@@ -73,15 +73,15 @@ client/
 #### Features Checklist
 
 **Setup & Configuration**
-- [ ] Initialize Vite + TypeScript project
-- [ ] Basic `tsconfig.json` (strict mode)
-- [ ] Install dependencies: `vite`, `typescript`
+- [x] Initialize Vite + TypeScript project
+- [x] Basic `tsconfig.json` (strict mode)
+- [x] Install dependencies: `vite`, `typescript`
 
 **Rendering (Canvas)**
-- [ ] Create 280x160 canvas element
-- [ ] Draw flat ground (horizontal line at y=140)
-- [ ] Draw Player 1 castle (small rectangle at x=20, y=130-140)
-- [ ] Draw Player 2 castle (small rectangle at x=260, y=130-140)
+- [x] Create 280x160 canvas element
+- [x] Draw flat ground (horizontal line at y=140)
+- [x] Draw Player 1 castle (small rectangle at x=20, y=130-140)
+- [x] Draw Player 2 castle (small rectangle at x=260, y=130-140)
 - [ ] Draw projectile (2px circle) at current position
 - [ ] Clear and redraw each frame (60fps)
 
@@ -101,17 +101,17 @@ client/
 - [ ] Determine which castle was hit (Player 1 or Player 2)
 
 **UI (Minimal HTML)**
-- [ ] Status display: "Your Turn" / "Waiting for opponent"
-- [ ] Angle input field (0-90)
-- [ ] Velocity input field (0-300)
-- [ ] "Fire!" button
+- [x] Status display: "Your Turn" / "Waiting for opponent"
+- [x] Angle input field (0-90)
+- [x] Velocity input field (0-300)
+- [x] "Fire!" button
 - [ ] Message display for game over
 
 **WebSocket Client**
-- [ ] Connect to WebSocket server on load
-- [ ] Send fire message: `{ type: "fire", angle, velocity }`
-- [ ] Receive game_start: `{ type: "game_start", playerId: 0|1, turn: 0|1 }`
-- [ ] Receive fire message from server (relay to both players)
+- [x] Connect to WebSocket server on load
+- [x] Send fire message: `{ type: "fire", angle, velocity }`
+- [x] Receive game_start: `{ type: "game_start", playerId: 0|1, turn: 0|1 }`
+- [x] Receive fire message from server (relay to both players)
 - [ ] Receive game_over: `{ type: "game_over", winner: 0|1 }`
 - [ ] Display connection status
 

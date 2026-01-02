@@ -17,4 +17,9 @@ export interface GameOverMessage {
   winner: 0 | 1;
 }
 
-export type GameMessage = GameStartMessage | FireMessage | GameOverMessage;
+export interface TurnChangeMessage {
+  type: 'turn_change';
+  turn: 0 | 1;
+}
+
+export type GameMessage = GameStartMessage | FireMessage | GameOverMessage | TurnChangeMessage;

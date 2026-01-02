@@ -49,12 +49,26 @@ function handleMessage(message: GameMessage): void {
     case 'fire':
       // Handle fire event
       console.log(`Shot fired: angle=${message.angle}, velocity=${message.velocity}`);
+      // Show that opponent fired (for the player who didn't fire)
+      const fireState = game.getState();
+      if (!fireState.isMyTurn) {
+        // This was the opponent's shot
+        messageEl.textContent = `Opponent fired: angle=${message.angle}°, velocity=${message.velocity}`;
+      }
       // TODO: Animate projectile
       break;
 
+    case 'turn_change':
+      game.setCurrentTurn(message.turn);
+      updateUI();
+      const currentState = game.getState();
+      messageEl.textContent = currentState.isMyTurn ? 'Your turn!' : "Opponent's turn";
+      console.log(`Turn changed to Player ${message.turn}`);
+      break;
+
     case 'game_over':
-      const state = game.getState();
-      const won = state.playerId === message.winner;
+      const gameOverState = game.getState();
+      const won = gameOverState.playerId === message.winner;
       messageEl.textContent = won ? '🎉 You won!' : '😔 You lost';
       fireButton.disabled = true;
       break;

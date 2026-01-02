@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { GameStartMessage, FireMessage, GameOverMessage } from '../types/messages';
+import { GameStartMessage, FireMessage, GameOverMessage, TurnChangeMessage } from '../types/messages';
 
 /**
  * Ultra-minimal game manager for MVP
@@ -83,6 +83,14 @@ export class GameManager {
 
     // Switch turn
     this.currentTurn = this.currentTurn === 0 ? 1 : 0;
+    console.log(`Turn switched to Player ${this.currentTurn}`);
+
+    // Notify both players about the turn change
+    const turnMessage: TurnChangeMessage = {
+      type: 'turn_change',
+      turn: this.currentTurn,
+    };
+    this.broadcast(turnMessage);
   }
 
   /**

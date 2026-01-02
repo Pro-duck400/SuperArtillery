@@ -321,9 +321,6 @@ SuperArtillery/
 - **Rationale**: 
   - Type safety prevents bugs
   - Shared type definitions between FE/BE
-  - Better IDE support and refactoring
-  - Self-documenting code
-- **Trade-off**: Slightly more setup time, but massive development benefits
 
 ### 5. **Server-Side Validation**
 - **Decision**: Optional validation of physics calculations
