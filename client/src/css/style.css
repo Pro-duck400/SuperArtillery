@@ -1,0 +1,116 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #1a1a1a;
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+#app {
+  text-align: center;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 20px;
+  font-size: 2.5em;
+}
+
+#status {
+  margin-bottom: 10px;
+  font-weight: bold;
+  font-size: 1.2em;
+  color: #4CAF50;
+}
+
+canvas {
+  border: 2px solid #333;
+  background-color: #87CEEB;
+  display: block;
+  margin: 20px auto;
+  image-rendering: pixelated;
+}
+
+#controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 14px;
+}
+
+input[type="number"] {
+  padding: 8px;
+  width: 100px;
+  border: 1px solid #444;
+  background-color: #333;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+input[type="number"]:disabled {
+  background-color: #222;
+  color: #666;
+  cursor: not-allowed;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
+
+button:not(:disabled):hover {
+  background-color: #45a049;
+}
+
+#message {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd700;
+  min-height: 30px;
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 2em;
+  }
+  
+  #controls {
+    flex-direction: column;
+  }
+  
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+}

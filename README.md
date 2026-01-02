@@ -180,73 +180,74 @@ interface GameOver {
 
 ## 🗂️ Project Structure
 
+This is a monorepo containing both the front-end client and back-end server.
+
 ```
 SuperArtillery/
-├── docs/
-│   ├── SuperArtillery.Apple][.Basic   # Original 1980 source code
-│   └── Project-Breakdown.md           # Initial implementation plan
-├── img/
-│   ├── Screenshot-rules.png           # Game rules screenshot
-│   └── Screenshot-game-play.png       # Gameplay screenshot
-├── src/                               # (To be created)
-│   ├── index.html
-│   ├── css/
-│   │   └── style.css
-│   ├── ts/                            # TypeScript source
-│   │   ├── main.ts
-│   │   ├── game.ts
-│   │   ├── physics.ts
-│   │   ├── terrain.ts
-│   │   ├── renderer.ts
-│   │   ├── network/
-│   │   │   ├── websocket.ts
-│   │   │   └── api.ts                # REST API client
-│   │   └── types/
-│   │       ├── game.ts               # Shared with backend
-│   │       ├── player.ts
-│   │       └── messages.ts
-│   ├── assets/
-│   │   └── sounds/                    # Optional sound effects
+├── client/                            # Front-End Application (complete)
+│   ├── src/
+│   │   ├── index.html
+│   │   ├── css/
+│   │   │   └── style.css
+│   │   ├── ts/                        # TypeScript source
+│   │   │   ├── main.ts
+│   │   │   ├── game.ts
+│   │   │   ├── physics.ts
+│   │   │   ├── terrain.ts
+│   │   │   ├── renderer.ts
+│   │   │   ├── network/
+│   │   │   │   ├── websocket.ts
+│   │   │   │   └── api.ts            # REST API client
+│   │   │   └── types/
+│   │   │       ├── game.ts           # Shared with backend
+│   │   │       ├── player.ts
+│   │   │       └── messages.ts
+│   │   └── assets/
+│   │       └── sounds/                # Optional sound effects
+│   ├── public/                        # Static assets
+│   ├── dist/                          # Build output
+│   ├── node_modules/
+│   ├── package.json
+│   ├── package-lock.json
 │   ├── tsconfig.json
-│   └── vite.config.ts                 # Build configuration
-├── package.json
-└── README.md
-```
-
-### Back-End Project Structure (Separate Repository)
-
-```
-SuperArtillery-Server/
-├── src/
-│   ├── server.ts                      # Main entry point
-│   ├── httpServer.ts                  # Express REST API
-│   ├── websocketServer.ts             # WebSocket server
-│   ├── routes/
-│   │   ├── auth.ts                    # POST /api/auth/*
-│   │   ├── lobby.ts                   # POST /api/lobby/*
-│   │   ├── stats.ts                   # GET /api/stats/*
-│   │   └── health.ts                  # GET /api/health
-│   ├── handlers/
-│   │   ├── gameHandler.ts             # WebSocket game events
-│   │   └── connectionHandler.ts       # WS connect/disconnect
-│   ├── services/
-│   │   ├── matchmaking.ts             # Queue management
-│   │   ├── gameManager.ts             # Active games
-│   │   └── authService.ts             # JWT validation
-│   ├── models/
-│   │   ├── Player.ts
-│   │   ├── Room.ts
-│   │   └── GameState.ts
-│   ├── types/                         # Shared with frontend
-│   │   ├── game.ts
-│   │   ├── player.ts
-│   │   └── messages.ts
-│   └── utils/
-│       ├── physics.ts                 # Server-side validation
-│       └── logger.ts
-├── tsconfig.json
-├── package.json
-├── .env.example
+│   └── vite.config.ts
+├── server/                            # Back-End Application (complete)
+│   ├── src/
+│   │   ├── server.ts                 # Main entry point
+│   │   ├── routes/
+│   │   │   ├── health.ts             # GET /api/health
+│   │   │   ├── lobby.ts              # POST /api/lobby/*
+│   │   │   └── stats.ts              # GET /api/stats/*
+│   │   ├── handlers/
+│   │   │   ├── gameHandler.ts        # WebSocket game events
+│   │   │   └── connectionHandler.ts  # WS connect/disconnect
+│   │   ├── services/
+│   │   │   ├── matchmaking.ts        # Queue management
+│   │   │   └── gameManager.ts        # Active games
+│   │   ├── models/
+│   │   │   ├── Player.ts
+│   │   │   ├── Room.ts
+│   │   │   └── GameState.ts
+│   │   ├── types/                    # Shared with frontend
+│   │   │   ├── game.ts
+│   │   │   ├── player.ts
+│   │   │   └── messages.ts
+│   │   └── utils/
+│   │       ├── physics.ts            # Server-side validation
+│   │       └── logger.ts
+│   ├── dist/                          # Build output
+│   ├── node_modules/
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── tsconfig.json
+│   └── .env.example
+├── docs/
+│   ├── SuperArtillery.Apple][.Basic  # Original 1980 source code
+│   ├── Project-Breakdown.md          # Initial implementation plan
+│   └── Implementation.md             # Detailed implementation guide
+├── img/
+│   ├── Screenshot-rules.png
+│   └── Screenshot-game-play.png
 └── README.md
 ```
 
@@ -340,7 +341,7 @@ SuperArtillery-Server/
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/SuperArtillery.git
-cd SuperArtillery
+cd SuperArtillery/client
 
 # Install dependencies
 npm install
@@ -358,9 +359,8 @@ npm run type-check
 
 ### Back-End Development
 ```bash
-# Clone the back-end repository
-git clone https://github.com/yourusername/SuperArtillery-Server.git
-cd SuperArtillery-Server
+# Navigate to server directory
+cd SuperArtillery/server
 
 # Install dependencies
 npm install
@@ -395,8 +395,7 @@ This project is a remake of the original SuperArtillery game published in 1980 b
 
 ## 🔗 Links
 
-- **Back-End Repository**: [Coming Soon]
-- **Live Demo**: [Coming Soon]`
+- **Live Demo**: [Coming Soon]
 - **Original Source Code**: [`docs/SuperArtillery.Apple][.Basic`](docs/SuperArtillery.Apple][.Basic)
 
 ---

@@ -43,13 +43,28 @@
 
 #### File Structure
 ```
-src/
-├── index.html           # Single page with canvas and inputs
-├── ts/
-│   ├── main.ts          # Entry point, WebSocket setup
-│   ├── game.ts          # Game state and turn management
-│   ├── physics.ts       # Projectile physics (gravity only)
-│   └── renderer.ts      # Draw canvas (flat ground, castles, projectile)
+client/
+├── src/
+│   ├── index.html           # Single page with canvas and inputs
+│   ├── css/
+│   │   └── style.css        # Basic styling
+│   ├── ts/                  # TypeScript source
+│   │   ├── main.ts          # Entry point, WebSocket setup
+│   │   ├── game.ts          # Game state and turn management
+│   │   ├── physics.ts       # Projectile physics (gravity only)
+│   │   ├── renderer.ts      # Draw canvas (flat ground, castles, projectile)
+│   │   ├── terrain.ts       # Terrain generation (placeholder)
+│   │   ├── network/
+│   │   │   ├── websocket.ts # WebSocket client implementation
+│   │   │   └── api.ts       # REST API client (placeholder)
+│   │   └── types/
+│   │       ├── game.ts      # Game-related types
+│   │       ├── player.ts    # Player types
+│   │       └── messages.ts  # WebSocket message type definitions
+│   └── assets/
+│       └── sounds/          # Optional sound effects (future)
+├── public/                  # Static assets
+├── dist/                    # Build output
 ├── tsconfig.json
 ├── vite.config.ts
 └── package.json
@@ -113,64 +128,70 @@ src/
 
 #### File Structure
 ```
-src/
-├── server.ts            # Main entry, WebSocket server
-├── game.ts              # Single game instance manager
-├── types.ts             # Shared message types
-└── package.json
+server/
+├── src/
+│   ├── server.ts           # Main entry, WebSocket server
+│   ├── services/
+│   │   └── gameManager.ts  # Single game instance manager
+│   └── types/
+│       └── messages.ts     # Shared message types
+├── dist/                   # Build output
+├── tsconfig.json
+├── package.json
+└── .env.example
 ```
-
-#### Features Checklist
-
-**Setup & Configuration**
-- [ ] Initialize Node.js + TypeScript project
-- [ ] Install dependencies: `ws`, `typescript`, `@types/ws`, `ts-node`
-- [ ] Configure `tsconfig.json` for Node.js
-- [ ] Environment variables: `PORT` (default 3000)
+x] Initialize Node.js + TypeScript project
+- [x] Install dependencies: `ws`, `typescript`, `@types/ws`, `ts-node`
+- [x] Configure `tsconfig.json` for Node.js
+- [x] Environment variables: `PORT` (default 3000)
 
 **WebSocket Server**
-- [ ] Create WebSocket server using `ws` library
-- [ ] Listen on port from environment (PORT=3000)
-- [ ] Accept connections (max 2 players)
+- [x] Create WebSocket server using `ws` library
+- [x] Listen on port from environment (PORT=3000)
+- [x] Accept connections (max 2 players)
 
 **Connection Management**
-- [ ] Array to store 2 player connections
-- [ ] Assign player ID (0 or 1) on connection
-- [ ] When 2 players connected: start game
-- [ ] Send `game_start` to both players
-- [ ] Handle player disconnect (end game, reset)
+- [x] Array to store 2 player connections
+- [x] Assign player ID (0 or 1) on connection
+- [x] When 2 players connected: start game
+- [x] Send `game_start` to both players
+- [x] Handle player disconnect (end game, reset)
 
 **Game Logic (Minimal)**
-- [ ] Track current turn (0 or 1)
-- [ ] Relay `fire` message to both players
-- [ ] Switch turn after each shot
-- [ ] Relay `game_over` when hit detected
-- [ ] Reset game state after game over
-- [ ] Clear player array for next game
+- [x] Track current turn (0 or 1)
+- [x] Relay `fire` message to both players
+- [x] Switch turn after each shot
+- [x] Relay `game_over` when hit detected
+- [x] Reset game state after game over
+- [x] Clear player array for next game
 
 **Message Protocol**
 ```typescript
 // Message types (shared with FE)
-interface GameStart {
+interface GameStartMessage {
   type: "game_start";
   playerId: 0 | 1;
   turn: 0 | 1;
 }
 
-interface Fire {
+interface FireMessage {
   type: "fire";
   angle: number;
   velocity: number;
 }
 
-interface GameOver {
+interface GameOverMessage {
   type: "game_over";
   winner: 0 | 1;
 }
 ```
 
 **Simplifications**
-- [ ] Single game instance (no room system)
+- [x] Single game instance (no room system)
+- [x] Server only relays messages (no validation)
+- [x] Client determines hit/winner (server trusts client)
+- [x] No authentication or player names
+- [x] Single game instance (no room system)
 - [ ] Server only relays messages (no validation)
 - [ ] Client determines hit/winner (server trusts client)
 - [ ] No authentication or player names
