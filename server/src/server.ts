@@ -1,5 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import * as dotenv from 'dotenv';
+import express from 'express';
+import { createServer } from 'http';
 import { GameManager } from './services/gameManager';
 import { GameMessage, FireMessage, GameOverMessage } from './types/messages';
 
@@ -8,17 +10,39 @@ dotenv.config();
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// Create WebSocket server
-const wss = new WebSocketServer({ port: PORT });
-
 // Single game instance (MVP: only one game at a time)
 const game = new GameManager();
+
+// Create Express app for HTTP endpoints
+const app = express();
+
+// Health check endpoint
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    players: game.getPlayerCount(),
+    version: '1.0.0'
+  });
+});
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Create WebSocket server attached to HTTP server
+const wss = new WebSocketServer({ server: httpServer });
 
 // Map to track which WebSocket belongs to which player
 const playerMap = new WeakMap<WebSocket, number>();
 
-console.log(`🚀 SuperArtillery WebSocket server running on port ${PORT}`);
-console.log(`Waiting for 2 players to connect...`);
+// Start HTTP server
+httpServer.listen(PORT, () => {
+  console.log(`🚀 SuperArtillery server running on port ${PORT}`);
+  console.log(`   HTTP API: http://localhost:${PORT}/api/health`);
+  console.log(`   WebSocket: ws://localhost:${PORT}`);
+  console.log(`Waiting for 2 players to connect...`);
+});
 
 wss.on('connection', (ws: WebSocket) => {
   console.log('New connection attempt...');
@@ -83,7 +107,7 @@ wss.on('error', (error) => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nShutting down server...');
-  wss.close(() => {
+  httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
@@ -91,7 +115,7 @@ process.on('SIGINT', () => {
 
 process.on('SIGTERM', () => {
   console.log('\nShutting down server...');
-  wss.close(() => {
+  httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
