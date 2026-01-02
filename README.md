@@ -396,7 +396,7 @@ This project is a remake of the original SuperArtillery game published in 1980 b
 ## 🔗 Links
 
 - **Back-End Repository**: [Coming Soon]
-- **Live Demo**: [Coming Soon]
+- **Live Demo**: [Coming Soon]`
 - **Original Source Code**: [`docs/SuperArtillery.Apple][.Basic`](docs/SuperArtillery.Apple][.Basic)
 
 ---
