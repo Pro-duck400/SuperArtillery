@@ -10,13 +10,52 @@ This document describes the REST API and WebSocket communication used by the MVP
 
 ### Registration
 
-**POST** `/api/register`
+**POST** `/api/v1/register`
 
-Registers a player and assigns a `playerId` (0 or 1).
+**Payload:**
+```json
+name: string
+```
+**Response:**
 
+- 200 Success 
+```json
+playerId: 0 | 1
+```
+- 409 Conflict
+```json
+details: string = "Player with name {name} already registered".
+```
 ---
 
 ### Fire Action
+
+**Payload**
+```json
+gameId: number;
+playerId: number;
+angle: number;
+velocity: number;
+```
+
+**Response:**
+
+- 200 Success 
+```json
+  type: "shot";
+  playerId: number;
+  angle: number;
+  velocity: number;
+```
+IF (over 350 should blow up the player)
+```json
+  type: "game_over";
+  winner: <playeId who won>;
+```
+- 403 Bad Request
+```json
+details: string = "The angle or velocity is invalid".
+```
 
 **POST** `/api/game/fire`
 
@@ -64,7 +103,7 @@ Sent when a shot misses and the turn switches to the other player.
 ```json
 {
   type: "turn_change",
-  turn: 0 | 1
+  playerId_turn: 0 | 1
 }
 ```
 
