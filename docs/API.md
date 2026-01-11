@@ -38,6 +38,9 @@ details: "Player {name} already registered"
 ```json
 details: "Server is full"
 ```
+Other possible error:
+- Bad request: name is required
+
 (When two players are already connected, refusing the 3rd player to connect)
 
 ---

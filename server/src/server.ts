@@ -1,6 +1,8 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import * as dotenv from 'dotenv';
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
 import { createServer } from 'http';
 import { GameManager } from './services/gameManager';
 import { GameMessage, FireMessage, GameOverMessage } from './types/messages';
@@ -16,8 +18,60 @@ const game = new GameManager();
 // Create Express app for HTTP endpoints
 const app = express();
 
-// Health check endpoint
-app.get('/api/health', (_req, res) => {
+// Swagger setup
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'SuperArtillery API',
+      version: '1.0.0',
+      description: 'API documentation for SuperArtillery game server',
+    },
+    servers: [
+      { url: `http://localhost:${PORT}` }
+    ],
+  },
+  apis: ['./src/server.ts'], // Use JSDoc comments in this file
+};
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+
+/**
+ * @openapi
+ * /api/v1/health:
+ *   get:
+ *     summary: Health check for the server
+ *     description: Returns server status and basic info.
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 uptime:
+ *                   type: number
+ *                   example: 123.45
+ *                 players:
+ *                   type: integer
+ *                   example: 1
+ *                 version:
+ *                   type: string
+ *                   example: 1.0.0
+ */
+app.get('/api/v1/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
