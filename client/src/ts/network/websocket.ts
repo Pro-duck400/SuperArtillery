@@ -27,6 +27,7 @@ export class WebSocketClient {
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as GameMessage;
+          console.log('📥 Received WebSocket message:', message);
           this.messageHandlers.forEach((handler) => handler(message));
         } catch (error) {
           console.error('Failed to parse message:', error);
@@ -37,14 +38,6 @@ export class WebSocketClient {
         console.log('WebSocket disconnected');
       };
     });
-  }
-
-  public send(message: GameMessage): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    } else {
-      console.error('WebSocket is not connected');
-    }
   }
 
   public onMessage(handler: (message: GameMessage) => void): void {

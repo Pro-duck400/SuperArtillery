@@ -8,24 +8,39 @@
 </head>
 <body>
   <div id="app">
-     
-    <div id="status">Connecting...</div>
-    
-    <canvas id="gameCanvas" width="280" height="160"></canvas>
-    
-    <div id="controls">
-      <label>
-        Angle (0-90):
-        <input type="number" id="angleInput" min="0" max="90" value="45" />
-      </label>
-      <label>
-        Velocity (0-300):
-        <input type="number" id="velocityInput" min="0" max="300" value="150" />
-      </label>
-      <button id="fireButton" disabled>Fire!</button>
+    <!-- Registration Panel -->
+    <div id="registrationPanel" style="display: block;">
+      <h2>Welcome to SuperArtillery!</h2>
+      <div>
+        <label>
+          Enter your name:
+          <input type="text" id="playerNameInput" placeholder="Your name" maxlength="20" />
+        </label>
+        <button id="registerButton">Join Game</button>
+      </div>
+      <div id="registrationError" style="color: red; margin-top: 10px;"></div>
     </div>
     
-    <div id="message"></div>
+    <!-- Game Panel (hidden initially) -->
+    <div id="gamePanel" style="display: none;">
+      <div id="status">Connecting...</div>
+      
+      <canvas id="gameCanvas" width="280" height="160"></canvas>
+      
+      <div id="controls">
+        <label>
+          Angle (0-90):
+          <input type="number" id="angleInput" min="0" max="90" value="45" />
+        </label>
+        <label>
+          Velocity (0-350):
+          <input type="number" id="velocityInput" min="0" max="300" value="150" />
+        </label>
+        <button id="fireButton" disabled>Fire!</button>
+      </div>
+      
+      <div id="message"></div>
+    </div>
   </div>
   
   <script type="module" src="/ts/main.ts"></script>

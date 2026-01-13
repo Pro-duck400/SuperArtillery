@@ -34,7 +34,7 @@ playerId: 0 | 1
 ```json
 details: "Player {name} already registered"
 ```
-- 403 Bad request
+- 400 Bad request
 ```json
 details: "Server is full"
 ```
@@ -63,7 +63,7 @@ velocity: number;
 
 - 200 Success 
 
-- 403 Bad Request
+- 400 Bad Request
 ```json
 details: string = "The error message goes here".
 ```
