@@ -6,7 +6,6 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { createServer } from 'http';
 import { GameManager } from './services/gameManager';
-import { GameMessage, GameOverMessage } from './types/messages';
 import { createApiRouter } from './routes/api';
 
 // Load environment variables
@@ -95,24 +94,8 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   console.log(`Player ${playerId} WebSocket connected. Registered players: ${game.getPlayerCount()}/2`);
 
-  // Handle incoming messages
-  ws.on('message', (data: Buffer) => {
-    try {
-      const message = JSON.parse(data.toString()) as GameMessage;
-      console.log(`Received message from Player ${playerId}:`, message.type);
-
-      switch (message.type) {
-        case 'game_over':
-          game.handleGameOver(message as GameOverMessage);
-          break;
-
-        default:
-          console.log('Unknown message type:', message);
-      }
-    } catch (error) {
-      console.error('Error parsing message:', error);
-    }
-  });
+  // Note: Clients don't send WebSocket messages - they use HTTP endpoints instead
+  // WebSocket is used only for server -> client broadcasts (game_start, shot, turn_change, game_over)
 
   // Handle disconnection
   ws.on('close', () => {
