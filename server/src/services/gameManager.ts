@@ -1,44 +1,81 @@
 import { WebSocket } from 'ws';
-import { GameStartMessage, FireMessage, GameOverMessage, TurnChangeMessage } from '../types/messages';
+import { GameStartMessage, TurnChangeMessage, GameOverMessage } from '../types/messages';
 
 /**
  * Ultra-minimal game manager for MVP
  * Handles a single game with exactly 2 players
  */
 export class GameManager {
-  private players: (WebSocket | null)[] = [null, null];
+  private playerNames: (string | null)[] = [null, null];
+  private playerConnections: (WebSocket | null)[] = [null, null];
   private currentTurn: 0 | 1 = 0;
+  private gameStarted: boolean = false;
+  private gameId: number = 1; // MVP: single game instance
 
   /**
-   * Add a player to the game
-   * @returns Player ID (0 or 1) or null if game is full
+   * Register a player with a name (HTTP endpoint)
+   * @returns Object with playerId (0 or 1) or error information
    */
-  addPlayer(ws: WebSocket): number | null {
+  registerPlayer(name: string): { success: true; playerId: 0 | 1 } | { success: false; error: string; statusCode: number } {
+    // Validate name is provided
+    if (!name || name.trim() === '') {
+      return { success: false, error: 'Name is required', statusCode: 400 };
+    }
+
+    // Check if name is already taken
+    if (this.playerNames.includes(name)) {
+      return { success: false, error: `Player ${name} already registered`, statusCode: 409 };
+    }
+
+    // Check if server is full (both slots taken)
+    if (this.playerNames[0] !== null && this.playerNames[1] !== null) {
+      return { success: false, error: 'Server is full', statusCode: 403 };
+    }
+
     // Find first empty slot
     for (let i = 0; i < 2; i++) {
-      if (this.players[i] === null) {
-        this.players[i] = ws;
-        console.log(`Player ${i} connected`);
-
-        // If both players are now connected, start the game
-        if (this.isFull()) {
-          this.startGame();
-        }
-
-        return i;
+      if (this.playerNames[i] === null) {
+        this.playerNames[i] = name;
+        console.log(`Player ${i} (${name}) registered`);
+        return { success: true, playerId: i as 0 | 1 };
       }
     }
-    return null; // Game is full
+
+    // Should never reach here, but just in case
+    return { success: false, error: 'Server is full', statusCode: 403 };
   }
 
   /**
-   * Remove a player from the game
+   * Connect a WebSocket for a registered player
+   * @returns true if connection successful, false otherwise
    */
-  removePlayer(ws: WebSocket): void {
-    const index = this.players.indexOf(ws);
+  connectPlayer(playerId: 0 | 1, ws: WebSocket): boolean {
+    // Verify player is registered
+    if (this.playerNames[playerId] === null) {
+      console.log(`Player ${playerId} not registered`);
+      return false;
+    }
+
+    // Connect the WebSocket
+    this.playerConnections[playerId] = ws;
+    console.log(`Player ${playerId} (${this.playerNames[playerId]}) connected via WebSocket`);
+
+    // If both players are now connected, start the game
+    if (this.areBothConnected() && !this.gameStarted) {
+      this.startGame();
+    }
+
+    return true;
+  }
+
+  /**
+   * Disconnect a player's WebSocket
+   */
+  disconnectPlayer(ws: WebSocket): void {
+    const index = this.playerConnections.indexOf(ws);
     if (index !== -1) {
-      this.players[index] = null;
-      console.log(`Player ${index} disconnected`);
+      this.playerConnections[index] = null;
+      console.log(`Player ${index} (${this.playerNames[index]}) disconnected`);
 
       // If a player disconnects, end the game
       this.endGame();
@@ -46,49 +83,31 @@ export class GameManager {
   }
 
   /**
-   * Check if both player slots are filled
+   * Check if both players are connected via WebSocket
    */
-  private isFull(): boolean {
-    return this.players[0] !== null && this.players[1] !== null;
+  private areBothConnected(): boolean {
+    return this.playerConnections[0] !== null && this.playerConnections[1] !== null;
   }
 
   /**
    * Start the game when both players are connected
    */
   private startGame(): void {
-    console.log('Game starting with 2 players!');
+    console.log(`Game starting with 2 players: ${this.playerNames[0]} vs ${this.playerNames[1]}!`);
+    this.gameStarted = true;
     this.currentTurn = 0; // Player 0 goes first
 
     // Send game_start message to both players
-    this.players.forEach((player, index) => {
-      if (player) {
-        const message: GameStartMessage = {
-          type: 'game_start',
-          playerId: index as 0 | 1,
-          turn: this.currentTurn,
-        };
-        player.send(JSON.stringify(message));
-      }
-    });
-  }
+    const gameStartMessage: GameStartMessage = {
+      type: 'game_start',
+      gameId: this.gameId,
+    };
+    this.broadcast(gameStartMessage);
 
-  /**
-   * Handle fire message from a player
-   */
-  handleFire(message: FireMessage): void {
-    console.log(`Fire: angle=${message.angle}, velocity=${message.velocity}`);
-
-    // Relay the fire message to both players
-    this.broadcast(message);
-
-    // Switch turn
-    this.currentTurn = this.currentTurn === 0 ? 1 : 0;
-    console.log(`Turn switched to Player ${this.currentTurn}`);
-
-    // Notify both players about the turn change
+    // Send turn_change message to indicate initial turn
     const turnMessage: TurnChangeMessage = {
       type: 'turn_change',
-      turn: this.currentTurn,
+      playerId_turn: this.currentTurn,
     };
     this.broadcast(turnMessage);
   }
@@ -97,7 +116,7 @@ export class GameManager {
    * Handle game over message
    */
   handleGameOver(message: GameOverMessage): void {
-    console.log(`Game over! Winner: Player ${message.winner}`);
+    console.log(`Game over! Winner: Player ${message.playerId_winner}`);
 
     // Broadcast game over to both players
     this.broadcast(message);
@@ -111,9 +130,10 @@ export class GameManager {
    */
   private broadcast(message: any): void {
     const messageStr = JSON.stringify(message);
-    this.players.forEach((player) => {
-      if (player && player.readyState === WebSocket.OPEN) {
-        player.send(messageStr);
+    this.playerConnections.forEach((connection, index) => {
+      if (connection && connection.readyState === WebSocket.OPEN) {
+        console.log(`📤 Broadcasting to Player ${index} (${this.playerNames[index]}):`, messageStr);
+        connection.send(messageStr);
       }
     });
   }
@@ -130,14 +150,62 @@ export class GameManager {
    * Reset game state for a new game
    */
   private reset(): void {
-    this.players = [null, null];
+    this.playerConnections = [null, null];
+    this.playerNames = [null, null];
     this.currentTurn = 0;
+    this.gameStarted = false;
   }
 
   /**
-   * Get current player count
+   * Get count of registered players
    */
   getPlayerCount(): number {
-    return this.players.filter(p => p !== null).length;
+    return this.playerNames.filter(p => p !== null).length;
+  }
+
+  /**
+   * Get player name by ID
+   */
+  getPlayerName(playerId: 0 | 1): string | null {
+    return this.playerNames[playerId];
+  }
+
+  /**
+   * Get current game ID
+   */
+  getGameId(): number {
+    return this.gameId;
+  }
+
+  /**
+   * Handle fire action from HTTP endpoint
+   * @returns success or error with status code
+   */
+  fire(gameId: number, playerId: 0 | 1, angle: number, velocity: number): { success: true } | { success: false; error: string; statusCode: number } {
+    // TODO: SuperArtillery #5
+    // TODO: Replace this console logging with actual method implementation
+    console.log(`Game ${gameId}: Player ${playerId} fired a shot: angle=${angle}, velocity=${velocity}`);
+
+    // TODO: Validate gameId (MVP: only one game, gameId should be 1 or we can be lenient)
+    // For MVP, we'll just check if game has started
+
+    // TODO: Validate playerId
+
+    // TODO: Check if player is registered
+
+    // TODO: Check if it's the player's turn
+
+    // TODO: Validate angle (0-360 degrees)
+    
+    // TODO:Validate velocity (must be positive)
+
+    // TODO: All validations passed - broadcast shot message
+
+    // For MVP: we'll assume all shots miss (no hit detection yet)
+    // TODO: Switch turn
+
+    // TODO: Notify both players about the turn change
+
+    return { success: true };
   }
 }

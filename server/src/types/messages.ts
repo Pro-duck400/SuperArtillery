@@ -2,24 +2,25 @@
 
 export interface GameStartMessage {
   type: "game_start";
-  playerId: 0 | 1;
-  turn: 0 | 1;
+  gameId: number;
 }
 
-export interface FireMessage {
-  type: "fire";
+export interface ShotMessage {
+  type: "shot";
+  playerId: 0 | 1;
   angle: number;
   velocity: number;
 }
 
-export interface GameOverMessage {
-  type: "game_over";
-  winner: 0 | 1;
-}
-
 export interface TurnChangeMessage {
   type: "turn_change";
-  turn: 0 | 1;
+  playerId_turn: 0 | 1;
 }
 
-export type GameMessage = GameStartMessage | FireMessage | GameOverMessage | TurnChangeMessage;
+export interface GameOverMessage {
+  type: "game_over";
+  playerId_winner: 0 | 1;
+}
+
+
+export type GameMessage = GameStartMessage | ShotMessage | TurnChangeMessage | GameOverMessage;

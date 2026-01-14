@@ -103,7 +103,7 @@ client/
 **UI (Minimal HTML)**
 - [x] Status display: "Your Turn" / "Waiting for opponent"
 - [x] Angle input field (0-90)
-- [x] Velocity input field (0-300)
+- [x] Velocity input field (0-350)
 - [x] "Fire!" button
 - [ ] Message display for game over
 
