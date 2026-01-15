@@ -47,11 +47,33 @@ export class Renderer {
     this.ctx.fill();
   }
 
-  public render(projectile: Projectile | null): void {
+  public drawTrajectory(trajectory: Array<{ x: number; y: number }>): void {
+    if (trajectory.length < 2) return;
+
+    this.ctx.strokeStyle = '#FFA500';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([2, 2]); // Dashed line
+    this.ctx.beginPath();
+    this.ctx.moveTo(trajectory[0].x, trajectory[0].y);
+    
+    for (let i = 1; i < trajectory.length; i++) {
+      this.ctx.lineTo(trajectory[i].x, trajectory[i].y);
+    }
+    
+    this.ctx.stroke();
+    this.ctx.setLineDash([]); // Reset to solid line
+  }
+
+  public render(projectile: Projectile | null, trajectory: Array<{ x: number; y: number }> = []): void {
     this.clear();
     this.drawGround();
     this.drawCastle(20); // Player 1
     this.drawCastle(260); // Player 2
+
+    // Draw trajectory first (so it appears behind the projectile)
+    if (trajectory.length > 0) {
+      this.drawTrajectory(trajectory);
+    }
 
     if (projectile) {
       this.drawProjectile(projectile);
