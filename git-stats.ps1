@@ -1,36 +1,47 @@
 # Git Repository Statistics
 # Analyzes commits and lines of code per contributor
+# PowerShell v1.0 Compatible
 
-Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "  Git Repository Statistics" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "========================================"
+Write-Host "  Git Repository Statistics"
+Write-Host "========================================"
+Write-Host ""
 
 # 1. Commits per contributor
-Write-Host "📊 COMMITS PER CONTRIBUTOR" -ForegroundColor Yellow
-Write-Host "─────────────────────────────────────────`n" -ForegroundColor DarkGray
+Write-Host "COMMITS PER CONTRIBUTOR"
+Write-Host "-----------------------------------------"
+Write-Host ""
 
 $commits = git shortlog -sn --all --no-merges | ForEach-Object {
     if ($_ -match '^\s*(\d+)\s+(.+)$') {
-        [PSCustomObject]@{
-            Commits = [int]$matches[1]
-            Author = $matches[2]
-        }
+        $obj = New-Object PSObject
+        Add-Member -InputObject $obj -MemberType NoteProperty -Name Commits -Value ([int]$matches[1])
+        Add-Member -InputObject $obj -MemberType NoteProperty -Name Author -Value $matches[2]
+        $obj
     }
 }
 
-$totalCommits = ($commits | Measure-Object -Property Commits -Sum).Sum
+$totalCommits = 0
+$commits | ForEach-Object { $totalCommits += $_.Commits }
 
 $commits | ForEach-Object {
     $percentage = [math]::Round(($_.Commits / $totalCommits) * 100, 1)
-    $bar = "█" * [math]::Min([int]($percentage / 2), 50)
-    Write-Host ("  {0,-30} {1,4} commits ({2,5}%)  {3}" -f $_.Author, $_.Commits, $percentage, $bar) -ForegroundColor White
+    $barLength = [math]::Min([int]($percentage / 2), 50)
+    $bar = ""
+    for ($i = 0; $i -lt $barLength; $i++) { $bar += "#" }
+    Write-Host ("  {0,-30} {1,4} commits ({2,5}%)  {3}" -f $_.Author, $_.Commits, $percentage, $bar)
 }
 
-Write-Host ("`n  Total: {0} commits`n" -f $totalCommits) -ForegroundColor Green
+Write-Host ""
+Write-Host ("  Total: {0} commits" -f $totalCommits)
+Write-Host ""
 
 # 2. Lines of code per contributor
-Write-Host "`n📝 LINES OF CODE PER CONTRIBUTOR" -ForegroundColor Yellow
-Write-Host "─────────────────────────────────────────`n" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "LINES OF CODE PER CONTRIBUTOR"
+Write-Host "-----------------------------------------"
+Write-Host ""
 
 $authors = git log --format='%aN' --all | Sort-Object -Unique
 
@@ -38,41 +49,40 @@ $stats = $authors | ForEach-Object {
     $author = $_
     
     # Get numstat for this author
-    $authorStats = git log --author="$author" --pretty=tformat: --numstat --all |
-                   Where-Object { $_ -match '^\d+\s+\d+' } |
-                   ForEach-Object {
-                       $parts = $_ -split '\s+'
-                       [PSCustomObject]@{
-                           Added = if ($parts[0] -match '^\d+$') { [int]$parts[0] } else { 0 }
-                           Removed = if ($parts[1] -match '^\d+$') { [int]$parts[1] } else { 0 }
-                       }
-                   }
+    $added = 0
+    $removed = 0
     
-    $added = ($authorStats | Measure-Object -Property Added -Sum).Sum
-    $removed = ($authorStats | Measure-Object -Property Removed -Sum).Sum
+    git log --author="$author" --pretty=tformat: --numstat --all | Where-Object { $_ -match '^\d+\s+\d+' } | ForEach-Object {
+        $parts = $_ -split '\s+'
+        if ($parts[0] -match '^\d+$') { $added += [int]$parts[0] }
+        if ($parts[1] -match '^\d+$') { $removed += [int]$parts[1] }
+    }
+    
     $net = $added - $removed
     
-    [PSCustomObject]@{
-        Author = $author
-        Added = $added
-        Removed = $removed
-        Net = $net
-    }
+    $obj = New-Object PSObject
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name Author -Value $author
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name Added -Value $added
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name Removed -Value $removed
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name Net -Value $net
+    $obj
 }
 
 $stats = $stats | Sort-Object -Property Net -Descending
 
-$totalAdded = ($stats | Measure-Object -Property Added -Sum).Sum
-$totalRemoved = ($stats | Measure-Object -Property Removed -Sum).Sum
+$totalAdded = 0
+$totalRemoved = 0
+$stats | ForEach-Object {
+    $totalAdded += $_.Added
+    $totalRemoved += $_.Removed
+}
 $totalNet = $totalAdded - $totalRemoved
 
 $stats | ForEach-Object {
     $percentage = if ($totalNet -gt 0) { [math]::Round(($_.Net / $totalNet) * 100, 1) } else { 0 }
-    
-    Write-Host ("  {0,-30}" -f $_.Author) -ForegroundColor White -NoNewline
-    Write-Host (" +{0,6} " -f $_.Added) -ForegroundColor Green -NoNewline
-    Write-Host ("-{0,6} " -f $_.Removed) -ForegroundColor Red -NoNewline
-    Write-Host ("= {0,7} ({1,5}%)" -f $_.Net, $percentage) -ForegroundColor Cyan
+    Write-Host ("  {0,-30} +{1,6} -{2,6} = {3,7} ({4,5}%)" -f $_.Author, $_.Added, $_.Removed, $_.Net, $percentage)
 }
 
-Write-Host ("`n  Total: +{0} -{1} = {2} lines`n" -f $totalAdded, $totalRemoved, $totalNet) -ForegroundColor Green
+Write-Host ""
+Write-Host ("  Total: +{0} -{1} = {2} lines" -f $totalAdded, $totalRemoved, $totalNet)
+Write-Host ""
