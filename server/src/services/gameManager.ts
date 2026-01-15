@@ -188,7 +188,7 @@ export class GameManager {
     velocity: number
   ): { success: true } | { success: false; error: string; statusCode: number } {
 
-    if (gameId !== this.gameId) {
+    if (gameId !== this.gameId || !this.gameStarted) {
       return {
         success: false,
         error: `GameId ${gameId} is unknown.`,
@@ -196,23 +196,7 @@ export class GameManager {
       };
     }
 
-    if (!this.gameStarted) {
-      return {
-        success: false,
-        error: 'Game has not started.',
-        statusCode: 400
-      };
-    }
-
     if (playerId !== 0 && playerId !== 1) {
-      return {
-        success: false,
-        error: `PlayerId ${playerId} is unknown.`,
-        statusCode: 400
-      };
-    }
-
-    if (this.playerNames[playerId] === null) {
       return {
         success: false,
         error: `PlayerId ${playerId} is unknown.`,
