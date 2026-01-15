@@ -181,30 +181,82 @@ export class GameManager {
    * Handle fire action from HTTP endpoint
    * @returns success or error with status code
    */
-  fire(gameId: number, playerId: 0 | 1, angle: number, velocity: number): { success: true } | { success: false; error: string; statusCode: number } {
-    // TODO: SuperArtillery #5
-    // TODO: Replace this console logging with actual method implementation
-    console.log(`Game ${gameId}: Player ${playerId} fired a shot: angle=${angle}, velocity=${velocity}`);
+  fire(
+    gameId: number,
+    playerId: 0 | 1,
+    angle: number,
+    velocity: number
+  ): { success: true } | { success: false; error: string; statusCode: number } {
 
-    // TODO: Validate gameId (MVP: only one game, gameId should be 1 or we can be lenient)
-    // For MVP, we'll just check if game has started
+    if (gameId !== this.gameId) {
+      return {
+        success: false,
+        error: `GameId ${gameId} is unknown.`,
+        statusCode: 400
+      };
+    }
 
-    // TODO: Validate playerId
+    if (!this.gameStarted) {
+      return {
+        success: false,
+        error: 'Game has not started.',
+        statusCode: 400
+      };
+    }
 
-    // TODO: Check if player is registered
+    if (playerId !== 0 && playerId !== 1) {
+      return {
+        success: false,
+        error: `PlayerId ${playerId} is unknown.`,
+        statusCode: 400
+      };
+    }
 
-    // TODO: Check if it's the player's turn
+    if (this.playerNames[playerId] === null) {
+      return {
+        success: false,
+        error: `PlayerId ${playerId} is unknown.`,
+        statusCode: 400
+      };
+    }
 
-    // TODO: Validate angle (0-360 degrees)
-    
-    // TODO:Validate velocity (must be positive)
+    if (playerId !== this.currentTurn) {
+      return {
+        success: false,
+        error: 'Player should wait for its turn to fire.',
+        statusCode: 400
+      };
+    }
 
-    // TODO: All validations passed - broadcast shot message
+    if (angle < 0 || angle > 360) {
+      return {
+        success: false,
+        error: 'The angle should be within 0-360 degrees.',
+        statusCode: 400
+      };
+    }
 
-    // For MVP: we'll assume all shots miss (no hit detection yet)
-    // TODO: Switch turn
+    if (velocity <= 0) {
+      return {
+        success: false,
+        error: 'The velocity should be positive.',
+        statusCode: 400
+      };
+    }
 
-    // TODO: Notify both players about the turn change
+    this.broadcast({
+      type: 'shot',
+      playerId,
+      angle,
+      velocity
+    });
+
+    this.currentTurn = this.currentTurn === 0 ? 1 : 0;
+
+    this.broadcast({
+      type: 'turn_change',
+      playerId_turn: this.currentTurn
+    });
 
     return { success: true };
   }

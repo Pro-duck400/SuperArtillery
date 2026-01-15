@@ -123,59 +123,74 @@ export function createApiRouter(game: GameManager): Router {
     }
   });
 
-  /**
-   * @openapi
-   * /api/v1/fire:
-   *   post:
-   *     summary: Fire a shot
-   *     description: Sends the firing action for the current player's turn. If server responds with 200 Success, each player receives WebSocket message `shot` with the given details of the shot. Followed by either `turn_change` if no one is hit or `game_over` if any player is hit.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - gameId
-   *               - playerId
-   *               - angle
-   *               - velocity
-   *             properties:
-   *               gameId:
-   *                 type: integer
-   *                 example: 1
-   *               playerId:
-   *                 type: integer
-   *                 enum: [0, 1]
-   *                 example: 0
-   *               angle:
-   *                 type: number
-   *                 minimum: 0
-   *                 maximum: 360
-   *                 example: 45
-   *               velocity:
-   *                 type: number
-   *                 minimum: 0
-   *                 example: 250
-   *     responses:
-   *       200:
-   *         description: Fire action successful
-   *       400:
-   *         description: Bad request
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 details:
-   *                   type: string
-   *                   examples:
-   *                     - GameId 1 is unknown.
-   *                     - PlayerId 0 is unknown.
-   *                     - Player should wait for its turn to fire.
-   *                     - The angle should be within 0-360 degrees.
-   *                     - The velocity should be positive.
-   */
+/**
+ * @openapi
+ * /api/v1/fire:
+ *   post:
+ *     summary: Fire a shot
+ *     description: >
+ *       Sends the firing action for the current player's turn.
+ *       On success, the server broadcasts WebSocket messages:
+ *       `shot` followed by `turn_change` or `game_over`.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [gameId, playerId, angle, velocity]
+ *             properties:
+ *               gameId:
+ *                 type: integer
+ *                 example: 1
+ *               playerId:
+ *                 type: integer
+ *                 enum: [0, 1]
+ *                 example: 0
+ *               angle:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 360
+ *                 example: 45
+ *               velocity:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 250
+ *     responses:
+ *       200:
+ *         description: Fire action successful
+ *       400:
+ *         description: Invalid fire request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 details:
+ *                   type: string
+ *             examples:
+ *               unknownGame:
+ *                 summary: Unknown game
+ *                 value:
+ *                   details: GameId 1 is unknown.
+ *               unknownPlayer:
+ *                 summary: Unknown player
+ *                 value:
+ *                   details: PlayerId 0 is unknown.
+ *               wrongTurn:
+ *                 summary: Wrong turn
+ *                 value:
+ *                   details: Player should wait for its turn to fire.
+ *               badAngle:
+ *                 summary: Invalid angle
+ *                 value:
+ *                   details: The angle should be within 0-360 degrees.
+ *               badVelocity:
+ *                 summary: Invalid velocity
+ *                 value:
+ *                   details: The velocity should be positive.
+ */
+
   router.post('/v1/fire', (req, res) => {
     const { gameId, playerId, angle, velocity } = req.body;
 
