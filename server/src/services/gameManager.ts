@@ -97,12 +97,19 @@ export class GameManager {
     this.gameStarted = true;
     this.currentTurn = 0; // Player 0 goes first
 
-    // Send game_start message to both players
-    const gameStartMessage: GameStartMessage = {
-      type: 'game_start',
-      gameId: this.gameId,
-    };
-    this.broadcast(gameStartMessage);
+    // send game_start message individually to each player
+    for (let i = 0; i < 2; i++) {
+      const opponentId = i === 0 ? 1: 0;
+      const ws = this.playerConnections[i];
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const startMessage : GameStartMessage = {
+          type: 'game_start',
+          gameId: this.gameId,
+          opponentName: this.playerNames[opponentId] || "",
+        };
+        ws.send(JSON.stringify(startMessage));
+      }
+    }
 
     // Send turn_change message to indicate initial turn
     const turnMessage: TurnChangeMessage = {
