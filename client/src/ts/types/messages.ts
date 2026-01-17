@@ -23,5 +23,4 @@ export interface GameOverMessage {
   playerId_winner: 0 | 1;
 }
 
-
 export type GameMessage = GameStartMessage | ShotMessage | TurnChangeMessage | GameOverMessage;

@@ -29,6 +29,7 @@ const animator = new ProjectileAnimator(renderer, canvas.width);
 const uiManager = new UIManager();
 const gameClient = new GameClient(API_BASE_URL, WS_BASE_URL, game);
 
+
 // Wire up UI events
 let clientName = '';
 let opponentName = ''; // not used yet
@@ -86,22 +87,27 @@ gameClient.onConnected(() => {
 gameClient.onGameStart((gameId: number) => {
   const playerId = gameClient.getPlayerId();
   // Get opponent name from GameStartMessage if available
-  // this part doesnt work yet
   let opponentName = '';
-  if (gameClient.lastGameStartMessage && typeof gameClient.lastGameStartMessage.opponentName === 'string') {
-    opponentName = gameClient.lastGameStartMessage.opponentName;
+  const lastGameStartMessage = gameClient.getLastGameStartMessage();
+  if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
+    opponentName = lastGameStartMessage.opponentName;
   }
   // Set both names in DOM  
   const leftNameEl = document.getElementById('playerNameLeft');
   const rightNameEl = document.getElementById('playerNameRight');
   if (playerId === 0) {
-    if (leftNameEl) leftNameEl.textContent = clientName;
-    if (rightNameEl) rightNameEl.textContent = opponentName;
+    // if (leftNameEl) leftNameEl.textContent = clientName;
+    if (rightNameEl) {
+      rightNameEl.textContent = opponentName;
+      rightNameEl.style.color = '#ffffff';
+    } 
+
   } else {
-    if (leftNameEl) leftNameEl.textContent = opponentName;
-    if (rightNameEl) rightNameEl.textContent = clientName;
+    if (leftNameEl) {
+    leftNameEl.textContent = opponentName;
+    leftNameEl.style.color = '#ffffff';
+    }
   }
-  // down to here..
 
   uiManager.setStatus(`Game #${gameId} - You are Player ${(playerId ?? 0) + 1}`);
   uiManager.setMessage('Game starting! Waiting for first turn...');
