@@ -160,7 +160,15 @@ export function createApiRouter(game: GameManager): Router {
  *       200:
  *         description: Fire action successful
  *       400:
- *         description: Invalid fire request
+ *         description: |
+ *           Bad request. Possible errors:
+ *           - Missing required fields (gameId, playerId, angle, velocity)
+ *           - Invalid field types
+ *           - GameId is unknown
+ *           - PlayerId is unknown
+ *           - Player should wait for its turn to fire
+ *           - The angle should be within 0-360 degrees
+ *           - The velocity should be positive
  *         content:
  *           application/json:
  *             schema:
@@ -168,27 +176,7 @@ export function createApiRouter(game: GameManager): Router {
  *               properties:
  *                 details:
  *                   type: string
- *             examples:
- *               unknownGame:
- *                 summary: Unknown game
- *                 value:
- *                   details: GameId 1 is unknown.
- *               unknownPlayer:
- *                 summary: Unknown player
- *                 value:
- *                   details: PlayerId 0 is unknown.
- *               wrongTurn:
- *                 summary: Wrong turn
- *                 value:
- *                   details: Player should wait for its turn to fire.
- *               badAngle:
- *                 summary: Invalid angle
- *                 value:
- *                   details: The angle should be within 0-360 degrees.
- *               badVelocity:
- *                 summary: Invalid velocity
- *                 value:
- *                   details: The velocity should be positive.
+ *                   example: Player should wait for its turn to fire.
  */
 
   router.post('/v1/fire', (req, res) => {
