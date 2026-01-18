@@ -38,6 +38,10 @@ canvas {
   margin: 20px auto;
   image-rendering: pixelated;
 }
+/* Highlight for active player's turn */
+.active-turn-name {
+  color: #ffd700 !important; /* requires !important, otherwise doesn't show */
+}
 
 #controls {
   display: flex;

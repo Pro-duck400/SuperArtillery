@@ -24,15 +24,21 @@ renderer.render(null);
 console.log('Renderer initialized');
 
 // Create core components
+
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
 const uiManager = new UIManager();
 const gameClient = new GameClient(API_BASE_URL, WS_BASE_URL, game);
 
+// provide global access from game and gameClient to UIManager
+// @ts-ignore
+window.game = game;
+// @ts-ignore
+window.gameClient = gameClient;
+
 
 // Wire up UI events
 let clientName = '';
-let opponentName = ''; // not used yet
 uiManager.onRegister(async (playerName: string) => {
   try {
     clientName = playerName;
@@ -96,7 +102,6 @@ gameClient.onGameStart((gameId: number) => {
   const leftNameEl = document.getElementById('playerNameLeft');
   const rightNameEl = document.getElementById('playerNameRight');
   if (playerId === 0) {
-    // if (leftNameEl) leftNameEl.textContent = clientName;
     if (rightNameEl) {
       rightNameEl.textContent = opponentName;
       rightNameEl.style.color = '#ffffff';
