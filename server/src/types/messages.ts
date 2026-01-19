@@ -3,6 +3,7 @@
 export interface GameStartMessage {
   type: "game_start";
   gameId: number;
+  opponentName: string;
 }
 
 export interface ShotMessage {

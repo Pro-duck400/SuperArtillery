@@ -2,7 +2,7 @@
 import { Game } from './game';
 import { WebSocketClient } from './network/websocket';
 import { ApiClient } from './network/api';
-import type { GameMessage } from './types/messages';
+import type { GameMessage, GameStartMessage } from './types/messages';
 
 export interface ShotEventData {
   playerId: number;
@@ -15,6 +15,7 @@ export class GameClient {
   private apiClient: ApiClient;
   private wsClient: WebSocketClient | null = null;
   private wsBaseUrl: string;
+  private lastGameStartMessage: GameStartMessage | null = null;
 
   // Event callbacks
   private onGameStartCallback: ((gameId: number) => void) | null = null;
@@ -71,6 +72,7 @@ export class GameClient {
     switch (message.type) {
       case 'game_start':
         this.game.setGameId(message.gameId);
+        this.lastGameStartMessage = message;
         if (this.onGameStartCallback) {
           this.onGameStartCallback(message.gameId);
         }
@@ -134,5 +136,9 @@ export class GameClient {
    */
   public getPlayerId(): number | null {
     return this.game.getPlayerId();
+  }
+
+  public getLastGameStartMessage(): GameStartMessage | null {
+    return this.lastGameStartMessage;
   }
 }

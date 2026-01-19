@@ -3,6 +3,7 @@
 export interface GameStartMessage {
   type: "game_start";
   gameId: number;
+  opponentName: string;
 }
 
 export interface ShotMessage {
@@ -21,6 +22,5 @@ export interface GameOverMessage {
   type: "game_over";
   playerId_winner: 0 | 1;
 }
-
 
 export type GameMessage = GameStartMessage | ShotMessage | TurnChangeMessage | GameOverMessage;
