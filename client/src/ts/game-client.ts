@@ -36,7 +36,7 @@ export class GameClient {
   public async register(playerName: string): Promise<void> {
     // Step 1: Register via HTTP
     const { playerId } = await this.apiClient.register(playerName);
-    this.game.setPlayerId(playerId);
+    this.game.setPlayer(playerId, playerName);
     console.log(`Registered as Player ${playerId} (${playerName})`);
 
     // Step 2: Connect WebSocket with playerId
@@ -71,6 +71,7 @@ export class GameClient {
   private handleMessage(message: GameMessage): void {
     switch (message.type) {
       case 'game_start':
+        this.game.setOpponentName(message.opponentName);
         this.game.setGameId(message.gameId);
         this.lastGameStartMessage = message;
         if (this.onGameStartCallback) {

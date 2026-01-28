@@ -45,6 +45,21 @@ export class GameManager {
     return { success: false, error: 'Server is full', statusCode: 403 };
   }
 
+  broadcastGameStart(): void {
+    this.playerConnections.forEach((ws, i) => {
+      const opponentId = i === 0 ? 1 : 0;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const startMessage: GameStartMessage = {
+          type: 'game_start',
+          gameId: this.gameId,
+          opponentName: this.playerNames[opponentId] || "",
+        };
+        ws.send(JSON.stringify(startMessage));
+        console.log(`Sent game_start to Player ${i} (${this.playerNames[i]}), opponent: ${this.playerNames[opponentId]}`);
+      }
+    });
+  }
+  
   /**
    * Connect a WebSocket for a registered player
    * @returns true if connection successful, false otherwise
