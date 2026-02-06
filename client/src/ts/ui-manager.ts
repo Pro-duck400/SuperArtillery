@@ -158,7 +158,7 @@ export class UIManager {
    * Update UI based on turn state and highlight current player's name
    * @param isMyTurn Whether it's this client's turn
    */
-  public updateTurnUI(isMyTurn: boolean): void {
+  public updateTurnUI(currentTurn: 0 | 1, isMyTurn: boolean): void {
     this.fireButton.disabled = !isMyTurn;
     if (isMyTurn) {
       this.statusEl.textContent = 'Your Turn';
@@ -173,7 +173,6 @@ export class UIManager {
     // Highlight only the player whose turn it is
     const leftNameEl = document.getElementById('playerNameLeft');
     const rightNameEl = document.getElementById('playerNameRight');
-    let currentTurn: 0 | 1 = 0;
     try {
       // @ts-ignore
       if (window && window.game) {
