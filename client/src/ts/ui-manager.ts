@@ -100,20 +100,16 @@ export class UIManager {
     if (playerId === 0) {
         if (leftNameEl) {
             leftNameEl.textContent = playerName;
-            leftNameEl.style.color = '#ffffff';
         }
         if (rightNameEl) {
             rightNameEl.textContent = opponentName;
-            rightNameEl.style.color = '#ffffff';
         }
     } else {
         if (leftNameEl) {
             leftNameEl.textContent = opponentName;
-            leftNameEl.style.color = '#ffffff';
         }
         if (rightNameEl) {
             rightNameEl.textContent = playerName;
-            rightNameEl.style.color = '#ffffff';
         }
     }
   }
