@@ -122,7 +122,9 @@ export class GameManager {
           gameId: this.gameId,
           opponentName: this.playerNames[opponentId] || "",
         };
-        ws.send(JSON.stringify(startMessage));
+        const messageStr = JSON.stringify(startMessage);
+        console.log(`📤 Broadcasting to Player ${i} (${this.playerNames[i]}):`, messageStr);
+        ws.send(messageStr);
       }
     }
 

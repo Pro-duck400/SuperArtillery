@@ -1,10 +1,3 @@
-// Add global type declarations for window.game and window.gameClient
-declare global {
-  interface Window {
-    game?: { getState: () => { currentTurn: 0 | 1 }, getPlayerId: () => 0 | 1 | null };
-    gameClient?: { game: { getState: () => { currentTurn: 0 | 1 } } };
-  }
-}
 // Manages all DOM interactions and UI state
 export class UIManager {
   // DOM elements
@@ -64,6 +57,8 @@ export class UIManager {
       }
     });
 
+
+
     // Enter key in name input
     this.playerNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -96,6 +91,33 @@ export class UIManager {
       }
     });
   }
+
+  // changed playerId parameter from 0 | 1 to string as it causes an error in main when called
+  public setPlayerNames(playerId: number, playerName: string, opponentName: string): void {
+    const leftNameEl = document.getElementById('playerNameLeft');
+    const rightNameEl = document.getElementById('playerNameRight');
+    
+    if (playerId === 0) {
+        if (leftNameEl) {
+            leftNameEl.textContent = playerName;
+            leftNameEl.style.color = '#ffffff';
+        }
+        if (rightNameEl) {
+            rightNameEl.textContent = opponentName;
+            rightNameEl.style.color = '#ffffff';
+        }
+    } else {
+        if (leftNameEl) {
+            leftNameEl.textContent = opponentName;
+            leftNameEl.style.color = '#ffffff';
+        }
+        if (rightNameEl) {
+            rightNameEl.textContent = playerName;
+            rightNameEl.style.color = '#ffffff';
+        }
+    }
+  }
+
 
   /**
    * Register callback for registration event
@@ -171,28 +193,19 @@ export class UIManager {
     }
 
     // Highlight only the player whose turn it is
-    const leftNameEl = document.getElementById('playerNameLeft');
-    const rightNameEl = document.getElementById('playerNameRight');
-    try {
-      // @ts-ignore
-      if (window && window.game) {
-        currentTurn = window.game.getState().currentTurn;
-      }
-    } catch {}
-    if (typeof window !== 'undefined' && window.gameClient) {
-      try {
-        currentTurn = window.gameClient.game.getState().currentTurn;
-      } catch {}
-    }
-    if (leftNameEl && rightNameEl) {
-      leftNameEl.classList.remove('active-turn-name');
-      rightNameEl.classList.remove('active-turn-name');
+      const leftNameEl = document.getElementById('playerNameLeft');
+      const rightNameEl = document.getElementById('playerNameRight');
+
+      // Remove the active class from both
+      leftNameEl?.classList.remove('player-name-active-turn');
+      rightNameEl?.classList.remove('player-name-active-turn');
+
+      // Add the active class to the current player's name
       if (currentTurn === 0) {
-        leftNameEl.classList.add('active-turn-name');
+        leftNameEl?.classList.add('player-name-active-turn');
       } else {
-        rightNameEl.classList.add('active-turn-name');
+        rightNameEl?.classList.add('player-name-active-turn');
       }
-    }
   }
 
   /**

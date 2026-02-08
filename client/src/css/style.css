@@ -38,9 +38,27 @@ canvas {
   margin: 20px auto;
   image-rendering: pixelated;
 }
-/* Highlight for active player's turn */
-.active-turn-name {
-  color: #ffd700 !important; /* requires !important, otherwise doesn't show */
+
+.player-name {
+  width: 120px; 
+  font-weight: bold; 
+  color: #ffffff60;
+}
+
+.player-name-left {
+  text-align: left; 
+}
+
+.player-name-right {
+  text-align: right; 
+}
+
+.player-name-active-turn {
+  color: #ffd700;
+}
+
+.player-name-connected {
+  color: #ffffff;
 }
 
 #controls {
