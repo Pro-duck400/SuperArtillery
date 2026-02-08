@@ -24,18 +24,10 @@ renderer.render(null);
 console.log('Renderer initialized');
 
 // Create core components
-
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
 const uiManager = new UIManager();
 const gameClient = new GameClient(API_BASE_URL, WS_BASE_URL, game);
-
-// provide global access from game and gameClient to UIManager
-// @ts-ignore
-window.game = game;
-// @ts-ignore
-window.gameClient = gameClient;
-
 
 // Wire up UI events
 let clientName = '';
@@ -47,23 +39,12 @@ uiManager.onRegister(async (playerName: string) => {
     const playerId = gameClient.getPlayerId();
     if (playerId !== null) {
       uiManager.showGamePanel(playerId);
-      // Set left/right name immediately
-      const leftNameEl = document.getElementById('playerNameLeft');
-      const rightNameEl = document.getElementById('playerNameRight');
-
-      if (leftNameEl) {
-        const player0 = playerId === 0;
-        leftNameEl.textContent = player0 ? clientName : 'connecting...';
-        if (player0) leftNameEl.style.color = '#ffffff';
-      }
-
-      if (rightNameEl) {
-        const player1 = playerId === 1;
-        rightNameEl.textContent = player1 ? clientName : 'connecting...';
-        if (player1) rightNameEl.style.color = '#ffffff';
-      }
+      
+      const lastGameStartMessage = gameClient.getLastGameStartMessage()
+      const opponentName = (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string')
+        ? lastGameStartMessage. opponentName: 'connecting...';
+      uiManager.setPlayerNames(playerId, clientName, opponentName)
     }
-    
   } catch (error) {
     console.error('Registration failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
@@ -133,7 +114,7 @@ gameClient.onShot((data) => {
 });
 
 gameClient.onTurnChange((playerId: number, isMyTurn: boolean) => {
-  uiManager.updateTurnUI(isMyTurn);
+  uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
   uiManager.setMessage(isMyTurn ? 'Your turn!' : "Opponent's turn");
 });
 
