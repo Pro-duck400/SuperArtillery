@@ -1,8 +1,21 @@
 // Shared message types between client and server
 
+export interface BattlefieldConfig {
+  terrain: number[]; // array for terrain heights/points
+  castles: [CastleConfig, CastleConfig];
+} 
+
+export interface CastleConfig {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface GameStartMessage {
   type: "game_start";
   gameId: number;
+  battlefield: BattlefieldConfig;
 }
 
 export interface ShotMessage {
