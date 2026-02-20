@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { GameStartMessage, TurnChangeMessage, GameOverMessage } from '../types/messages';
+import { BattlefieldConfig, GameStartMessage, TurnChangeMessage, GameOverMessage } from '../types/messages';
 
 /**
  * Ultra-minimal game manager for MVP
@@ -89,6 +89,19 @@ export class GameManager {
     return this.playerConnections[0] !== null && this.playerConnections[1] !== null;
   }
 
+  private getBattlefield(): BattlefieldConfig {
+    return {
+      canvasWidth: 280,
+      canvasHeight: 160,
+      gravity: 100,
+      castles: [
+        { playerId: 0, x: 20, y: 10, width: 10, height: 10 },
+        { playerId: 1, x: 240, y: 10, width: 10, height: 10 }
+      ]
+    }
+  }
+
+
   /**
    * Start the game when both players are connected
    */
@@ -101,6 +114,7 @@ export class GameManager {
     const gameStartMessage: GameStartMessage = {
       type: 'game_start',
       gameId: this.gameId,
+      battlefield: this.getBattlefield(),
     };
     this.broadcast(gameStartMessage);
 

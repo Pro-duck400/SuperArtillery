@@ -1,11 +1,14 @@
 // Shared message types between client and server
 
 export interface BattlefieldConfig {
-  terrain: number[]; // array for terrain heights/points
+  canvasWidth: number;
+  canvasHeight: number;
+  gravity: number;
   castles: [CastleConfig, CastleConfig];
 } 
 
 export interface CastleConfig {
+  playerId: number;
   x: number;
   y: number;
   width: number;
