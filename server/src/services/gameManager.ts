@@ -11,6 +11,21 @@ export class GameManager {
   private currentTurn: 0 | 1 = 0;
   private gameStarted: boolean = false;
   private gameId: number = 1; // MVP: single game instance
+  private config: BattlefieldConfig;
+
+  constructor() {
+    this.config = {
+      canvasWidth: 280,
+      canvasHeight: 160,
+      gravity: 100,
+      castles: [
+        { playerId: 0, x: 20, y: 10, width: 10, height: 10 },
+        { playerId: 1, x: 240, y: 10, width: 10, height: 10 }
+      ]
+    };
+  }
+
+
 
   /**
    * Register a player with a name (HTTP endpoint)
@@ -89,19 +104,6 @@ export class GameManager {
     return this.playerConnections[0] !== null && this.playerConnections[1] !== null;
   }
 
-  private getBattlefield(): BattlefieldConfig {
-    return {
-      canvasWidth: 280,
-      canvasHeight: 160,
-      gravity: 100,
-      castles: [
-        { playerId: 0, x: 20, y: 10, width: 10, height: 10 },
-        { playerId: 1, x: 240, y: 10, width: 10, height: 10 }
-      ]
-    }
-  }
-
-
   /**
    * Start the game when both players are connected
    */
@@ -114,7 +116,7 @@ export class GameManager {
     const gameStartMessage: GameStartMessage = {
       type: 'game_start',
       gameId: this.gameId,
-      battlefield: this.getBattlefield(),
+      battlefield: this.config,
     };
     this.broadcast(gameStartMessage);
 
@@ -249,13 +251,30 @@ export class GameManager {
       velocity
     });
 
-    this.currentTurn = this.currentTurn === 0 ? 1 : 0;
+    const hitDetected = this.detectHit(playerId, angle, velocity);
+    if (hitDetected) {
+      const winnerId = playerId;
+      const gameOverMsg: GameOverMessage = {
+        type: "game_over",
+        playerId_winner:  winnerId
+      };
+      this.broadcast(gameOverMsg)
+      this.reset()
+      return { success: true };
+    } else {
+      this.currentTurn = this.currentTurn === 0 ? 1 : 0;
+      this.broadcast({
+        type: 'turn_change',
+        playerId_turn: this.currentTurn
+      }); 
 
-    this.broadcast({
-      type: 'turn_change',
-      playerId_turn: this.currentTurn
-    });
+      return { success: true };
+    }
+  }
 
-    return { success: true };
+  private detectHit(playerId: 0 | 1, angle: number, velocity: number): boolean {
+  // TODO: replace with real physics logic
+  // for now, just use chance to hit player 20% of the time
+  return Math.random() < 0.2;
   }
 }
