@@ -1,5 +1,6 @@
 // Game state and turn management
 import type { GameState } from './types/game';
+import type { BattlefieldConfig } from './types/messages';
 
 export class Game {
   private state: GameState = {
@@ -8,6 +9,7 @@ export class Game {
     isMyTurn: false,
   };
   private gameId: number | null = null;
+  private battlefield: BattlefieldConfig | null = null;
 
   public getState(): GameState {
     return { ...this.state };
@@ -24,6 +26,14 @@ export class Game {
 
   public getGameId(): number | null {
     return this.gameId;
+  }
+
+  public setBattlefield(battlefield: BattlefieldConfig): void {
+    this.battlefield = battlefield;
+  }
+
+  public getBattlefield(): BattlefieldConfig | null {
+    return this.battlefield;
   }
 
   public getPlayerId(): 0 | 1 | null {

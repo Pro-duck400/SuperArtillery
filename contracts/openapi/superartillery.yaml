@@ -1,0 +1,257 @@
+openapi: 3.1.0
+info:
+  title: SuperArtillery API
+  version: 1.0.0
+  description: Contract-first API specification for REST endpoints and server-to-client game messages.
+servers:
+  - url: http://localhost:3000
+tags:
+  - name: Health
+  - name: Players
+  - name: Gameplay
+paths:
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: Health check for the server
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/register:
+    post:
+      tags: [Players]
+      summary: Register a player
+      description: Register a player on the server.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+        '400':
+          description: Name is missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Server is full
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Player name already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/fire:
+    post:
+      tags: [Gameplay]
+      summary: Fire a shot
+      description: If accepted, the server broadcasts `shot` and then either `turn_change` or `game_over`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FireRequest'
+      responses:
+        '200':
+          description: Fire action accepted
+        '400':
+          description: Validation or game-state error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    PlayerId:
+      type: integer
+      enum: [0, 1]
+
+    Position:
+      type: object
+      additionalProperties: false
+      required: [x, y]
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+
+    Castle:
+      type: object
+      additionalProperties: false
+      required: [playerId, left_x]
+      properties:
+        playerId:
+          $ref: '#/components/schemas/PlayerId'
+        left_x:
+          type: number
+
+    Battlefield:
+      type: object
+      additionalProperties: false
+      required: [canvasWidth, canvasHeight, gravity, groundY, castleWidth, castleHeight, castles]
+      properties:
+        canvasWidth:
+          type: number
+        canvasHeight:
+          type: number
+        gravity:
+          type: number
+        groundY:
+          type: number
+        castleWidth:
+          type: number
+        castleHeight:
+          type: number
+        castles:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/Castle'
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    RegisterSuccessResponse:
+      type: object
+      additionalProperties: false
+      required: [playerId]
+      properties:
+        playerId:
+          $ref: '#/components/schemas/PlayerId'
+
+    FireRequest:
+      type: object
+      additionalProperties: false
+      required: [gameId, playerId, angle, velocity]
+      properties:
+        gameId:
+          type: integer
+          minimum: 1
+        playerId:
+          $ref: '#/components/schemas/PlayerId'
+        angle:
+          type: number
+          minimum: 0
+          maximum: 999
+        velocity:
+          type: number
+          exclusiveMinimum: 0
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [details]
+      properties:
+        details:
+          type: string
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, timestamp, uptime, players, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+        players:
+          type: integer
+          minimum: 0
+        version:
+          type: string
+
+    GameStartMessage:
+      type: object
+      additionalProperties: false
+      required: [type, gameId, battlefield]
+      properties:
+        type:
+          type: string
+          const: game_start
+        gameId:
+          type: integer
+        battlefield:
+          $ref: '#/components/schemas/Battlefield'
+
+    ShotMessage:
+      type: object
+      additionalProperties: false
+      required: [type, playerId, angle, velocity]
+      properties:
+        type:
+          type: string
+          const: shot
+        playerId:
+          $ref: '#/components/schemas/PlayerId'
+        angle:
+          type: number
+        velocity:
+          type: number
+
+    TurnChangeMessage:
+      type: object
+      additionalProperties: false
+      required: [type, playerId_turn]
+      properties:
+        type:
+          type: string
+          const: turn_change
+        playerId_turn:
+          $ref: '#/components/schemas/PlayerId'
+
+    GameOverMessage:
+      type: object
+      additionalProperties: false
+      required: [type, playerId_winner]
+      properties:
+        type:
+          type: string
+          const: game_over
+        playerId_winner:
+          $ref: '#/components/schemas/PlayerId'
+
+    GameMessage:
+      oneOf:
+        - $ref: '#/components/schemas/GameStartMessage'
+        - $ref: '#/components/schemas/ShotMessage'
+        - $ref: '#/components/schemas/TurnChangeMessage'
+        - $ref: '#/components/schemas/GameOverMessage'
+      discriminator:
+        propertyName: type
+        mapping:
+          game_start: '#/components/schemas/GameStartMessage'
+          shot: '#/components/schemas/ShotMessage'
+          turn_change: '#/components/schemas/TurnChangeMessage'
+          game_over: '#/components/schemas/GameOverMessage'

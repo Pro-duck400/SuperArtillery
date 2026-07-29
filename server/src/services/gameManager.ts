@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
-import { BattlefieldConfig, GameStartMessage, TurnChangeMessage, GameOverMessage } from '../types/messages';
+import type { Battlefield, GameStartMessage, TurnChangeMessage, GameOverMessage, ShotMessage } from '../types/messages';
+import { calculateVelocityComponents, checkCastleCollision } from '../utils/physics';
 
 /**
  * Ultra-minimal game manager for MVP
@@ -11,21 +12,22 @@ export class GameManager {
   private currentTurn: 0 | 1 = 0;
   private gameStarted: boolean = false;
   private gameId: number = 1; // MVP: single game instance
-  private config: BattlefieldConfig;
+  private battlefield: Battlefield;
 
   constructor() {
-    this.config = {
+    this.battlefield = {
       canvasWidth: 280,
       canvasHeight: 160,
       gravity: 100,
+      groundY: 140,
+      castleWidth: 10,
+      castleHeight: 10,
       castles: [
-        { playerId: 0, x: 20, y: 10, width: 10, height: 10 },
-        { playerId: 1, x: 240, y: 10, width: 10, height: 10 }
+        { playerId: 0, left_x: 20 },
+        { playerId: 1, left_x: 250 }
       ]
     };
   }
-
-
 
   /**
    * Register a player with a name (HTTP endpoint)
@@ -116,7 +118,7 @@ export class GameManager {
     const gameStartMessage: GameStartMessage = {
       type: 'game_start',
       gameId: this.gameId,
-      battlefield: this.config,
+      battlefield: this.battlefield,
     };
     this.broadcast(gameStartMessage);
 
@@ -244,37 +246,60 @@ export class GameManager {
       };
     }
 
-    this.broadcast({
+    // After validations pass, before broadcasting shot:
+
+    // Determine which player is the target (opponent)
+    const targetPlayerId = playerId === 0 ? 1 : 0;
+    const targetCastle = this.battlefield.castles[targetPlayerId];
+    const firingCastle = this.battlefield.castles[playerId];
+
+    // Match client aiming convention: player 1 shoots toward the left.
+    const adjustedAngle = playerId === 1 ? (180 - angle) : angle;
+    const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
+
+    // Starting position (top of firing castle)
+    const x0 = firingCastle.left_x + this.battlefield.castleWidth / 2;
+    const y0 = this.battlefield.groundY - this.battlefield.castleHeight;
+
+    // Check collision with target castle
+    const hitTime = checkCastleCollision(
+      x0, y0,
+      vx, vy,
+      this.battlefield.gravity,
+      targetCastle.left_x + this.battlefield.castleWidth / 2,
+      this.battlefield.castleWidth,
+      this.battlefield.castleHeight,
+      this.battlefield.groundY
+    );
+
+    // Broadcast shot message
+    const shotMessage: ShotMessage = {
       type: 'shot',
       playerId,
       angle,
       velocity
-    });
+    };
+    this.broadcast(shotMessage);
 
-    const hitDetected = this.detectHit(playerId, angle, velocity);
-    if (hitDetected) {
-      const winnerId = playerId;
-      const gameOverMsg: GameOverMessage = {
-        type: "game_over",
-        playerId_winner:  winnerId
+    // Check if hit
+    if (hitTime !== null) {
+      // Game over - firing player wins
+      const gameOverMessage: GameOverMessage = {
+        type: 'game_over',
+        playerId_winner: playerId
       };
-      this.broadcast(gameOverMsg)
-      this.reset()
-      return { success: true };
-    } else {
-      this.currentTurn = this.currentTurn === 0 ? 1 : 0;
-      this.broadcast({
-        type: 'turn_change',
-        playerId_turn: this.currentTurn
-      }); 
-
+      this.handleGameOver(gameOverMessage);
       return { success: true };
     }
-  }
 
-  private detectHit(playerId: 0 | 1, angle: number, velocity: number): boolean {
-  // TODO: replace with real physics logic
-  // for now, just use chance to hit player 20% of the time
-  return Math.random() < 0.2;
+    // Miss - switch turns
+    this.currentTurn = this.currentTurn === 0 ? 1 : 0;
+    const turnMessage: TurnChangeMessage = {
+      type: 'turn_change',
+      playerId_turn: this.currentTurn
+    };
+    this.broadcast(turnMessage);
+
+    return { success: true };
   }
 }
