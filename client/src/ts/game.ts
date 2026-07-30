@@ -10,13 +10,16 @@ export class Game {
   };
   private gameId: number | null = null;
   private battlefield: BattlefieldConfig | null = null;
+  private playerName: string | null = null;
+  private opponentName: string | null = null;
 
   public getState(): GameState {
     return { ...this.state };
   }
 
-  public setPlayerId(id: 0 | 1): void {
+  public setPlayer(id: 0 | 1, playerName: string): void {
     this.state.playerId = id;
+    this.playerName = playerName;
     this.updateTurnState();
   }
 
@@ -48,4 +51,17 @@ export class Game {
   private updateTurnState(): void {
     this.state.isMyTurn = this.state.playerId !== null && this.state.playerId === this.state.currentTurn;
   }
+
+  public setOpponentName(name: string): void {
+    this.opponentName = name;
+  }
+
+  public getPlayerName(): string | null {
+    return this.playerName;
+  }
+
+  public getOpponentName(): string | null {
+    return this.opponentName;
+  }
 }
+

@@ -57,6 +57,8 @@ export class UIManager {
       }
     });
 
+
+
     // Enter key in name input
     this.playerNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -89,6 +91,29 @@ export class UIManager {
       }
     });
   }
+
+  // changed playerId parameter from 0 | 1 to string as it causes an error in main when called
+  public setPlayerNames(playerId: number, playerName: string, opponentName: string): void {
+    const leftNameEl = document.getElementById('playerNameLeft');
+    const rightNameEl = document.getElementById('playerNameRight');
+    
+    if (playerId === 0) {
+        if (leftNameEl) {
+            leftNameEl.textContent = playerName;
+        }
+        if (rightNameEl) {
+            rightNameEl.textContent = opponentName;
+        }
+    } else {
+        if (leftNameEl) {
+            leftNameEl.textContent = opponentName;
+        }
+        if (rightNameEl) {
+            rightNameEl.textContent = playerName;
+        }
+    }
+  }
+
 
   /**
    * Register callback for registration event
@@ -147,9 +172,12 @@ export class UIManager {
   /**
    * Update UI based on turn state
    */
-  public updateTurnUI(isMyTurn: boolean): void {
+  /**
+   * Update UI based on turn state and highlight current player's name
+   * @param isMyTurn Whether it's this client's turn
+   */
+  public updateTurnUI(currentTurn: 0 | 1, isMyTurn: boolean): void {
     this.fireButton.disabled = !isMyTurn;
-    
     if (isMyTurn) {
       this.statusEl.textContent = 'Your Turn';
       this.angleInput.disabled = false;
@@ -159,6 +187,21 @@ export class UIManager {
       this.angleInput.disabled = true;
       this.velocityInput.disabled = true;
     }
+
+    // Highlight only the player whose turn it is
+      const leftNameEl = document.getElementById('playerNameLeft');
+      const rightNameEl = document.getElementById('playerNameRight');
+
+      // Remove the active class from both
+      leftNameEl?.classList.remove('player-name-active-turn');
+      rightNameEl?.classList.remove('player-name-active-turn');
+
+      // Add the active class to the current player's name
+      if (currentTurn === 0) {
+        leftNameEl?.classList.add('player-name-active-turn');
+      } else {
+        rightNameEl?.classList.add('player-name-active-turn');
+      }
   }
 
   /**

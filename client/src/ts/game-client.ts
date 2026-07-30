@@ -2,7 +2,7 @@
 import { Game } from './game';
 import { WebSocketClient } from './network/websocket';
 import { ApiClient } from './network/api';
-import type { BattlefieldConfig, GameMessage } from './types/messages';
+import type { BattlefieldConfig, GameMessage, GameStartMessage } from './types/messages';
 
 export interface ShotEventData {
   playerId: number;
@@ -15,6 +15,7 @@ export class GameClient {
   private apiClient: ApiClient;
   private wsClient: WebSocketClient | null = null;
   private wsBaseUrl: string;
+  private lastGameStartMessage: GameStartMessage | null = null;
 
   // Event callbacks
   private onGameStartCallback: ((gameId: number, battlefield: BattlefieldConfig) => void) | null = null;
@@ -35,7 +36,7 @@ export class GameClient {
   public async register(playerName: string): Promise<void> {
     // Step 1: Register via HTTP
     const { playerId } = await this.apiClient.register(playerName);
-    this.game.setPlayerId(playerId);
+    this.game.setPlayer(playerId, playerName);
     console.log(`Registered as Player ${playerId} (${playerName})`);
 
     // Step 2: Connect WebSocket with playerId
@@ -70,8 +71,10 @@ export class GameClient {
   private handleMessage(message: GameMessage): void {
     switch (message.type) {
       case 'game_start':
+        this.game.setOpponentName(message.opponentName);
         this.game.setGameId(message.gameId);
         this.game.setBattlefield(message.battlefield);
+        this.lastGameStartMessage = message;
         if (this.onGameStartCallback) {
           this.onGameStartCallback(message.gameId, message.battlefield);
         }
@@ -135,5 +138,9 @@ export class GameClient {
    */
   public getPlayerId(): number | null {
     return this.game.getPlayerId();
+  }
+
+  public getLastGameStartMessage(): GameStartMessage | null {
+    return this.lastGameStartMessage;
   }
 }

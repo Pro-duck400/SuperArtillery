@@ -195,13 +195,15 @@ components:
     GameStartMessage:
       type: object
       additionalProperties: false
-      required: [type, gameId, battlefield]
+      required: [type, gameId, opponentName, battlefield]
       properties:
         type:
           type: string
           const: game_start
         gameId:
           type: integer
+        opponentName:
+          type: string
         battlefield:
           $ref: '#/components/schemas/Battlefield'
 

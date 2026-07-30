@@ -30,13 +30,20 @@ const uiManager = new UIManager();
 const gameClient = new GameClient(API_BASE_URL, WS_BASE_URL, game);
 
 // Wire up UI events
+let clientName = '';
 uiManager.onRegister(async (playerName: string) => {
   try {
+    clientName = playerName;
     uiManager.showRegistering();
     await gameClient.register(playerName);
     const playerId = gameClient.getPlayerId();
     if (playerId !== null) {
       uiManager.showGamePanel(playerId);
+      
+      const lastGameStartMessage = gameClient.getLastGameStartMessage()
+      const opponentName = (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string')
+        ? lastGameStartMessage. opponentName: 'connecting...';
+      uiManager.setPlayerNames(playerId, clientName, opponentName)
     }
   } catch (error) {
     console.error('Registration failed:', error);
@@ -55,7 +62,7 @@ uiManager.onFire(async (angle: number, velocity: number) => {
     console.error('Fire failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Fire action failed';
     uiManager.setMessage(errorMessage);
-    uiManager.updateTurnUI(game.getState().isMyTurn);
+    uiManager.updateTurnUI(game.getState().currentTurn, game.getState().isMyTurn);
   }
 });
 
@@ -75,6 +82,28 @@ gameClient.onGameStart((gameId: number, battlefield) => {
   );
 
   const playerId = gameClient.getPlayerId();
+  // Get opponent name from GameStartMessage if available
+  let opponentName = '';
+  const lastGameStartMessage = gameClient.getLastGameStartMessage();
+  if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
+    opponentName = lastGameStartMessage.opponentName;
+  }
+  // Set both names in DOM  
+  const leftNameEl = document.getElementById('playerNameLeft');
+  const rightNameEl = document.getElementById('playerNameRight');
+  if (playerId === 0) {
+    if (rightNameEl) {
+      rightNameEl.textContent = opponentName;
+      rightNameEl.style.color = '#ffffff';
+    } 
+
+  } else {
+    if (leftNameEl) {
+    leftNameEl.textContent = opponentName;
+    leftNameEl.style.color = '#ffffff';
+    }
+  }
+
   uiManager.setStatus(`Game #${gameId} - You are Player ${(playerId ?? 0) + 1}`);
   uiManager.setMessage('Game starting! Waiting for first turn...');
 });
@@ -93,8 +122,8 @@ gameClient.onShot((data) => {
   animator.fire(data.angle, data.velocity, startX, shooterId);
 });
 
-gameClient.onTurnChange((_playerId: number, isMyTurn: boolean) => {
-  uiManager.updateTurnUI(isMyTurn);
+gameClient.onTurnChange((playerId: number, isMyTurn: boolean) => {
+  uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
   uiManager.setMessage(isMyTurn ? 'Your turn!' : "Opponent's turn");
 });
 

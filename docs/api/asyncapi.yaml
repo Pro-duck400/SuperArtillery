@@ -1,0 +1,127 @@
+asyncapi: 2.6.0
+info:
+  title: SuperArtillery WebSocket Events
+  version: 1.0.0
+  description: >-
+    Concise WebSocket message contract generated from current server implementation.
+defaultContentType: application/json
+servers:
+  local:
+    url: localhost:3000
+    protocol: ws
+    description: Connect using ws://localhost:3000?playerId={0|1}
+channels:
+  game/events:
+    description: >-
+      Server-to-client game events sent to connected players.
+      Connection requirement: include query parameter playerId with value 0 or 1.
+    subscribe:
+      operationId: onGameEvent
+      message:
+        oneOf:
+          - $ref: '#/components/messages/GameStart'
+          - $ref: '#/components/messages/Shot'
+          - $ref: '#/components/messages/TurnChange'
+          - $ref: '#/components/messages/GameOver'
+          - $ref: '#/components/messages/Error'
+components:
+  messages:
+    GameStart:
+      name: game_start
+      title: Game start
+      payload:
+        $ref: '#/components/schemas/GameStartPayload'
+    Shot:
+      name: shot
+      title: Shot fired
+      payload:
+        $ref: '#/components/schemas/ShotPayload'
+    TurnChange:
+      name: turn_change
+      title: Turn changed
+      payload:
+        $ref: '#/components/schemas/TurnChangePayload'
+    GameOver:
+      name: game_over
+      title: Game over
+      payload:
+        $ref: '#/components/schemas/GameOverPayload'
+    Error:
+      name: error
+      title: Connection error
+      payload:
+        $ref: '#/components/schemas/ErrorPayload'
+  schemas:
+    GameStartPayload:
+      type: object
+      required:
+        - type
+        - gameId
+        - opponentName
+      properties:
+        type:
+          type: string
+          enum: [game_start]
+        gameId:
+          type: number
+        opponentName:
+          type: string
+    ShotPayload:
+      type: object
+      required:
+        - type
+        - playerId
+        - angle
+        - velocity
+      properties:
+        type:
+          type: string
+          enum: [shot]
+        playerId:
+          type: integer
+          enum: [0, 1]
+        angle:
+          type: number
+          minimum: 0
+          maximum: 360
+        velocity:
+          type: number
+          exclusiveMinimum: 0
+    TurnChangePayload:
+      type: object
+      required:
+        - type
+        - playerId_turn
+      properties:
+        type:
+          type: string
+          enum: [turn_change]
+        playerId_turn:
+          type: integer
+          enum: [0, 1]
+    GameOverPayload:
+      type: object
+      required:
+        - type
+        - playerId_winner
+      properties:
+        type:
+          type: string
+          enum: [game_over]
+        playerId_winner:
+          type: integer
+          enum: [0, 1]
+    ErrorPayload:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          type: string
+          enum: [error]
+        message:
+          type: string
+          enum:
+            - Invalid or missing playerId
+            - Player not registered

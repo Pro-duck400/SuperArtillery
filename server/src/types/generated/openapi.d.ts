@@ -214,6 +214,7 @@ export interface components {
              */
             type: "game_start";
             gameId: number;
+            opponentName: string;
             battlefield: components["schemas"]["Battlefield"];
         };
         ShotMessage: {

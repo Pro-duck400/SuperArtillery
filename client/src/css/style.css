@@ -39,6 +39,28 @@ canvas {
   image-rendering: pixelated;
 }
 
+.player-name {
+  width: 120px; 
+  font-weight: bold; 
+  color: #ffffff60;
+}
+
+.player-name-left {
+  text-align: left; 
+}
+
+.player-name-right {
+  text-align: right; 
+}
+
+.player-name-active-turn {
+  color: #ffd700;
+}
+
+.player-name-connected {
+  color: #ffffff;
+}
+
 #controls {
   display: flex;
   gap: 15px;
