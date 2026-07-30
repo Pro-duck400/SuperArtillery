@@ -59,3 +59,17 @@ Supporting docs:
 npm run contracts:generate
 npm run contracts:check
 ```
+
+## Deploy Client To GitHub Pages
+
+This repository now includes a GitHub Actions workflow that builds and deploys the Vite client from `client/` to GitHub Pages.
+
+1. Push to `main` (or run the `Deploy Client To GitHub Pages` workflow manually from Actions).
+2. In GitHub repository settings, ensure Pages source is set to GitHub Actions.
+3. After deployment, the site URL will look like:
+	- `https://<your-username>.github.io/SuperArtillery/`
+
+Important runtime note:
+
+- The hosted client is static only. It still needs a reachable backend server for API and WebSocket.
+- In the game registration screen, set `Server address` to your deployed backend URL (for example, a Render/Fly/Railway host).
