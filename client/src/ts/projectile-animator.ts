@@ -9,13 +9,21 @@ export class ProjectileAnimator {
   private trajectory: Array<{ x: number; y: number }> = [];
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
-  private readonly GROUND_Y = 140;
-  private readonly CASTLE_HEIGHT = 10;
+  private groundY = 140;
+  private launchY = 130;
+  private gravity = 600;
   private canvasWidth: number;
 
   constructor(renderer: Renderer, canvasWidth: number) {
     this.renderer = renderer;
     this.canvasWidth = canvasWidth;
+  }
+
+  public configureScene(canvasWidth: number, groundY: number, launchY: number, gravity: number): void {
+    this.canvasWidth = canvasWidth;
+    this.groundY = groundY;
+    this.launchY = launchY;
+    this.gravity = gravity;
   }
 
   /**
@@ -34,7 +42,7 @@ export class ProjectileAnimator {
     // Initialize projectile at castle position
     this.currentProjectile = {
       x: startX,
-      y: this.GROUND_Y - this.CASTLE_HEIGHT,
+      y: this.launchY,
       vx,
       vy
     };
@@ -79,13 +87,13 @@ export class ProjectileAnimator {
 
     if (deltaTime > 0 && deltaTime < 0.1) {
       // Update projectile physics
-      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime);
+      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime, this.gravity);
       
       // Add to trajectory
       this.trajectory.push({ x: this.currentProjectile.x, y: this.currentProjectile.y });
 
       // Check if projectile hit ground or went off screen
-      if (this.currentProjectile.y >= this.GROUND_Y || 
+        if (this.currentProjectile.y >= this.groundY || 
           this.currentProjectile.x < 0 || 
           this.currentProjectile.x > this.canvasWidth) {
         // Projectile finished - render final state and stop

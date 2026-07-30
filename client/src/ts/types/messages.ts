@@ -1,26 +1,12 @@
-// Shared message types between client and server
+import type { components } from './generated/openapi';
 
-export interface GameStartMessage {
-  type: "game_start";
-  gameId: number;
-  opponentName: string;
-}
+export type Position = components['schemas']['Position'];
+export type CastleConfig = components['schemas']['Castle'];
+export type BattlefieldConfig = components['schemas']['Battlefield'];
 
-export interface ShotMessage {
-  type: "shot";
-  playerId: 0 | 1;
-  angle: number;
-  velocity: number;
-}
+export type GameStartMessage = components['schemas']['GameStartMessage'];
+export type ShotMessage = components['schemas']['ShotMessage'];
+export type TurnChangeMessage = components['schemas']['TurnChangeMessage'];
+export type GameOverMessage = components['schemas']['GameOverMessage'];
 
-export interface TurnChangeMessage {
-  type: "turn_change";
-  playerId_turn: 0 | 1;
-}
-
-export interface GameOverMessage {
-  type: "game_over";
-  playerId_winner: 0 | 1;
-}
-
-export type GameMessage = GameStartMessage | ShotMessage | TurnChangeMessage | GameOverMessage;
+export type GameMessage = components['schemas']['GameMessage'];

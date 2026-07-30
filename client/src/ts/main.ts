@@ -62,6 +62,7 @@ uiManager.onFire(async (angle: number, velocity: number) => {
     console.error('Fire failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Fire action failed';
     uiManager.setMessage(errorMessage);
+    uiManager.updateTurnUI(game.getState().currentTurn, game.getState().isMyTurn);
   }
 });
 
@@ -71,7 +72,15 @@ gameClient.onConnected(() => {
   uiManager.setMessage('Waiting for another player to join...');
 });
 
-gameClient.onGameStart((gameId: number) => {
+gameClient.onGameStart((gameId: number, battlefield) => {
+  renderer.applyBattlefield(battlefield);
+  animator.configureScene(
+    renderer.getCanvasWidth(),
+    renderer.getGroundY(),
+    renderer.getCastleTopY(),
+    battlefield.gravity
+  );
+
   const playerId = gameClient.getPlayerId();
   // Get opponent name from GameStartMessage if available
   let opponentName = '';
@@ -108,9 +117,9 @@ gameClient.onShot((data) => {
       : `Opponent fired: angle=${data.angle}°, velocity=${data.velocity}`
   );
   
-  // Fire from correct position based on which player fired (0 = left, 1 = right)
-  const startX = data.playerId === 0 ? 20 : 260;
-  animator.fire(data.angle, data.velocity, startX, data.playerId);
+  const shooterId = data.playerId === 0 ? 0 : 1;
+  const startX = renderer.getCastleMuzzleX(shooterId);
+  animator.fire(data.angle, data.velocity, startX, shooterId);
 });
 
 gameClient.onTurnChange((playerId: number, isMyTurn: boolean) => {
@@ -118,7 +127,7 @@ gameClient.onTurnChange((playerId: number, isMyTurn: boolean) => {
   uiManager.setMessage(isMyTurn ? 'Your turn!' : "Opponent's turn");
 });
 
-gameClient.onGameOver((winnerId: number, didIWin: boolean) => {
+gameClient.onGameOver((_winnerId: number, didIWin: boolean) => {
   uiManager.showGameOver(didIWin);
 });
 

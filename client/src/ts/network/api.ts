@@ -22,8 +22,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.details || 'Registration failed');
+      throw new Error(await this.extractErrorMessage(response, 'Registration failed'));
     }
 
     return response.json();
@@ -46,9 +45,25 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.details || 'Fire action failed');
+      throw new Error(await this.extractErrorMessage(response, 'Fire action failed'));
     }
+  }
+
+  private async extractErrorMessage(response: Response, fallback: string): Promise<string> {
+    try {
+      const errorBody = (await response.json()) as { details?: string; message?: string };
+      if (typeof errorBody.details === 'string' && errorBody.details.trim() !== '') {
+        return errorBody.details;
+      }
+
+      if (typeof errorBody.message === 'string' && errorBody.message.trim() !== '') {
+        return errorBody.message;
+      }
+    } catch {
+      // Ignore parse failures and fall back to status text/fallback below.
+    }
+
+    return response.statusText || fallback;
   }
 
   public getBaseUrl(): string {

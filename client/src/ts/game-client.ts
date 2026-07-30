@@ -2,7 +2,7 @@
 import { Game } from './game';
 import { WebSocketClient } from './network/websocket';
 import { ApiClient } from './network/api';
-import type { GameMessage, GameStartMessage } from './types/messages';
+import type { BattlefieldConfig, GameMessage, GameStartMessage } from './types/messages';
 
 export interface ShotEventData {
   playerId: number;
@@ -18,7 +18,7 @@ export class GameClient {
   private lastGameStartMessage: GameStartMessage | null = null;
 
   // Event callbacks
-  private onGameStartCallback: ((gameId: number) => void) | null = null;
+  private onGameStartCallback: ((gameId: number, battlefield: BattlefieldConfig) => void) | null = null;
   private onShotCallback: ((data: ShotEventData) => void) | null = null;
   private onTurnChangeCallback: ((playerId: number, isMyTurn: boolean) => void) | null = null;
   private onGameOverCallback: ((winnerId: number, didIWin: boolean) => void) | null = null;
@@ -73,9 +73,10 @@ export class GameClient {
       case 'game_start':
         this.game.setOpponentName(message.opponentName);
         this.game.setGameId(message.gameId);
+        this.game.setBattlefield(message.battlefield);
         this.lastGameStartMessage = message;
         if (this.onGameStartCallback) {
-          this.onGameStartCallback(message.gameId);
+          this.onGameStartCallback(message.gameId, message.battlefield);
         }
         break;
 
@@ -116,7 +117,7 @@ export class GameClient {
     this.onConnectedCallback = callback;
   }
 
-  public onGameStart(callback: (gameId: number) => void): void {
+  public onGameStart(callback: (gameId: number, battlefield: BattlefieldConfig) => void): void {
     this.onGameStartCallback = callback;
   }
 

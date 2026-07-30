@@ -1,12 +1,14 @@
 // Canvas rendering
 import type { Projectile } from './types/game';
+import type { BattlefieldConfig } from './types/messages';
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
-  private readonly GROUND_Y = 140;
-  private readonly CASTLE_WIDTH = 10;
-  private readonly CASTLE_HEIGHT = 10;
+  private groundY = 140;
+  private castleWidth = 10;
+  private castleHeight = 10;
+  private castleLeftByPlayerId: Record<0 | 1, number> = { 0: 20, 1: 260 };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -25,19 +27,49 @@ export class Renderer {
     this.ctx.strokeStyle = '#654321';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    this.ctx.moveTo(0, this.GROUND_Y);
-    this.ctx.lineTo(this.canvas.width, this.GROUND_Y);
+    this.ctx.moveTo(0, this.groundY);
+    this.ctx.lineTo(this.canvas.width, this.groundY);
     this.ctx.stroke();
   }
 
-  public drawCastle(x: number): void {
+  public drawCastle(leftX: number): void {
     this.ctx.fillStyle = '#808080';
     this.ctx.fillRect(
-      x - this.CASTLE_WIDTH / 2,
-      this.GROUND_Y - this.CASTLE_HEIGHT,
-      this.CASTLE_WIDTH,
-      this.CASTLE_HEIGHT
+      leftX,
+      this.groundY - this.castleHeight,
+      this.castleWidth,
+      this.castleHeight
     );
+  }
+
+  public applyBattlefield(battlefield: BattlefieldConfig): void {
+    this.canvas.width = battlefield.canvasWidth;
+    this.canvas.height = battlefield.canvasHeight;
+    this.groundY = battlefield.groundY;
+    this.castleWidth = battlefield.castleWidth;
+    this.castleHeight = battlefield.castleHeight;
+
+    battlefield.castles.forEach((castle) => {
+      this.castleLeftByPlayerId[castle.playerId] = castle.left_x;
+    });
+
+    this.render(null);
+  }
+
+  public getGroundY(): number {
+    return this.groundY;
+  }
+
+  public getCastleTopY(): number {
+    return this.groundY - this.castleHeight;
+  }
+
+  public getCanvasWidth(): number {
+    return this.canvas.width;
+  }
+
+  public getCastleMuzzleX(playerId: 0 | 1): number {
+    return this.castleLeftByPlayerId[playerId] + this.castleWidth / 2;
   }
 
   public drawProjectile(projectile: Projectile): void {
@@ -67,8 +99,8 @@ export class Renderer {
   public render(projectile: Projectile | null, trajectory: Array<{ x: number; y: number }> = []): void {
     this.clear();
     this.drawGround();
-    this.drawCastle(20); // Player 1
-    this.drawCastle(260); // Player 2
+    this.drawCastle(this.castleLeftByPlayerId[0]);
+    this.drawCastle(this.castleLeftByPlayerId[1]);
 
     // Draw trajectory first (so it appears behind the projectile)
     if (trajectory.length > 0) {

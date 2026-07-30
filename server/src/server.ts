@@ -3,8 +3,10 @@ import * as dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
-import swaggerJsdoc from 'swagger-jsdoc';
 import { createServer } from 'http';
+import { readFileSync } from 'fs';
+import path from 'path';
+import { parse as parseYaml } from 'yaml';
 import { GameManager } from './services/gameManager';
 import { createApiRouter } from './routes/api';
 
@@ -19,22 +21,10 @@ const game = new GameManager();
 // Create Express app for HTTP endpoints
 const app = express();
 
-// Swagger setup
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'SuperArtillery API',
-      version: '1.0.0',
-      description: 'API documentation for SuperArtillery game server',
-    },
-    servers: [
-      { url: `http://localhost:${PORT}` }
-    ],
-  },
-  apis: ['./src/routes/*.ts'], // Scan route files for OpenAPI comments
-};
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+// Load canonical OpenAPI contract from repository-level contracts folder.
+const openapiSpecPath = path.resolve(__dirname, '../../contracts/openapi/superartillery.yaml');
+const openapiSpecRaw = readFileSync(openapiSpecPath, 'utf8');
+const swaggerSpec = parseYaml(openapiSpecRaw);
 app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Enable CORS for all routes

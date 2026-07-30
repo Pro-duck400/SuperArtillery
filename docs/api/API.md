@@ -1,5 +1,8 @@
 # API Documentation
 
+> Canonical machine-readable API contract source is maintained in `contracts/openapi/superartillery.yaml`.
+> This document is explanatory and should stay aligned with the contract source.
+
 ## Communication Protocol
 
 This document describes the REST API and WebSocket communication used by the MVP version of the game.
