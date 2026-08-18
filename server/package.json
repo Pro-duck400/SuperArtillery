@@ -32,5 +32,9 @@
     "@types/ws": "^8.18.1",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "@scarf/scarf@1.4.0": true
   }
 }
