@@ -12,6 +12,11 @@ Generated contract types used by the client are located at:
 
 ## Quick Start
 
+Prerequisites:
+
+- Node.js 26+
+- npm 10+
+
 ```bash
 # Install dependencies
 npm install
