@@ -8,9 +8,15 @@ import { GameClient } from './game-client';
 
 console.log('SuperArtillery initializing...');
 
-// Server URLs (will be updated for production)
-const API_BASE_URL = 'http://localhost:3000';
-const WS_BASE_URL = 'ws://localhost:3000';
+const DEFAULT_SERVER_ADDRESS = 'http://localhost:3000';
+
+function resolveServerBaseUrls(serverAddress: string): { apiBaseUrl: string; wsBaseUrl: string } {
+  const parsedUrl = new URL(serverAddress.trim() || DEFAULT_SERVER_ADDRESS);
+  const apiBaseUrl = parsedUrl.origin;
+  const wsProtocol = parsedUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsBaseUrl = `${wsProtocol}//${parsedUrl.host}`;
+  return { apiBaseUrl, wsBaseUrl };
+}
 
 // Initialize canvas and renderer
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -27,12 +33,82 @@ console.log('Renderer initialized');
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
 const uiManager = new UIManager();
-const gameClient = new GameClient(API_BASE_URL, WS_BASE_URL, game);
+let gameClient: GameClient | null = null;
+
+function wireGameClientEvents(client: GameClient): void {
+  client.onConnected(() => {
+    uiManager.setStatus('Connected! Waiting for opponent...');
+    uiManager.setMessage('Waiting for another player to join...');
+  });
+
+  client.onGameStart((gameId: number, battlefield) => {
+    renderer.applyBattlefield(battlefield);
+    animator.configureScene(
+      renderer.getCanvasWidth(),
+      renderer.getGroundY(),
+      renderer.getCastleTopY(),
+      battlefield.gravity
+    );
+
+    const playerId = client.getPlayerId();
+    // Get opponent name from GameStartMessage if available
+    let opponentName = '';
+    const lastGameStartMessage = client.getLastGameStartMessage();
+    if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
+      opponentName = lastGameStartMessage.opponentName;
+    }
+    // Set both names in DOM
+    const leftNameEl = document.getElementById('playerNameLeft');
+    const rightNameEl = document.getElementById('playerNameRight');
+    if (playerId === 0) {
+      if (rightNameEl) {
+        rightNameEl.textContent = opponentName;
+        rightNameEl.style.color = '#ffffff';
+      }
+
+    } else {
+      if (leftNameEl) {
+        leftNameEl.textContent = opponentName;
+        leftNameEl.style.color = '#ffffff';
+      }
+    }
+
+    uiManager.setStatus(`Game #${gameId} - You are Player ${(playerId ?? 0) + 1}`);
+    uiManager.setMessage('Game starting! Waiting for first turn...');
+  });
+
+  client.onShot((data) => {
+    const playerId = client.getPlayerId();
+    const isMyShot = playerId !== null && data.playerId === playerId;
+    uiManager.setMessage(
+      isMyShot
+        ? `You fired: angle=${data.angle}°, velocity=${data.velocity}`
+        : `Opponent fired: angle=${data.angle}°, velocity=${data.velocity}`
+    );
+
+    const shooterId = data.playerId === 0 ? 0 : 1;
+    const startX = renderer.getCastleMuzzleX(shooterId);
+    animator.fire(data.angle, data.velocity, startX, shooterId);
+  });
+
+  client.onTurnChange((playerId: number, isMyTurn: boolean) => {
+    uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
+    uiManager.setMessage(isMyTurn ? 'Your turn!' : "Opponent's turn");
+  });
+
+  client.onGameOver((_winnerId: number, didIWin: boolean) => {
+    uiManager.showGameOver(didIWin);
+  });
+}
 
 // Wire up UI events
 let clientName = '';
-uiManager.onRegister(async (playerName: string) => {
+uiManager.onRegister(async (playerName: string, serverAddress: string) => {
   try {
+    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
+    gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
+    wireGameClientEvents(gameClient);
+
     clientName = playerName;
     uiManager.showRegistering();
     await gameClient.register(playerName);
@@ -54,6 +130,10 @@ uiManager.onRegister(async (playerName: string) => {
 
 uiManager.onFire(async (angle: number, velocity: number) => {
   try {
+    if (!gameClient) {
+      throw new Error('Not connected yet');
+    }
+
     uiManager.disableFireButton();
     uiManager.setMessage('Firing...');
     await gameClient.fire(angle, velocity);
@@ -64,70 +144,5 @@ uiManager.onFire(async (angle: number, velocity: number) => {
     uiManager.setMessage(errorMessage);
     uiManager.updateTurnUI(game.getState().currentTurn, game.getState().isMyTurn);
   }
-});
-
-// Wire up game client events
-gameClient.onConnected(() => {
-  uiManager.setStatus('Connected! Waiting for opponent...');
-  uiManager.setMessage('Waiting for another player to join...');
-});
-
-gameClient.onGameStart((gameId: number, battlefield) => {
-  renderer.applyBattlefield(battlefield);
-  animator.configureScene(
-    renderer.getCanvasWidth(),
-    renderer.getGroundY(),
-    renderer.getCastleTopY(),
-    battlefield.gravity
-  );
-
-  const playerId = gameClient.getPlayerId();
-  // Get opponent name from GameStartMessage if available
-  let opponentName = '';
-  const lastGameStartMessage = gameClient.getLastGameStartMessage();
-  if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
-    opponentName = lastGameStartMessage.opponentName;
-  }
-  // Set both names in DOM  
-  const leftNameEl = document.getElementById('playerNameLeft');
-  const rightNameEl = document.getElementById('playerNameRight');
-  if (playerId === 0) {
-    if (rightNameEl) {
-      rightNameEl.textContent = opponentName;
-      rightNameEl.style.color = '#ffffff';
-    } 
-
-  } else {
-    if (leftNameEl) {
-    leftNameEl.textContent = opponentName;
-    leftNameEl.style.color = '#ffffff';
-    }
-  }
-
-  uiManager.setStatus(`Game #${gameId} - You are Player ${(playerId ?? 0) + 1}`);
-  uiManager.setMessage('Game starting! Waiting for first turn...');
-});
-
-gameClient.onShot((data) => {
-  const playerId = gameClient.getPlayerId();
-  const isMyShot = playerId !== null && data.playerId === playerId;
-  uiManager.setMessage(
-    isMyShot 
-      ? `You fired: angle=${data.angle}°, velocity=${data.velocity}`
-      : `Opponent fired: angle=${data.angle}°, velocity=${data.velocity}`
-  );
-  
-  const shooterId = data.playerId === 0 ? 0 : 1;
-  const startX = renderer.getCastleMuzzleX(shooterId);
-  animator.fire(data.angle, data.velocity, startX, shooterId);
-});
-
-gameClient.onTurnChange((playerId: number, isMyTurn: boolean) => {
-  uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
-  uiManager.setMessage(isMyTurn ? 'Your turn!' : "Opponent's turn");
-});
-
-gameClient.onGameOver((_winnerId: number, didIWin: boolean) => {
-  uiManager.showGameOver(didIWin);
 });
 

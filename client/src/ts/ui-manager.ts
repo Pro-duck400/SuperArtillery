@@ -4,6 +4,7 @@ export class UIManager {
   private registrationPanel: HTMLDivElement;
   private gamePanel: HTMLDivElement;
   private playerNameInput: HTMLInputElement;
+  private serverAddressInput: HTMLInputElement;
   private registerButton: HTMLButtonElement;
   private registrationError: HTMLDivElement;
   private statusEl: HTMLDivElement;
@@ -13,7 +14,7 @@ export class UIManager {
   private fireButton: HTMLButtonElement;
 
   // Event callbacks
-  private onRegisterCallback: ((name: string) => void) | null = null;
+  private onRegisterCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
 
   constructor() {
@@ -21,6 +22,7 @@ export class UIManager {
     this.registrationPanel = document.getElementById('registrationPanel') as HTMLDivElement;
     this.gamePanel = document.getElementById('gamePanel') as HTMLDivElement;
     this.playerNameInput = document.getElementById('playerNameInput') as HTMLInputElement;
+    this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     this.registerButton = document.getElementById('registerButton') as HTMLButtonElement;
     this.registrationError = document.getElementById('registrationError') as HTMLDivElement;
     this.statusEl = document.getElementById('status') as HTMLDivElement;
@@ -40,6 +42,7 @@ export class UIManager {
     // Register button
     this.registerButton.addEventListener('click', () => {
       const playerName = this.playerNameInput.value.trim();
+      const serverAddress = this.serverAddressInput.value.trim();
       
       if (!playerName) {
         this.registrationError.textContent = 'Please enter your name';
@@ -51,9 +54,25 @@ export class UIManager {
         return;
       }
 
+      if (!serverAddress) {
+        this.registrationError.textContent = 'Please enter a server address';
+        return;
+      }
+
+      try {
+        const parsedUrl = new URL(serverAddress);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          this.registrationError.textContent = 'Server address must start with http:// or https://';
+          return;
+        }
+      } catch {
+        this.registrationError.textContent = 'Please enter a valid server address, e.g. http://localhost:3000';
+        return;
+      }
+
       if (this.onRegisterCallback) {
         this.registrationError.textContent = '';
-        this.onRegisterCallback(playerName);
+        this.onRegisterCallback(playerName, serverAddress);
       }
     });
 
@@ -118,7 +137,7 @@ export class UIManager {
   /**
    * Register callback for registration event
    */
-  public onRegister(callback: (name: string) => void): void {
+  public onRegister(callback: (name: string, serverAddress: string) => void): void {
     this.onRegisterCallback = callback;
   }
 

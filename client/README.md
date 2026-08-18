@@ -32,11 +32,27 @@ Default local URL:
 
 ## Runtime Expectations
 
-- REST base URL is currently configured in src/ts/main.ts.
-- WebSocket base URL is currently configured in src/ts/main.ts.
-- Server should be running locally on port 3000 by default.
+- Enter server address in the registration panel before joining.
+- The client derives REST and WebSocket endpoints from this value.
+- Use `http://` or `https://` URLs (example: `http://localhost:3000`).
+- By default, the server address input is prefilled with `http://localhost:3000`.
 
 ## Notes
 
 - Do not manually edit generated contract type files.
 - Update contracts first, regenerate, then update client implementation.
+
+## GitHub Pages Deployment
+
+The repository includes `.github/workflows/deploy-client-pages.yml` to publish this client on GitHub Pages.
+
+- Build base path is configured through `VITE_BASE_PATH` in `vite.config.ts`.
+- The workflow sets `VITE_BASE_PATH=/<repo-name>/` automatically.
+
+To test a Pages-style build locally:
+
+```bash
+VITE_BASE_PATH=/SuperArtillery/ npm run build
+```
+
+After deployment, open your Pages URL and enter your backend host in the registration `Server address` field.
