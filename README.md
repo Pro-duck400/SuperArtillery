@@ -9,7 +9,7 @@ TypeScript multiplayer artillery game with a browser client and Node.js server.
 
 Prerequisites:
 
-- Node.js 22+
+- Node.js 26+
 - npm 10+
 
 Install dependencies:
