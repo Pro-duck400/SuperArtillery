@@ -39,7 +39,7 @@ Swagger UI: http://localhost:3000/api/swagger
 Cloud deployment:
 
 - Client: [Open the deployed client](https://pro-duck400.github.io/SuperArtillery/)
-- Server: [Open the deployed server](https://superartillery.onrender.com)
+- Server: [Open the deployed server](https://superartillery.onrender.com/api/v1/health)
 - The deployed client uses the deployed server automatically. Local client development uses `http://localhost:3000` by default.
 
 ## Where To Find Docs
