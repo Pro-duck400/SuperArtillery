@@ -8,7 +8,7 @@ import { GameClient } from './game-client';
 
 console.log('SuperArtillery initializing...');
 
-const DEFAULT_SERVER_ADDRESS = 'http://localhost:3000';
+const DEFAULT_SERVER_ADDRESS = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
 function resolveServerBaseUrls(serverAddress: string): { apiBaseUrl: string; wsBaseUrl: string } {
   const parsedUrl = new URL(serverAddress.trim() || DEFAULT_SERVER_ADDRESS);
@@ -32,7 +32,7 @@ console.log('Renderer initialized');
 // Create core components
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
-const uiManager = new UIManager();
+const uiManager = new UIManager(DEFAULT_SERVER_ADDRESS);
 let gameClient: GameClient | null = null;
 
 function wireGameClientEvents(client: GameClient): void {
