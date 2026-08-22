@@ -42,7 +42,7 @@ Default local URL:
 - Use `http://` or `https://` URLs (example: `http://localhost:3000`).
 - Local Vite development defaults to `http://localhost:3000`.
 - The GitHub Pages build uses `https://superartillery.onrender.com`.
-- The server address field remains available when connecting to another server.
+- The server address field remains available for connecting to another server.
 
 ## Notes
 
@@ -63,4 +63,4 @@ To test a Pages-style build locally:
 VITE_BASE_PATH=/SuperArtillery/ npm run build
 ```
 
-After deployment, open the Pages URL and join the game. The Render backend URL is preconfigured by the deployment workflow.
+After deployment, open your Pages URL and join the game. The Render backend URL is preconfigured by the deployment workflow.

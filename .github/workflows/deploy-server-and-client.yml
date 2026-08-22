@@ -47,7 +47,6 @@ jobs:
   deploy:
     name: Build And Deploy Client
     runs-on: ubuntu-latest
-    needs: deploy-server
 
     environment:
       name: github-pages
