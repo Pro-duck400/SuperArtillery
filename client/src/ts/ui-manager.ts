@@ -12,12 +12,14 @@ export class UIManager {
   private angleInput: HTMLInputElement;
   private velocityInput: HTMLInputElement;
   private fireButton: HTMLButtonElement;
+  private defaultServerAddress: string;
 
   // Event callbacks
   private onRegisterCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
 
-  constructor() {
+  constructor(defaultServerAddress: string) {
+    this.defaultServerAddress = defaultServerAddress;
     // Get DOM elements
     this.registrationPanel = document.getElementById('registrationPanel') as HTMLDivElement;
     this.gamePanel = document.getElementById('gamePanel') as HTMLDivElement;
@@ -30,6 +32,8 @@ export class UIManager {
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
+    this.serverAddressInput.value = defaultServerAddress;
+    this.serverAddressInput.placeholder = defaultServerAddress;
 
     this.setupEventListeners();
     this.playerNameInput.focus();
@@ -42,7 +46,7 @@ export class UIManager {
     // Register button
     this.registerButton.addEventListener('click', () => {
       const playerName = this.playerNameInput.value.trim();
-      const serverAddress = this.serverAddressInput.value.trim();
+      const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
       
       if (!playerName) {
         this.registrationError.textContent = 'Please enter your name';
@@ -51,11 +55,6 @@ export class UIManager {
 
       if (playerName.length < 2) {
         this.registrationError.textContent = 'Name must be at least 2 characters';
-        return;
-      }
-
-      if (!serverAddress) {
-        this.registrationError.textContent = 'Please enter a server address';
         return;
       }
 
