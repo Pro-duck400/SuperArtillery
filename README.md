@@ -36,6 +36,12 @@ Server: http://localhost:3000
 Client: http://localhost:5173
 Swagger UI: http://localhost:3000/api/swagger
 
+Cloud deployment:
+
+- Client: [Open the deployed client](https://pro-duck400.github.io/SuperArtillery/)
+- Server: [Open the deployed server](https://superartillery.onrender.com)
+- The deployed client uses the deployed server automatically. Local client development uses `http://localhost:3000` by default.
+
 ## Where To Find Docs
 
 Primary docs are in subfolders:
@@ -72,4 +78,4 @@ This repository now includes a GitHub Actions workflow that builds and deploys t
 Important runtime note:
 
 - The hosted client is static only. It still needs a reachable backend server for API and WebSocket.
-- In the game registration screen, set `Server address` to your deployed backend URL (for example, a Render/Fly/Railway host).
+- The deployed client is configured to use the deployed backend automatically.

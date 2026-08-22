@@ -37,10 +37,12 @@ Default local URL:
 
 ## Runtime Expectations
 
-- Enter server address in the registration panel before joining.
+- The server address is configured automatically for each environment.
 - The client derives REST and WebSocket endpoints from this value.
 - Use `http://` or `https://` URLs (example: `http://localhost:3000`).
-- By default, the server address input is prefilled with `http://localhost:3000`.
+- Local Vite development defaults to `http://localhost:3000`.
+- The GitHub Pages build uses `https://superartillery.onrender.com`.
+- The server address field remains available for connecting to another server.
 
 ## Notes
 
@@ -49,9 +51,10 @@ Default local URL:
 
 ## GitHub Pages Deployment
 
-The repository includes `.github/workflows/deploy-client-pages.yml` to publish this client on GitHub Pages.
+The repository includes `.github/workflows/deploy-server-and-client.yml` to publish this client on GitHub Pages.
 
 - Build base path is configured through `VITE_BASE_PATH` in `vite.config.ts`.
+- Backend URL is configured through `VITE_SERVER_URL` during the Pages build.
 - The workflow sets `VITE_BASE_PATH=/<repo-name>/` automatically.
 
 To test a Pages-style build locally:
@@ -60,4 +63,4 @@ To test a Pages-style build locally:
 VITE_BASE_PATH=/SuperArtillery/ npm run build
 ```
 
-After deployment, open your Pages URL and enter your backend host in the registration `Server address` field.
+After deployment, open your Pages URL and join the game. The Render backend URL is preconfigured by the deployment workflow.
