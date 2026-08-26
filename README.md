@@ -39,8 +39,8 @@ Swagger UI: http://localhost:3000/api/swagger
 Cloud deployment:
 
 - Client: [Open the deployed client](https://pro-duck400.github.io/SuperArtillery/)
-- Server: [Open the deployed server](https://superartillery.onrender.com/api/v1/health)
-- The deployed client uses the deployed server automatically. Local client development uses `http://localhost:3000` by default.
+- Server: Open the Railway service URL at `/api/v1/health`
+- The deployed client uses the Railway server URL configured in GitHub Actions. Local client development uses `http://localhost:3000` by default.
 
 ## Where To Find Docs
 
@@ -66,16 +66,18 @@ npm run contracts:generate
 npm run contracts:check
 ```
 
-## Deploy Client To GitHub Pages
+## Deploy Server To Railway And Client To GitHub Pages
 
-This repository now includes a GitHub Actions workflow that builds and deploys the Vite client from `client/` to GitHub Pages.
+This repository includes a GitHub Actions workflow that deploys the server to Railway and builds and deploys the Vite client from `client/` to GitHub Pages.
 
-1. Push to `main` (or run the `Deploy Client To GitHub Pages` workflow manually from Actions).
-2. In GitHub repository settings, ensure Pages source is set to GitHub Actions.
-3. After deployment, the site URL will look like:
+1. Add the `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID`, and `VITE_SERVER_URL` repository secrets. `VITE_SERVER_URL` is the public Railway URL, including `https://` and without a trailing slash.
+2. In Railway, create a project and service for this repository, leave the service root directory empty, and ensure the service uses `railway.toml` from the repository root.
+3. Push to `main` (or run the workflow manually from Actions).
+4. In GitHub repository settings, ensure Pages source is set to GitHub Actions.
+5. After deployment, the site URL will look like:
 	- `https://<your-username>.github.io/SuperArtillery/`
 
 Important runtime note:
 
 - The hosted client is static only. It still needs a reachable backend server for API and WebSocket.
-- The deployed client is configured to use the deployed backend automatically.
+- The deployed client is configured to use the Railway backend automatically.

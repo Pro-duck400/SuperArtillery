@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   deploy-server:
-    name: Deploy Server To Render
+    name: Deploy Server To Railway
     runs-on: ubuntu-latest
 
     steps:
@@ -39,10 +39,14 @@ jobs:
         working-directory: server
         run: npm run build
 
-      - name: Trigger Render deployment
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli
+
+      - name: Deploy server to Railway
         env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-        run: curl --fail --show-error --silent --request POST "$RENDER_DEPLOY_HOOK"
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: railway up --service "$RAILWAY_SERVICE_ID" --ci
 
   deploy:
     name: Build And Deploy Client
@@ -74,7 +78,7 @@ jobs:
         working-directory: client
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_SERVER_URL: https://superartillery.onrender.com
+          VITE_SERVER_URL: ${{ secrets.VITE_SERVER_URL }}
         run: npm run build
 
       - name: Upload Pages artifact
