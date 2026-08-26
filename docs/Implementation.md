@@ -1,7 +1,5 @@
 # SuperArtillery - Implementation Plan
 
-**Philosophy**: Deploy early, deploy often. Build the simplest thing first, then iterate.
-
 ---
 
 ## 🎯 Part 1: Sprint 0 - MVP (Minimal Viable Product)
@@ -98,9 +96,6 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] `GET /api/auth/profile` - Get user profile
 
 **Lobby & Matchmaking**
-- [ ] `POST /api/lobby/join` - Join matchmaking queue
-- [ ] `GET /api/lobby/status/:playerId` - Check queue position
-- [ ] `DELETE /api/lobby/leave/:playerId` - Leave queue
 - [ ] `POST /api/game/create` - Create private game
 - [ ] `POST /api/game/:id/join` - Join private game with code
 
@@ -137,46 +132,6 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 #### Player Management
 - [ ] Player registration and authentication
-- [ ] JWT token-based auth
-- [ ] Anonymous guest play (optional)
-- [ ] Player profiles
-- [ ] Friend system (add/remove friends)
-- [ ] Block/report players
-- [ ] Player status (online, in-game, offline)
-
-#### Game Rooms
-- [ ] Public matchmaking rooms
-- [ ] Private rooms with invite codes
-- [ ] Room settings (rounds, time limits)
-- [ ] Room chat (pre-game lobby)
-- [ ] Ready check before game starts
-- [ ] Spectator slots (watch games)
-- [ ] Room persistence across disconnects
-
----
-
-### 💾 Data Persistence & Storage
-
-#### Database Schema
-- [ ] **Users table**: id, username, email, password_hash, created_at
-- [ ] **Games table**: id, player1_id, player2_id, winner_id, terrain, wind, created_at
-- [ ] **Rounds table**: id, game_id, round_number, shots, winner_id
-- [ ] **Stats table**: user_id, wins, losses, total_shots, accuracy, elo_rating
-- [ ] **Achievements table**: user_id, achievement_id, unlocked_at
-
-#### Database Operations
-- [ ] User CRUD operations
-- [ ] Game history persistence
-- [ ] Statistics aggregation and updates
-- [ ] Leaderboard queries with caching
-- [ ] Game replay data storage
-- [ ] Achievement tracking
-
-#### Technology Options
-- [ ] SQLite (simple, file-based)
-- [ ] PostgreSQL (production-ready)
-- [ ] MongoDB (NoSQL option)
-- [ ] Redis (caching and sessions)
 
 ---
 
@@ -241,7 +196,6 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Mute toggle
 - [ ] Audio preloading
 - [ ] Browser autoplay policy handling
-- [ ] Background music (optional)
 - [ ] Positional audio (left/right castle)
 
 ---
@@ -254,14 +208,12 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Input validation
 - [ ] Utility functions
 - [ ] API endpoint handlers
-- [ ] Database operations
 
 #### Integration Tests
 - [ ] WebSocket message flow
 - [ ] Client-server communication
 - [ ] REST API endpoints
 - [ ] Authentication flow
-- [ ] Matchmaking system
 - [ ] Game lifecycle (start to finish)
 
 #### End-to-End Tests
@@ -274,9 +226,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 #### Performance Testing
 - [ ] Load testing (100+ concurrent players)
 - [ ] WebSocket connection stress test
-- [ ] Database query optimization
 - [ ] Client-side FPS benchmarking
-- [ ] Memory leak detection
 - [ ] Network latency simulation
 
 ---
@@ -288,19 +238,9 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Input sanitization (angle, velocity)
 - [ ] Rate limiting on API endpoints
 - [ ] WebSocket message rate limiting
-- [ ] SQL injection prevention
 - [ ] XSS protection
 - [ ] CSRF tokens
 - [ ] Session management
-
-#### Authentication & Authorization
-- [ ] Password hashing (bcrypt)
-- [ ] JWT token validation
-- [ ] Token expiration and refresh
-- [ ] Secure password requirements
-- [ ] Account verification (email)
-- [ ] Password reset flow
-- [ ] Two-factor authentication (optional)
 
 #### Infrastructure Security
 - [ ] HTTPS/TLS for all connections
@@ -343,33 +283,12 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 ### 🚀 Advanced Features (Beyond Original)
 
-#### AI Opponent
-- [ ] Single-player mode with bot
-- [ ] Difficulty levels (Easy, Medium, Hard)
-- [ ] Bot physics calculation
-- [ ] Strategic shot selection
-- [ ] Learning AI (optional, ML-based)
-
 #### Replay System
 - [ ] Record game state each frame
 - [ ] Replay viewer with playback controls
 - [ ] Save favorite replays
 - [ ] Share replay links
 - [ ] Replay download (JSON format)
-
-#### Tournament Mode
-- [ ] Bracket generation
-- [ ] Multi-round tournaments
-- [ ] Leaderboard for tournament
-- [ ] Prize/reward system
-- [ ] Tournament scheduling
-
-#### Custom Content
-- [ ] Custom terrain editor
-- [ ] Save/load custom maps
-- [ ] Share custom maps with community
-- [ ] User-generated content gallery
-- [ ] Map rating system
 
 #### Power-Ups & Variants
 - [ ] Special ammunition types (cluster bombs, nukes)
@@ -381,17 +300,13 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 #### Social Features
 - [ ] In-game text chat
 - [ ] Emoji/reaction system
-- [ ] Friend list and online status
 - [ ] Private messages
-- [ ] Clan/guild system (optional)
-- [ ] Social feed (recent activities)
 
 #### Progressive Web App (PWA)
 - [ ] Service worker for offline support
 - [ ] App manifest
 - [ ] Install prompt
 - [ ] Push notifications
-- [ ] Offline mode (vs AI only)
 
 #### Mobile Optimization
 - [ ] Touch controls
@@ -406,15 +321,6 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Particle effect styles
 - [ ] Environment variants (desert, snow, etc.)
 - [ ] Seasonal themes
-
-#### Achievements & Progression
-- [ ] Achievement system
-- [ ] Badges and titles
-- [ ] Experience points (XP)
-- [ ] Level progression
-- [ ] Unlockable cosmetics
-- [ ] Daily challenges
-- [ ] Weekly quests
 
 ---
 
@@ -445,28 +351,6 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Architecture diagrams
 - [ ] Deployment guide
 - [ ] Contributing guidelines
-- [ ] Changelog maintenance
-
----
-
-## 📝 Summary
-
-**Part 1 (Sprint 0)**: Ultra-minimal MVP with ~20 essential tasks for crude 2-player online game
-
-**Part 2 (Post-MVP)**: ~200+ features organized into categories:
-- Core game features (terrain, physics, mechanics)
-- Networking infrastructure (WebSocket, REST API)
-- Multiplayer systems (matchmaking, rooms)
-- Data persistence (database, stats)
-- UI/UX enhancements (lobby, menus, design)
-- Audio system
-- Testing & QA
-- Security & validation
-- Analytics & monitoring
-- Advanced features (AI, replays, tournaments, etc.)
-- Developer tools & DevOps
-
-**Next Step**: Organize Part 2 features into logical sprints based on dependencies and priorities.
 
 ---
 
