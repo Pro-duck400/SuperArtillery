@@ -103,7 +103,22 @@ function wireGameClientEvents(client: GameClient): void {
 
 // Wire up UI events
 let clientName = '';
-uiManager.onRegister(async (playerName: string, serverAddress: string) => {
+const lobbyState = {
+  lastInviteUrl: '',
+  lastInviteCode: ''
+};
+
+function parseInviteInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const match = trimmed.match(/[?&]invite=([^&]+)/i);
+  return match ? decodeURIComponent(match[1]) : trimmed;
+}
+
+uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
     gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
@@ -111,19 +126,53 @@ uiManager.onRegister(async (playerName: string, serverAddress: string) => {
 
     clientName = playerName;
     uiManager.showRegistering();
-    await gameClient.register(playerName);
+    const createResult = await gameClient.createGame(playerName);
+    lobbyState.lastInviteUrl = createResult.inviteUrl;
+    lobbyState.lastInviteCode = createResult.inviteCode;
+    uiManager.showInviteInfo(createResult.inviteCode, createResult.inviteUrl);
+
+    uiManager.setStatus(`Game created. Waiting for opponent...`);
+    uiManager.setMessage(`Share this code: ${createResult.inviteCode}`);
+    await gameClient.connectToGame();
+
     const playerId = gameClient.getPlayerId();
     if (playerId !== null) {
       uiManager.showGamePanel(playerId);
-      
-      const lastGameStartMessage = gameClient.getLastGameStartMessage()
-      const opponentName = (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string')
-        ? lastGameStartMessage. opponentName: 'connecting...';
-      uiManager.setPlayerNames(playerId, clientName, opponentName)
+      const opponentName = 'waiting for opponent...';
+      uiManager.setPlayerNames(playerId, clientName, opponentName);
     }
   } catch (error) {
-    console.error('Registration failed:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
+    console.error('Create game failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Game creation failed. Please try again.';
+    uiManager.showRegistrationError(errorMessage);
+  }
+});
+
+uiManager.onJoinGame(async (inviteTokenOrCode: string, playerName: string, serverAddress: string) => {
+  try {
+    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
+    gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
+    wireGameClientEvents(gameClient);
+
+    clientName = playerName;
+    uiManager.showRegistering();
+    const inviteValue = parseInviteInput(inviteTokenOrCode);
+    const accepted = await gameClient.acceptInvitation(inviteValue, playerName);
+
+    lobbyState.lastInviteCode = accepted.gameId;
+    uiManager.setStatus(`Joined game ${accepted.gameId}. Waiting for opponent...`);
+    uiManager.setMessage('Connected to private game');
+    await gameClient.connectToGame();
+
+    const playerId = gameClient.getPlayerId();
+    if (playerId !== null) {
+      uiManager.showGamePanel(playerId);
+      const opponentName = 'waiting for opponent...';
+      uiManager.setPlayerNames(playerId, clientName, opponentName);
+    }
+  } catch (error) {
+    console.error('Join game failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unable to join game. Please try again.';
     uiManager.showRegistrationError(errorMessage);
   }
 });

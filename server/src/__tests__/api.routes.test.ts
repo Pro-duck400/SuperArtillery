@@ -1,0 +1,90 @@
+import express from 'express';
+import request from 'supertest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createApiRouter } from '../routes/api';
+import { GameManager } from '../services/gameManager';
+
+describe('API routes', () => {
+  let app: express.Express;
+  let gameManager: GameManager;
+
+  beforeEach(() => {
+    gameManager = new GameManager();
+    app = express();
+    app.use(express.json());
+    app.use('/api', createApiRouter(gameManager));
+  });
+
+  it('creates a game and returns invite details', async () => {
+    const response = await request(app)
+      .post('/api/v1/games')
+      .send({ playerName: 'Alice' })
+      .expect(201);
+
+    expect(response.body.gameId).toBeTruthy();
+    expect(response.body.playerToken).toBeTruthy();
+    expect(response.body.inviteCode).toMatch(/^[A-Z0-9]{6}$/i);
+    expect(response.body.inviteUrl).toContain('invite=');
+  });
+
+  it('accepts an invitation by code', async () => {
+    const created = gameManager.createGame('Alice');
+    if ('error' in created) throw new Error('Expected created game');
+
+    const response = await request(app)
+      .post('/api/v1/invitations/accept')
+      .send({ inviteCode: created.inviteCode, playerName: 'Bob' })
+      .expect(200);
+
+    expect(response.body.gameId).toBe(created.gameId);
+    expect(response.body.playerToken).toBeTruthy();
+  });
+
+  it('requires a session token for status polling', async () => {
+    const created = gameManager.createGame('Alice');
+    if ('error' in created) throw new Error('Expected created game');
+
+    const response = await request(app)
+      .get(`/api/v1/games/${created.gameId}/status`)
+      .expect(401);
+
+    expect(response.body.code).toBe('MISSING_SESSION_TOKEN');
+  });
+
+  it('returns status for a valid session token', async () => {
+    const created = gameManager.createGame('Alice');
+    if ('error' in created) throw new Error('Expected created game');
+
+    const response = await request(app)
+      .get(`/api/v1/games/${created.gameId}/status`)
+      .query({ sessionToken: created.playerToken })
+      .expect(200);
+
+    expect(response.body.status).toBe('pending');
+    expect(response.body.playersConnected).toBe(0);
+    expect(response.body.requiredPlayers).toBe(2);
+  });
+
+  it('rejects fire without required payload fields', async () => {
+    const response = await request(app)
+      .post('/api/v1/fire')
+      .query({ sessionToken: 'abc' })
+      .send({ gameId: 'x', angle: 45 })
+      .expect(400);
+
+    expect(response.body.code).toBe('MISSING_FIELDS');
+  });
+
+  it('reports health with stats', async () => {
+    const response = await request(app)
+      .get('/api/v1/health')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      gameCount: expect.any(Number),
+      invitationCount: expect.any(Number),
+      maxGamesReached: expect.any(Boolean)
+    });
+  });
+});

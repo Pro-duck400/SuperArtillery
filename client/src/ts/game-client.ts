@@ -26,9 +26,10 @@ export class GameClient {
   private wsBaseUrl: string;
   private lastGameStartMessage: GameStartMessage | null = null;
   private gameSession: GameSession | null = null;
-  private statusPollInterval: NodeJS.Timeout | null = null;
+  private statusPollInterval: ReturnType<typeof setInterval> | null = null;
   private onShotCallback: ((data: ShotEventData) => void) | null = null;
   private onTurnChangeCallback: ((playerId: number, isMyTurn: boolean) => void) | null = null;
+  private onGameStartCallback: ((gameId: string, battlefield: BattlefieldConfig) => void) | null = null;
   private onGameOverCallback: ((winnerId: number, didIWin: boolean) => void) | null = null;
   private onConnectedCallback: (() => void) | null = null;
 
@@ -171,14 +172,18 @@ export class GameClient {
           }
 
           if (status.playersConnected === status.requiredPlayers) {
-            clearInterval(this.statusPollInterval!);
+            if (this.statusPollInterval !== null) {
+              clearInterval(this.statusPollInterval);
+            }
             this.statusPollInterval = null;
             resolve();
             return;
           }
 
           if (Date.now() - startTime > maxWaitTime) {
-            clearInterval(this.statusPollInterval as unknown as NodeJS.Timeout);
+            if (this.statusPollInterval !== null) {
+              clearInterval(this.statusPollInterval);
+            }
             this.statusPollInterval = null;
             reject(new Error('Game connection timeout'));
             return;

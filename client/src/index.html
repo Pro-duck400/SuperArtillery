@@ -8,7 +8,7 @@
 </head>
 <body>
   <div id="app">
-    <!-- Registration Panel -->
+    <!-- Registration / Lobby Panel -->
     <div id="registrationPanel" style="display: block;">
       <h2>Welcome to SuperArtillery!</h2>
       <div>
@@ -20,9 +20,17 @@
           Server address:
           <input type="text" id="serverAddressInput" placeholder="" />
         </label>
-        <button id="registerButton">Join Game</button>
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
+        <button id="registerButton">Create Private Game</button>
+        <label style="display: flex; align-items: center; gap: 8px;">
+          Invite code or link:
+          <input type="text" id="inviteInput" placeholder="ABC123 or invite link" />
+        </label>
+        <button id="joinGameButton">Join with Invite</button>
       </div>
       <div id="registrationError" style="color: red; margin-top: 10px;"></div>
+      <div id="inviteInfo" style="margin-top: 12px; display: none; white-space: pre-wrap;"></div>
     </div>
     
     <!-- Game Panel (hidden initially) -->
