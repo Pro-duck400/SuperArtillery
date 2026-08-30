@@ -5,7 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx src/server.ts",
-    "build": "tsc",
+    "generate:contracts": "npm --prefix .. run contracts:generate",
+    "build": "npm run generate:contracts && tsc",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
     "test": "vitest run",

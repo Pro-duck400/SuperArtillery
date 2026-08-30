@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health check for the server */
+        /**
+         * Enhanced health check for the server
+         * @description Returns server health, game count, and capacity information
+         */
         get: {
             parameters: {
                 query?: never;
@@ -40,6 +43,261 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new private game
+         * @description Create a new private two-player game and return invitation tokens/codes
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateGameRequest"];
+                };
+            };
+            responses: {
+                /** @description Game created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreateGameResponse"];
+                    };
+                };
+                /** @description Invalid player name */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Server at maximum capacity */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a game invitation
+         * @description Accept an invitation via token or short code and join the game
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AcceptInvitationRequest"];
+                };
+            };
+            responses: {
+                /** @description Invitation accepted successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AcceptInvitationResponse"];
+                    };
+                };
+                /** @description Invalid invitation or player name */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invitation expired */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{gameId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get game status
+         * @description Poll game status (requires valid session token)
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Player session token for authentication */
+                    sessionToken: string;
+                };
+                header?: never;
+                path: {
+                    gameId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Game status retrieved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameStatusResponse"];
+                    };
+                };
+                /** @description Invalid session token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Game not found or expired */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fire a shot (session token authenticated)
+         * @description Fire a projectile. Requires gameId and sessionToken. Server derives player identity from token.
+         */
+        post: {
+            parameters: {
+                query: {
+                    /** @description Player session token for authentication */
+                    sessionToken: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FireRequest"];
+                };
+            };
+            responses: {
+                /** @description Fire action accepted (server broadcasts shot + turn_change/game_over via WebSocket) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation or game-state error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invalid session token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Game not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/register": {
         parameters: {
             query?: never;
@@ -50,8 +308,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Register a player
-         * @description Register a player on the server.
+         * Register a player (DEPRECATED)
+         * @description Legacy endpoint. Use POST /api/v1/games instead.
          */
         post: {
             parameters: {
@@ -93,58 +351,8 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Player name already registered */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/fire": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Fire a shot
-         * @description If accepted, the server broadcasts `shot` and then either `turn_change` or `game_over`.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["FireRequest"];
-                };
-            };
-            responses: {
-                /** @description Fire action accepted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Validation or game-state error */
-                400: {
+                /** @description Endpoint deprecated */
+                410: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -183,6 +391,51 @@ export interface components {
             castleHeight: number;
             castles: components["schemas"]["Castle"][];
         };
+        CreateGameRequest: {
+            /** @description Display name for the initiating player (15 chars max, must start with alphanumeric) */
+            playerName: string;
+        };
+        CreateGameResponse: {
+            /** @description Opaque game ID */
+            gameId: string;
+            /** @description Session token for this player (high entropy, one-time) */
+            playerToken: string;
+            /**
+             * Format: uri
+             * @description Full invitation link with embedded token (shareable)
+             */
+            inviteUrl: string;
+            /** @description Short 6-character alphanumeric code (easy to type) */
+            inviteCode: string;
+        };
+        AcceptInvitationRequest: {
+            /** @description Full invitation token from link (if accepting via link) */
+            inviteToken?: string;
+            /** @description Short invite code (if accepting via code) */
+            inviteCode?: string;
+            /** @description Display name for the invited player */
+            playerName: string;
+        };
+        AcceptInvitationResponse: {
+            /** @description Opaque game ID */
+            gameId: string;
+            /** @description Session token for this player (high entropy, one-time) */
+            playerToken: string;
+        };
+        GameStatusResponse: {
+            /**
+             * @description Current game status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "finished" | "expired";
+            /** @description Number of players currently connected via WebSocket */
+            playersConnected: number;
+            /**
+             * @description Required number of players for the game to start
+             * @constant
+             */
+            requiredPlayers: 2;
+        };
         RegisterRequest: {
             name: string;
         };
@@ -190,21 +443,39 @@ export interface components {
             playerId: components["schemas"]["PlayerId"];
         };
         FireRequest: {
-            gameId: number;
-            playerId: components["schemas"]["PlayerId"];
+            /** @description Opaque game ID */
+            gameId: string;
+            /** @description Projectile angle in degrees */
             angle: number;
+            /** @description Projectile velocity (must be positive) */
             velocity: number;
         };
         ErrorResponse: {
-            details: string;
+            /** @description Machine-readable error code */
+            code: string;
+            /** @description Human-readable error message */
+            message: string;
+            /** @description Optional additional error context */
+            details?: {
+                [key: string]: unknown;
+            };
         };
         HealthResponse: {
-            /** @enum {string} */
-            status: "ok";
+            /**
+             * @description Server status (degraded if at max capacity)
+             * @enum {string}
+             */
+            status: "ok" | "degraded";
             /** Format: date-time */
             timestamp: string;
+            /** @description Server uptime in seconds */
             uptime: number;
-            players: number;
+            /** @description Number of active games */
+            gameCount: number;
+            /** @description Number of pending invitations */
+            invitationCount: number;
+            /** @description True if server is at maximum capacity */
+            maxGamesReached: boolean;
             version: string;
         };
         GameStartMessage: {
@@ -213,7 +484,9 @@ export interface components {
              * @enum {string}
              */
             type: "game_start";
-            gameId: number;
+            /** @description Opaque game ID */
+            gameId: string;
+            /** @description Display name of the opponent */
             opponentName: string;
             battlefield: components["schemas"]["Battlefield"];
         };

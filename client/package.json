@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "generate:contracts": "npm --prefix .. run contracts:generate",
+    "build": "npm run generate:contracts && tsc && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test": "vitest run",

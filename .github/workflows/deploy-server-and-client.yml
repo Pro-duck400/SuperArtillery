@@ -31,6 +31,9 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
+      - name: Install contract generator
+        run: npm ci
+
       - name: Install server dependencies
         working-directory: server
         run: npm ci
@@ -69,6 +72,9 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
+      - name: Install contract generator
+        run: npm ci
 
       - name: Install client dependencies
         working-directory: client

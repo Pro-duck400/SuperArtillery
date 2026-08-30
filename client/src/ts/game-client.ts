@@ -256,8 +256,7 @@ export class GameClient {
     switch (message.type) {
       case 'game_start':
         this.game.setOpponentName(message.opponentName);
-        // gameId might be a number or string depending on server version
-        const gameId = typeof message.gameId === 'number' ? message.gameId.toString() : message.gameId;
+        const gameId = message.gameId;
         this.game.setGameId(gameId);
         this.game.setBattlefield(message.battlefield);
         this.lastGameStartMessage = message;

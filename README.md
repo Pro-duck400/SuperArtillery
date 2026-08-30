@@ -63,7 +63,8 @@ Supporting docs:
 
 ```bash
 npm run contracts:generate
-npm run contracts:check
+cd server && npm run build
+cd ../client && npm run build
 ```
 
 ## Deploy Server To Railway And Client To GitHub Pages
