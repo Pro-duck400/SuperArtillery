@@ -1,21 +1,568 @@
 import { WebSocket } from 'ws';
-import type { Battlefield, GameStartMessage, TurnChangeMessage, GameOverMessage, ShotMessage } from '../types/messages';
+import type {
+  Battlefield,
+  GameStartMessage,
+  TurnChangeMessage,
+  GameOverMessage,
+  ShotMessage
+} from '../types/messages';
+import type {
+  PrivateGame,
+  CreateGameResponse,
+  AcceptInvitationResponse,
+  GameStatusResponse
+} from '../types/private-game';
 import { calculateVelocityComponents, checkCastleCollision } from '../utils/physics';
+import { TokenService } from './tokenService';
 
 /**
- * Ultra-minimal game manager for MVP
- * Handles a single game with exactly 2 players
+ * Multi-game manager supporting private, in-memory only games
+ * 
+ * Architecture:
+ * - Map<gameId, PrivateGame> for multi-game support
+ * - Session tokens for WebSocket authentication
+ * - Token hashes stored in memory (never plain tokens)
+ * - Automatic expiration of old games and invitations
+ * - Activity-based TTL for active games
  */
 export class GameManager {
-  private playerNames: (string | null)[] = [null, null];
-  private playerConnections: (WebSocket | null)[] = [null, null];
-  private currentTurn: 0 | 1 = 0;
-  private gameStarted: boolean = false;
-  private gameId: number = 1; // MVP: single game instance
-  private battlefield: Battlefield;
+  private games: Map<string, PrivateGame> = new Map();
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  // Configuration
+  private readonly INVITATION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+  private readonly ACTIVE_GAME_TTL_MS = 30 * 60 * 1000; // 30 minutes
+  private readonly FINISHED_GAME_GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_ACTIVE_GAMES = 100;
+  private readonly CLEANUP_INTERVAL_MS = 60 * 1000; // 1 minute
 
   constructor() {
-    this.battlefield = {
+    this.startCleanupTimer();
+  }
+
+  /**
+   * Start periodic cleanup of expired games and invitations
+   */
+  private startCleanupTimer(): void {
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, this.CLEANUP_INTERVAL_MS);
+  }
+
+  /**
+   * Stop cleanup timer (for graceful shutdown)
+   */
+  public shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+  }
+
+  /**
+   * Create a new private game
+   * @param playerName The initiator's display name
+   * @returns Game creation response with tokens and invite code
+   */
+  public createGame(playerName: string): CreateGameResponse | { error: string; code: string } {
+    // Validate and normalize player name
+    const normalizedName = TokenService.normalizeName(playerName);
+    if (!normalizedName) {
+      return {
+        error: 'Player name must be 15 characters or less and start with a letter or number',
+        code: 'INVALID_PLAYER_NAME'
+      };
+    }
+
+    // Check if max games reached
+    if (this.games.size >= this.MAX_ACTIVE_GAMES) {
+      return {
+        error: 'Server is at maximum capacity. Please try again later.',
+        code: 'MAX_GAMES_REACHED'
+      };
+    }
+
+    // Generate secure tokens and IDs
+    const gameId = TokenService.generateGameId();
+    const sessionToken = TokenService.generateSessionToken();
+    const inviteToken = TokenService.generateInviteToken();
+    const inviteCode = TokenService.generateInviteCode();
+
+    const now = Date.now();
+
+    // Create the game record
+    const game: PrivateGame = {
+      id: gameId,
+      status: 'pending',
+      createdAt: now,
+      expiresAt: now + this.INVITATION_TTL_MS,
+      lastActivityAt: now,
+      invitation: {
+        invitationTokenHash: TokenService.hashToken(inviteToken),
+        inviteCode,
+        inviteCodeHash: TokenService.hashToken(inviteCode),
+        expiresAt: now + this.INVITATION_TTL_MS,
+        accepted: false
+      },
+      initiator: {
+        name: normalizedName,
+        sessionTokenHash: TokenService.hashToken(sessionToken),
+        websocket: null
+      },
+      invited: {
+        name: null,
+        sessionTokenHash: '',
+        websocket: null
+      },
+      currentTurn: 0,
+      gameStarted: false
+    };
+
+    this.games.set(gameId, game);
+    console.log(`✅ Game ${gameId} created by ${normalizedName}`);
+
+    // Build invite URL - use the deployed client URL with invite token param
+    const inviteUrl = `https://alkoz-lab.github.io/SuperArtillery/?invite=${inviteToken}`;
+
+    return {
+      gameId,
+      playerToken: sessionToken, // Only return plain token to initiator
+      inviteUrl,
+      inviteCode
+    };
+  }
+
+  /**
+   * Accept an invitation via token or code
+   * @param inviteTokenOrCode Either the full invitation token or 6-char code
+   * @param playerName The invited player's display name
+   * @returns Invitation acceptance response with game ID and session token
+   */
+  public acceptInvitation(
+    inviteTokenOrCode: string | undefined,
+    playerName: string
+  ): AcceptInvitationResponse | { error: string; code: string } {
+    // Validate and normalize player name
+    const normalizedName = TokenService.normalizeName(playerName);
+    if (!normalizedName) {
+      return {
+        error: 'Player name must be 15 characters or less and start with a letter or number',
+        code: 'INVALID_PLAYER_NAME'
+      };
+    }
+
+    if (!inviteTokenOrCode) {
+      return {
+        error: 'Invitation token or code is required',
+        code: 'MISSING_INVITE'
+      };
+    }
+
+    // Find the game matching the invitation
+    let game: PrivateGame | undefined;
+    
+    if (inviteTokenOrCode.length === 6) {
+      // Short code provided
+      const codeHash = TokenService.hashToken(inviteTokenOrCode.toUpperCase());
+      game = Array.from(this.games.values()).find(
+        g => g.invitation.inviteCodeHash === codeHash
+      );
+    } else {
+      // Full token provided
+      const tokenHash = TokenService.hashToken(inviteTokenOrCode);
+      game = Array.from(this.games.values()).find(
+        g => g.invitation.invitationTokenHash === tokenHash
+      );
+    }
+
+    if (!game) {
+      return {
+        error: 'Invitation not found or has expired',
+        code: 'INVALID_INVITATION'
+      };
+    }
+
+    // Check if invitation is still valid
+    if (game.invitation.accepted) {
+      return {
+        error: 'This invitation has already been accepted',
+        code: 'INVITATION_ALREADY_ACCEPTED'
+      };
+    }
+
+    if (game.invitation.expiresAt < Date.now()) {
+      game.status = 'expired';
+      return {
+        error: 'Invitation has expired. Create a new game.',
+        code: 'INVITATION_EXPIRED'
+      };
+    }
+
+    if (game.status !== 'pending') {
+      return {
+        error: 'This game is no longer available',
+        code: 'GAME_UNAVAILABLE'
+      };
+    }
+
+    // Generate session token for invited player
+    const sessionToken = TokenService.generateSessionToken();
+
+    // Mark invitation as accepted
+    game.invitation.accepted = true;
+    game.invited.name = normalizedName;
+    game.invited.sessionTokenHash = TokenService.hashToken(sessionToken);
+
+    console.log(`✅ Invitation accepted for game ${game.id} by ${normalizedName}`);
+
+    return {
+      gameId: game.id,
+      playerToken: sessionToken // Only return plain token to invited player
+    };
+  }
+
+  /**
+   * Get non-sensitive game status (for polling before WebSocket connection)
+   * @param gameId The game ID
+   * @param sessionToken The player's session token (for authentication)
+   * @returns Game status response
+   */
+  public getGameStatus(
+    gameId: string,
+    sessionToken: string
+  ): GameStatusResponse | { error: string; code: string } {
+    const game = this.games.get(gameId);
+    if (!game) {
+      return {
+        error: 'Game not found or has expired',
+        code: 'GAME_NOT_FOUND'
+      };
+    }
+
+    // Verify session token belongs to this game
+    const isInitiator = TokenService.verifyToken(sessionToken, game.initiator.sessionTokenHash);
+    const isInvited = TokenService.verifyToken(sessionToken, game.invited.sessionTokenHash);
+
+    if (!isInitiator && !isInvited) {
+      return {
+        error: 'Invalid session token for this game',
+        code: 'INVALID_SESSION_TOKEN'
+      };
+    }
+
+    const playersConnected = [game.initiator.websocket, game.invited.websocket].filter(
+      ws => ws !== null && ws.readyState === WebSocket.OPEN
+    ).length;
+
+    return {
+      status: game.status,
+      playersConnected,
+      requiredPlayers: 2
+    };
+  }
+
+  /**
+   * Connect a player via WebSocket using session token
+   * @param gameId The game ID
+   * @param sessionToken The player's session token
+   * @param ws The WebSocket connection
+   * @returns Player ID (0 or 1) if successful, error otherwise
+   */
+  public connectPlayer(
+    gameId: string,
+    sessionToken: string,
+    ws: WebSocket
+  ): { playerId: 0 | 1 } | { error: string; code: string } {
+    const game = this.games.get(gameId);
+    if (!game) {
+      return {
+        error: 'Game not found or has expired',
+        code: 'GAME_NOT_FOUND'
+      };
+    }
+
+    // Determine which player this is by validating session token
+    const isInitiator = TokenService.verifyToken(sessionToken, game.initiator.sessionTokenHash);
+    const isInvited = TokenService.verifyToken(sessionToken, game.invited.sessionTokenHash);
+
+    if (!isInitiator && !isInvited) {
+      return {
+        error: 'Invalid session token for this game',
+        code: 'INVALID_SESSION_TOKEN'
+      };
+    }
+
+    const playerId = isInitiator ? 0 : 1;
+
+    // Store WebSocket connection
+    if (playerId === 0) {
+      game.initiator.websocket = ws;
+    } else {
+      game.invited.websocket = ws;
+    }
+
+    console.log(`✅ Player ${playerId} (${isInitiator ? game.initiator.name : game.invited.name}) connected to game ${gameId}`);
+
+    // Try to start game if both players are connected
+    if (!game.gameStarted) {
+      this.tryStartGame(game);
+    }
+
+    return { playerId };
+  }
+
+  /**
+   * Get player ID from session token
+   * @param gameId The game ID
+   * @param sessionToken The player's session token
+   * @returns Player ID (0 or 1) or null if invalid
+   */
+  public getPlayerIdFromToken(gameId: string, sessionToken: string): 0 | 1 | null {
+    const game = this.games.get(gameId);
+    if (!game) return null;
+
+    const isInitiator = TokenService.verifyToken(sessionToken, game.initiator.sessionTokenHash);
+    if (isInitiator) return 0;
+
+    const isInvited = TokenService.verifyToken(sessionToken, game.invited.sessionTokenHash);
+    if (isInvited) return 1;
+
+    return null;
+  }
+
+  /**
+   * Handle player disconnect
+   */
+  public disconnectPlayer(gameId: string, playerId: 0 | 1): void {
+    const game = this.games.get(gameId);
+    if (!game) return;
+
+    if (playerId === 0) {
+      game.initiator.websocket = null;
+    } else {
+      game.invited.websocket = null;
+    }
+
+    console.log(`Player ${playerId} disconnected from game ${gameId}`);
+
+    // End game if it was in progress
+    if (game.gameStarted) {
+      game.status = 'finished';
+      game.gameFinishedAt = Date.now();
+    } else if (game.status === 'pending') {
+      // If game is still pending and initiator disconnects, mark as expired
+      if (playerId === 0) {
+        game.status = 'expired';
+      }
+    }
+  }
+
+  /**
+   * Try to start a game when both players are connected
+   */
+  private tryStartGame(game: PrivateGame): void {
+    if (
+      game.gameStarted ||
+      game.initiator.websocket === null ||
+      game.invited.websocket === null ||
+      game.initiator.websocket.readyState !== WebSocket.OPEN ||
+      game.invited.websocket.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
+
+    game.status = 'active';
+    game.gameStarted = true;
+    game.currentTurn = 0;
+    game.lastActivityAt = Date.now();
+
+    const battlefield = this.createBattlefield();
+
+    console.log(
+      `🎮 Game ${game.id} started: ${game.initiator.name} vs ${game.invited.name}`
+    );
+
+    // Send game_start to both players
+    for (let playerId = 0; playerId < 2; playerId++) {
+      const ws = playerId === 0 ? game.initiator.websocket : game.invited.websocket;
+      const opponentName =
+        playerId === 0
+          ? (game.invited.name ?? 'Opponent')
+          : (game.initiator.name ?? 'Opponent');
+
+      const startMessage: GameStartMessage = {
+        type: 'game_start',
+        gameId: game.id,
+        opponentName,
+        battlefield
+      };
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(startMessage));
+      }
+    }
+
+    // Send initial turn change
+    const turnMessage: TurnChangeMessage = {
+      type: 'turn_change',
+      playerId_turn: 0
+    };
+    this.broadcastToGame(game, turnMessage);
+  }
+
+  /**
+   * Handle fire action (from HTTP endpoint with session token)
+   * @param gameId The game ID
+   * @param sessionToken The player's session token
+   * @param angle Projectile angle
+   * @param velocity Projectile velocity
+   * @returns Success or error
+   */
+  public fire(
+    gameId: string,
+    sessionToken: string,
+    angle: number,
+    velocity: number
+  ): { success: true } | { success: false; error: string; code: string; statusCode: number } {
+    const game = this.games.get(gameId);
+    if (!game) {
+      return {
+        success: false,
+        error: 'Game not found or has expired',
+        code: 'GAME_NOT_FOUND',
+        statusCode: 404
+      };
+    }
+
+    // Derive player ID from session token
+    const playerId = this.getPlayerIdFromToken(gameId, sessionToken);
+    if (playerId === null) {
+      return {
+        success: false,
+        error: 'Invalid session token for this game',
+        code: 'INVALID_SESSION_TOKEN',
+        statusCode: 401
+      };
+    }
+
+    if (!game.gameStarted || game.status !== 'active') {
+      return {
+        success: false,
+        error: 'Game has not started or has ended',
+        code: 'GAME_NOT_ACTIVE',
+        statusCode: 400
+      };
+    }
+
+    if (playerId !== game.currentTurn) {
+      return {
+        success: false,
+        error: 'Wait for your turn',
+        code: 'NOT_YOUR_TURN',
+        statusCode: 400
+      };
+    }
+
+    // Validate angle
+    if (typeof angle !== 'number' || angle < 0 || angle > 360) {
+      return {
+        success: false,
+        error: 'Angle must be between 0 and 360 degrees',
+        code: 'INVALID_ANGLE',
+        statusCode: 400
+      };
+    }
+
+    // Validate velocity
+    if (typeof velocity !== 'number' || velocity <= 0) {
+      return {
+        success: false,
+        error: 'Velocity must be positive',
+        code: 'INVALID_VELOCITY',
+        statusCode: 400
+      };
+    }
+
+    // Update activity timestamp
+    game.lastActivityAt = Date.now();
+
+    // Get battlefield for physics calculation
+    const battlefield = this.createBattlefield();
+    const targetPlayerId = playerId === 0 ? 1 : 0;
+    const targetCastle = battlefield.castles[targetPlayerId];
+    const firingCastle = battlefield.castles[playerId];
+
+    // Adjust angle for player 1 (shoots left)
+    const adjustedAngle = playerId === 1 ? 180 - angle : angle;
+    const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
+
+    // Starting position (top of firing castle)
+    const x0 = firingCastle.left_x + battlefield.castleWidth / 2;
+    const y0 = battlefield.groundY - battlefield.castleHeight;
+
+    // Check collision with target castle
+    const hitTime = checkCastleCollision(
+      x0,
+      y0,
+      vx,
+      vy,
+      battlefield.gravity,
+      targetCastle.left_x + battlefield.castleWidth / 2,
+      battlefield.castleWidth,
+      battlefield.castleHeight,
+      battlefield.groundY
+    );
+
+    // Broadcast shot
+    const shotMessage: ShotMessage = {
+      type: 'shot',
+      playerId,
+      angle,
+      velocity
+    };
+    this.broadcastToGame(game, shotMessage);
+
+    if (hitTime !== null) {
+      // Hit! Game over
+      const gameOverMessage: GameOverMessage = {
+        type: 'game_over',
+        playerId_winner: playerId
+      };
+      game.status = 'finished';
+      game.gameFinishedAt = Date.now();
+      this.broadcastToGame(game, gameOverMessage);
+      return { success: true };
+    }
+
+    // Miss - switch turns
+    game.currentTurn = game.currentTurn === 0 ? 1 : 0;
+    const turnMessage: TurnChangeMessage = {
+      type: 'turn_change',
+      playerId_turn: game.currentTurn
+    };
+    this.broadcastToGame(game, turnMessage);
+
+    return { success: true };
+  }
+
+  /**
+   * Broadcast a message to both players in a game
+   */
+  private broadcastToGame(game: PrivateGame, message: any): void {
+    const messageStr = JSON.stringify(message);
+
+    [game.initiator, game.invited].forEach((player) => {
+      if (player.websocket && player.websocket.readyState === WebSocket.OPEN) {
+        player.websocket.send(messageStr);
+      }
+    });
+  }
+
+  /**
+   * Create a battlefield for the game
+   */
+  private createBattlefield(): Battlefield {
+    return {
       canvasWidth: 280,
       canvasHeight: 160,
       gravity: 100,
@@ -30,285 +577,94 @@ export class GameManager {
   }
 
   /**
-   * Register a player with a name (HTTP endpoint)
-   * @returns Object with playerId (0 or 1) or error information
+   * Cleanup expired games and invitations
+   * Runs periodically to free memory
    */
-  registerPlayer(name: string): { success: true; playerId: 0 | 1 } | { success: false; error: string; statusCode: number } {
-    // Validate name is provided
-    if (!name || name.trim() === '') {
-      return { success: false, error: 'Name is required', statusCode: 400 };
-    }
+  private cleanup(): void {
+    const now = Date.now();
+    const toDelete: string[] = [];
 
-    // Check if name is already taken
-    if (this.playerNames.includes(name)) {
-      return { success: false, error: `Player ${name} already registered`, statusCode: 409 };
-    }
-
-    // Check if server is full (both slots taken)
-    if (this.playerNames[0] !== null && this.playerNames[1] !== null) {
-      return { success: false, error: 'Server is full', statusCode: 403 };
-    }
-
-    // Find first empty slot
-    for (let i = 0; i < 2; i++) {
-      if (this.playerNames[i] === null) {
-        this.playerNames[i] = name;
-        console.log(`Player ${i} (${name}) registered`);
-        return { success: true, playerId: i as 0 | 1 };
+    this.games.forEach((game, gameId) => {
+      // Expire pending games with expired invitations
+      if (
+        game.status === 'pending' &&
+        game.invitation.expiresAt < now
+      ) {
+        game.status = 'expired';
       }
-    }
 
-    // Should never reach here, but just in case
-    return { success: false, error: 'Server is full', statusCode: 403 };
-  }
-
-  /**
-   * Connect a WebSocket for a registered player
-   * @returns true if connection successful, false otherwise
-   */
-  connectPlayer(playerId: 0 | 1, ws: WebSocket): boolean {
-    // Verify player is registered
-    if (this.playerNames[playerId] === null) {
-      console.log(`Player ${playerId} not registered`);
-      return false;
-    }
-
-    // Connect the WebSocket
-    this.playerConnections[playerId] = ws;
-    console.log(`Player ${playerId} (${this.playerNames[playerId]}) connected via WebSocket`);
-
-    // If both players are now connected, start the game
-    if (this.areBothConnected() && !this.gameStarted) {
-      this.startGame();
-    }
-
-    return true;
-  }
-
-  /**
-   * Disconnect a player's WebSocket
-   */
-  disconnectPlayer(ws: WebSocket): void {
-    const index = this.playerConnections.indexOf(ws);
-    if (index !== -1) {
-      this.playerConnections[index] = null;
-      console.log(`Player ${index} (${this.playerNames[index]}) disconnected`);
-
-      // If a player disconnects, end the game
-      this.endGame();
-    }
-  }
-
-  /**
-   * Check if both players are connected via WebSocket
-   */
-  private areBothConnected(): boolean {
-    return this.playerConnections[0] !== null && this.playerConnections[1] !== null;
-  }
-
-  /**
-   * Start the game when both players are connected
-   */
-  private startGame(): void {
-    console.log(`Game starting with 2 players: ${this.playerNames[0]} vs ${this.playerNames[1]}!`);
-    this.gameStarted = true;
-    this.currentTurn = 0; // Player 0 goes first
-
-    // send game_start message individually to each player
-    for (let i = 0; i < 2; i++) {
-      const opponentId = i === 0 ? 1: 0;
-      const ws = this.playerConnections[i];
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        const startMessage : GameStartMessage = {
-          type: 'game_start',
-          gameId: this.gameId,
-          opponentName: this.playerNames[opponentId] || "",
-          battlefield: this.battlefield,
-        };
-        const messageStr = JSON.stringify(startMessage);
-        console.log(`📤 Broadcasting to Player ${i} (${this.playerNames[i]}):`, messageStr);
-        ws.send(messageStr);
+      // Expire active games with no activity for TTL
+      if (
+        game.status === 'active' &&
+        game.lastActivityAt + this.ACTIVE_GAME_TTL_MS < now
+      ) {
+        game.status = 'expired';
       }
-    }
 
-    // Send turn_change message to indicate initial turn
-    const turnMessage: TurnChangeMessage = {
-      type: 'turn_change',
-      playerId_turn: this.currentTurn,
-    };
-    this.broadcast(turnMessage);
-  }
+      // Remove finished games after grace period
+      if (
+        game.status === 'finished' &&
+        game.gameFinishedAt &&
+        game.gameFinishedAt + this.FINISHED_GAME_GRACE_PERIOD_MS < now
+      ) {
+        toDelete.push(gameId);
+      }
 
-  /**
-   * Handle game over message
-   */
-  handleGameOver(message: GameOverMessage): void {
-    console.log(`Game over! Winner: Player ${message.playerId_winner}`);
-
-    // Broadcast game over to both players
-    this.broadcast(message);
-
-    // Reset game state
-    this.reset();
-  }
-
-  /**
-   * Broadcast a message to all connected players
-   */
-  private broadcast(message: any): void {
-    const messageStr = JSON.stringify(message);
-    this.playerConnections.forEach((connection, index) => {
-      if (connection && connection.readyState === WebSocket.OPEN) {
-        console.log(`📤 Broadcasting to Player ${index} (${this.playerNames[index]}):`, messageStr);
-        connection.send(messageStr);
+      // Remove expired games
+      if (game.status === 'expired' && game.expiresAt < now) {
+        toDelete.push(gameId);
       }
     });
-  }
 
-  /**
-   * End the game (on disconnect or error)
-   */
-  private endGame(): void {
-    console.log('Game ended');
-    this.reset();
-  }
+    // Clean up
+    toDelete.forEach(gameId => {
+      const game = this.games.get(gameId);
+      if (game) {
+        console.log(
+          `🧹 Cleaning up game ${gameId} (status: ${game.status})`
+        );
+        // Close WebSocket connections
+        if (game.initiator.websocket) {
+          game.initiator.websocket.close();
+        }
+        if (game.invited.websocket) {
+          game.invited.websocket.close();
+        }
+        this.games.delete(gameId);
+      }
+    });
 
-  /**
-   * Reset game state for a new game
-   */
-  private reset(): void {
-    this.playerConnections = [null, null];
-    this.playerNames = [null, null];
-    this.currentTurn = 0;
-    this.gameStarted = false;
-  }
-
-  /**
-   * Get count of registered players
-   */
-  getPlayerCount(): number {
-    return this.playerNames.filter(p => p !== null).length;
-  }
-
-  /**
-   * Get player name by ID
-   */
-  getPlayerName(playerId: 0 | 1): string | null {
-    return this.playerNames[playerId];
-  }
-
-  /**
-   * Get current game ID
-   */
-  getGameId(): number {
-    return this.gameId;
-  }
-
-  /**
-   * Handle fire action from HTTP endpoint
-   * @returns success or error with status code
-   */
-  fire(
-    gameId: number,
-    playerId: 0 | 1,
-    angle: number,
-    velocity: number
-  ): { success: true } | { success: false; error: string; statusCode: number } {
-
-    if (gameId !== this.gameId || !this.gameStarted) {
-      return {
-        success: false,
-        error: `GameId ${gameId} is unknown.`,
-        statusCode: 400
-      };
+    if (toDelete.length > 0) {
+      console.log(`Cleaned up ${toDelete.length} games. Active games: ${this.games.size}`);
     }
+  }
 
-    if (playerId !== 0 && playerId !== 1) {
-      return {
-        success: false,
-        error: `PlayerId ${playerId} is unknown.`,
-        statusCode: 400
-      };
-    }
+  /**
+   * Get game statistics for health check
+   */
+  public getStats(): {
+    gameCount: number;
+    invitationCount: number;
+    maxGamesReached: boolean;
+  } {
+    let invitationCount = 0;
+    this.games.forEach(game => {
+      if (game.status === 'pending' && !game.invitation.accepted) {
+        invitationCount++;
+      }
+    });
 
-    if (playerId !== this.currentTurn) {
-      return {
-        success: false,
-        error: 'Player should wait for its turn to fire.',
-        statusCode: 400
-      };
-    }
-
-    if (angle < 0 || angle > 360) {
-      return {
-        success: false,
-        error: 'The angle should be within 0-360 degrees.',
-        statusCode: 400
-      };
-    }
-
-    if (velocity <= 0) {
-      return {
-        success: false,
-        error: 'The velocity should be positive.',
-        statusCode: 400
-      };
-    }
-
-    // After validations pass, before broadcasting shot:
-
-    // Determine which player is the target (opponent)
-    const targetPlayerId = playerId === 0 ? 1 : 0;
-    const targetCastle = this.battlefield.castles[targetPlayerId];
-    const firingCastle = this.battlefield.castles[playerId];
-
-    // Match client aiming convention: player 1 shoots toward the left.
-    const adjustedAngle = playerId === 1 ? (180 - angle) : angle;
-    const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
-
-    // Starting position (top of firing castle)
-    const x0 = firingCastle.left_x + this.battlefield.castleWidth / 2;
-    const y0 = this.battlefield.groundY - this.battlefield.castleHeight;
-
-    // Check collision with target castle
-    const hitTime = checkCastleCollision(
-      x0, y0,
-      vx, vy,
-      this.battlefield.gravity,
-      targetCastle.left_x + this.battlefield.castleWidth / 2,
-      this.battlefield.castleWidth,
-      this.battlefield.castleHeight,
-      this.battlefield.groundY
-    );
-
-    // Broadcast shot message
-    const shotMessage: ShotMessage = {
-      type: 'shot',
-      playerId,
-      angle,
-      velocity
+    return {
+      gameCount: this.games.size,
+      invitationCount,
+      maxGamesReached: this.games.size >= this.MAX_ACTIVE_GAMES
     };
-    this.broadcast(shotMessage);
+  }
 
-    // Check if hit
-    if (hitTime !== null) {
-      // Game over - firing player wins
-      const gameOverMessage: GameOverMessage = {
-        type: 'game_over',
-        playerId_winner: playerId
-      };
-      this.handleGameOver(gameOverMessage);
-      return { success: true };
-    }
-
-    // Miss - switch turns
-    this.currentTurn = this.currentTurn === 0 ? 1 : 0;
-    const turnMessage: TurnChangeMessage = {
-      type: 'turn_change',
-      playerId_turn: this.currentTurn
-    };
-    this.broadcast(turnMessage);
-
-    return { success: true };
+  /**
+   * Get player count (for backward compatibility)
+   */
+  public getPlayerCount(): number {
+    return this.games.size;
   }
 }

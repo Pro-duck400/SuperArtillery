@@ -1,24 +1,204 @@
-// REST API client
+// REST API client for SuperArtillery private games
+
+export interface CreateGameResponse {
+  gameId: string;
+  playerToken: string;
+  inviteUrl: string;
+  inviteCode: string;
+}
+
+export interface AcceptInvitationResponse {
+  gameId: string;
+  playerToken: string;
+}
+
+export interface GameStatusResponse {
+  status: 'pending' | 'active' | 'finished' | 'expired';
+  playersConnected: number;
+  requiredPlayers: 2;
+}
+
+export interface HealthResponse {
+  status: 'ok' | 'degraded';
+  timestamp: string;
+  uptime: number;
+  gameCount: number;
+  invitationCount: number;
+  maxGamesReached: boolean;
+  version: string;
+}
+
+export interface ErrorResponse {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
 
 export class ApiClient {
   private baseUrl: string;
+  private readonly REQUEST_TIMEOUT_MS = 5000;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
   /**
-   * Register a player with the server
-   * @param name Player name
-   * @returns playerId (0 or 1) if successful
+   * Health check with retry logic
+   * Retries with delays: 0, 1, 2, 5 seconds
    */
-  public async register(name: string): Promise<{ playerId: 0 | 1 }> {
-    const response = await fetch(`${this.baseUrl}/api/v1/register`, {
+  public async healthCheckWithRetry(): Promise<HealthResponse> {
+    const delays = [0, 1000, 2000, 5000];
+    let lastError: Error | null = null;
+
+    for (let i = 0; i < delays.length; i++) {
+      if (i > 0) {
+        await this.delay(delays[i]);
+      }
+
+      try {
+        return await this.healthCheck();
+      } catch (error) {
+        lastError = error as Error;
+        console.log(
+          `Health check attempt ${i + 1}/${delays.length} failed: ${
+            lastError.message
+          }`
+        );
+      }
+    }
+
+    throw lastError || new Error('Health check failed after all retries');
+  }
+
+  /**
+   * Single health check request
+   */
+  public async healthCheck(): Promise<HealthResponse> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/health`, {
+      method: 'GET'
+    });
+
+    if (!response.ok) {
+      throw new Error('Server is not responding');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Create a new private game
+   */
+  public async createGame(playerName: string): Promise<CreateGameResponse> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/games`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ playerName })
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await this.extractErrorMessage(response, 'Failed to create game')
+      );
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Accept an invitation
+   */
+  public async acceptInvitation(
+    inviteTokenOrCode: string,
+    playerName: string
+  ): Promise<AcceptInvitationResponse> {
+    // Determine if it's a token or code based on length
+    const isCode = inviteTokenOrCode.length === 6;
+    const body = isCode
+      ? { inviteCode: inviteTokenOrCode, playerName }
+      : { inviteToken: inviteTokenOrCode, playerName };
+
+    const response = await this.fetchWithTimeout(
+      `${this.baseUrl}/api/v1/invitations/accept`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        await this.extractErrorMessage(response, 'Failed to accept invitation')
+      );
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get game status
+   */
+  public async getGameStatus(
+    gameId: string,
+    sessionToken: string
+  ): Promise<GameStatusResponse> {
+    const response = await this.fetchWithTimeout(
+      `${this.baseUrl}/api/v1/games/${gameId}/status?sessionToken=${encodeURIComponent(
+        sessionToken
+      )}`,
+      {
+        method: 'GET'
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        await this.extractErrorMessage(response, 'Failed to get game status')
+      );
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fire a shot (updated for session tokens)
+   */
+  public async fire(
+    gameId: string,
+    sessionToken: string,
+    angle: number,
+    velocity: number
+  ): Promise<void> {
+    const response = await this.fetchWithTimeout(
+      `${this.baseUrl}/api/v1/fire?sessionToken=${encodeURIComponent(sessionToken)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ gameId, angle, velocity })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(await this.extractErrorMessage(response, 'Fire action failed'));
+    }
+  }
+
+  /**
+   * Legacy register endpoint (deprecated)
+   */
+  public async register(name: string): Promise<{ playerId: 0 | 1 }> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name })
     });
 
     if (!response.ok) {
@@ -29,41 +209,60 @@ export class ApiClient {
   }
 
   /**
-   * Fire a shot
-   * @param gameId Game ID
-   * @param playerId Player ID (0 or 1)
-   * @param angle Angle in degrees (0-360)
-   * @param velocity Velocity (must be positive)
+   * Fetch with timeout
    */
-  public async fire(gameId: number, playerId: 0 | 1, angle: number, velocity: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/fire`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ gameId, playerId, angle, velocity }),
-    });
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      throw new Error(await this.extractErrorMessage(response, 'Fire action failed'));
+    try {
+      return await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
-  private async extractErrorMessage(response: Response, fallback: string): Promise<string> {
+  /**
+   * Extract error message from response
+   */
+  private async extractErrorMessage(
+    response: Response,
+    fallback: string
+  ): Promise<string> {
     try {
-      const errorBody = (await response.json()) as { details?: string; message?: string };
-      if (typeof errorBody.details === 'string' && errorBody.details.trim() !== '') {
-        return errorBody.details;
-      }
-
+      const errorBody = (await response.json()) as {
+        details?: string;
+        message?: string;
+      };
       if (typeof errorBody.message === 'string' && errorBody.message.trim() !== '') {
         return errorBody.message;
       }
+      if (typeof errorBody.details === 'string' && errorBody.details.trim() !== '') {
+        return errorBody.details;
+      }
     } catch {
-      // Ignore parse failures and fall back to status text/fallback below.
+      // Ignore parse failures and fall back to status text/fallback
     }
 
     return response.statusText || fallback;
+  }
+
+  /**
+   * Delay helper
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   public getBaseUrl(): string {

@@ -8,7 +8,7 @@ export class Game {
     currentTurn: 0,
     isMyTurn: false,
   };
-  private gameId: number | null = null;
+  private gameId: string | null = null;
   private battlefield: BattlefieldConfig | null = null;
   private playerName: string | null = null;
   private opponentName: string | null = null;
@@ -23,11 +23,11 @@ export class Game {
     this.updateTurnState();
   }
 
-  public setGameId(id: number): void {
+  public setGameId(id: string): void {
     this.gameId = id;
   }
 
-  public getGameId(): number | null {
+  public getGameId(): string | null {
     return this.gameId;
   }
 

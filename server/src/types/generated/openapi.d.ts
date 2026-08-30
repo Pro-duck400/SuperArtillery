@@ -190,8 +190,7 @@ export interface components {
             playerId: components["schemas"]["PlayerId"];
         };
         FireRequest: {
-            gameId: number;
-            playerId: components["schemas"]["PlayerId"];
+            gameId: string;
             angle: number;
             velocity: number;
         };
@@ -213,7 +212,7 @@ export interface components {
              * @enum {string}
              */
             type: "game_start";
-            gameId: number;
+            gameId: string;
             opponentName: string;
             battlefield: components["schemas"]["Battlefield"];
         };

@@ -41,7 +41,7 @@ function wireGameClientEvents(client: GameClient): void {
     uiManager.setMessage('Waiting for another player to join...');
   });
 
-  client.onGameStart((gameId: number, battlefield) => {
+  client.onGameStart((gameId: string, battlefield) => {
     renderer.applyBattlefield(battlefield);
     animator.configureScene(
       renderer.getCanvasWidth(),
