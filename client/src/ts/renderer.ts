@@ -9,6 +9,7 @@ export class Renderer {
   private castleWidth = 10;
   private castleHeight = 10;
   private castleLeftByPlayerId: Record<0 | 1, number> = { 0: 20, 1: 260 };
+  private activeCastlePlayerId: 0 | 1 | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -32,7 +33,19 @@ export class Renderer {
     this.ctx.stroke();
   }
 
-  public drawCastle(leftX: number): void {
+  public drawCastle(leftX: number, isActive: boolean = false): void {
+    if (isActive) {
+      const padding = 3;
+      this.ctx.strokeStyle = '#ffd700';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(
+        leftX - padding,
+        this.groundY - this.castleHeight - padding,
+        this.castleWidth + padding * 2,
+        this.castleHeight + padding * 2
+      );
+    }
+
     this.ctx.fillStyle = '#808080';
     this.ctx.fillRect(
       leftX,
@@ -72,6 +85,13 @@ export class Renderer {
     return this.castleLeftByPlayerId[playerId] + this.castleWidth / 2;
   }
 
+  /**
+   * Highlight the castle of the player whose turn it is (null clears the highlight)
+   */
+  public setActiveTurn(playerId: 0 | 1 | null): void {
+    this.activeCastlePlayerId = playerId;
+  }
+
   public drawProjectile(projectile: Projectile): void {
     this.ctx.fillStyle = '#FF0000';
     this.ctx.beginPath();
@@ -99,8 +119,8 @@ export class Renderer {
   public render(projectile: Projectile | null, trajectory: Array<{ x: number; y: number }> = []): void {
     this.clear();
     this.drawGround();
-    this.drawCastle(this.castleLeftByPlayerId[0]);
-    this.drawCastle(this.castleLeftByPlayerId[1]);
+    this.drawCastle(this.castleLeftByPlayerId[0], this.activeCastlePlayerId === 0);
+    this.drawCastle(this.castleLeftByPlayerId[1], this.activeCastlePlayerId === 1);
 
     // Draw trajectory first (so it appears behind the projectile)
     if (trajectory.length > 0) {

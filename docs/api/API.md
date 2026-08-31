@@ -5,211 +5,272 @@
 
 ## Communication Protocol
 
-This document describes the REST API and WebSocket communication used by the MVP version of the game.
+This document describes the REST API and WebSocket communication used by the private, invite-only, in-memory-only game system.
 
-Clients and server communicates via HTTP(S) endpoints & WebSocket messages. 
+Clients call HTTP(S) endpoints exposed by the server to start an action (create a game, accept an invitation, fire a shot).
 
-Clients call HTTP(S) endpoints exposed by the server to start an action.
+Once both players are connected, the server pushes WebSocket messages to keep clients in sync with game state changes (shots, turn changes, game over).
 
-Upon action the server sends WebSocket messages to connected clients to keep them up-to date with the changes of the game state.
+There is no persistence: games, invitations, and sessions live only in server memory and are lost on restart.
 
 ---
 
 ## REST API Endpoints (HTTP/HTTPS)
 
-### Registration
+### Health Check
 
-Register the player on the server. Server responds with `playerId` if registration is successful.
+Used by the client to detect a sleeping/cold-starting server before create/accept operations, with retry logic (delays such as 0, 1, 2, 5 seconds).
 
-**POST** `/api/v1/register`
+**GET** `/api/v1/health`
+
+**Response `200`:**
+```json
+{
+  "status": "ok" | "degraded",
+  "timestamp": "2026-08-31T12:00:00.000Z",
+  "uptime": 123.45,
+  "gameCount": 3,
+  "invitationCount": 1,
+  "maxGamesReached": false,
+  "version": "1.0.0"
+}
+```
+
+---
+
+### Create a Private Game
+
+Creates a new private, two-player game in memory and returns tokens/links for the initiator to share.
+
+**POST** `/api/v1/games`
 
 **Payload:**
 ```json
-name: string
+{ "playerName": "Alice" }
 ```
-**Response:**
 
-- 200 Success 
+**Response `201`:**
 ```json
-playerId: 0 | 1
+{
+  "gameId": "opaque-game-id",
+  "playerToken": "opaque-session-token",
+  "inviteUrl": "https://example.com/?invite=opaque-invite-token",
+  "inviteCode": "K7M4"
+}
 ```
-- 409 Conflict
-```json
-details: "Player {name} already registered"
-```
-- 400 Bad request
-```json
-details: "Server is full"
-```
-Other possible error:
-- Bad request: name is required
 
-(When two players are already connected, refusing the 3rd player to connect)
+**Errors:**
+- `400 INVALID_PLAYER_NAME` — name missing/too long/invalid first character.
+- `503 MAX_GAMES_REACHED` — server at maximum concurrent-game capacity.
+
+---
+
+### Accept an Invitation
+
+Accepts a private game invitation via the full token (from the link) or the short 4-character code. One-time use only.
+
+**POST** `/api/v1/invitations/accept`
+
+**Payload:**
+```json
+{ "inviteToken": "opaque-invite-token", "playerName": "Bob" }
+```
+or
+```json
+{ "inviteCode": "K7M4", "playerName": "Bob" }
+```
+
+**Response `200`:**
+```json
+{
+  "gameId": "opaque-game-id",
+  "playerToken": "opaque-session-token"
+}
+```
+
+**Errors:**
+- `400 INVALID_PLAYER_NAME` — invalid display name.
+- `400 MISSING_INVITE` — no token or code supplied.
+- `400 INVALID_INVITATION` — unknown token/code.
+- `400 INVITATION_ALREADY_ACCEPTED` — invitation was already used by another player (e.g. a third client trying to join a game that already has two players).
+- `400 GAME_UNAVAILABLE` — game exists but is no longer pending.
+- `410 INVITATION_EXPIRED` — invitation TTL elapsed.
+
+---
+
+### Get Game Status
+
+Polls non-sensitive lobby state. Requires a valid session token.
+
+**GET** `/api/v1/games/{gameId}/status?sessionToken=...`
+
+**Response `200`:**
+```json
+{
+  "status": "pending" | "active" | "finished" | "expired",
+  "playersConnected": 1,
+  "requiredPlayers": 2
+}
+```
+
+**Errors:**
+- `401` — missing/invalid session token.
+- `404 GAME_NOT_FOUND` — unknown or expired game.
 
 ---
 
 ### Fire Action
 
-Sends the firing action for the current player's turn. If server responds with 200 Success, each player receives WebSocket message `shot` with the given details of the shot. Followed by either `turn_change` if no one is hit or `game_over` if any player is hit.
+Fires a shot for the current player's turn. Player identity is derived server-side from the session token — the client never supplies a `playerId`. On success, the server broadcasts `shot` to both players over WebSocket, followed by either `turn_change` or `game_over`.
 
-**POST** `/api/v1/fire`
+**POST** `/api/v1/fire?sessionToken=...`
 
-**Payload**
+**Payload:**
 ```json
-gameId: number;
-playerId: number;
-angle: number;
-velocity: number;
+{ "gameId": "opaque-game-id", "angle": 45, "velocity": 250 }
 ```
 
-**Response:**
+**Response:** `200` (no body)
 
-- 200 Success 
-
-- 400 Bad Request
-```json
-details: string = "The error message goes here".
-```
-Possible errors:
-
-- GameId {gameId} is unknown.
-- PlayerId {playerId} is unknown.
-- Player should wait for its turn to fire.
-- The angle should be within 0-360 degrees.
-- The velocity should be positive.
-
----
-## WebSocket Messages (Real-time Game Events)
-
-WebSockets messages are send from server to synchronise the current game state changes between the server and connected clients.
+**Errors** (`400` unless noted):
+- `404 GAME_NOT_FOUND`
+- `401 INVALID_SESSION_TOKEN`
+- `GAME_NOT_ACTIVE` — game hasn't started or has ended.
+- `NOT_YOUR_TURN`
+- `INVALID_ANGLE` — must be between 0 and 360 degrees.
+- `INVALID_VELOCITY` — must be positive.
 
 ---
 
-### Server → Client
+## WebSocket Authentication
+
+Clients open an authenticated WebSocket connection using the `gameId` and `playerToken` (session token) returned by `/games` or `/invitations/accept`:
+
+```text
+wss://server/?gameId=opaque-game-id&sessionToken=opaque-session-token
+```
+
+The server derives player identity from the session token; it never trusts a client-supplied `playerId`. The game starts automatically once both players' sockets are connected.
+
+---
+
+## WebSocket Messages (Server → Client)
 
 #### Game Start
-
-Sent when the second player connects and the game begins.
-
+Sent to both players once both WebSocket connections are open.
 ```json
 {
   "type": "game_start",
-  "gameId": number,
+  "gameId": "opaque-game-id",
+  "opponentName": "Bob",
+  "battlefield": { "...": "battlefield config (gravity, castles, etc.)" }
 }
 ```
 
 #### Shots Fired
-
-Broadcast to both players after a successful fire action.
-
+Broadcast to both players after a successful `POST /api/v1/fire`.
 ```json
 {
   "type": "shot",
-  "playerId": 0 | 1,
-  "angle": number, /*between 0-360*/
-  "velocity": nubmer /* > 0; Velocity over 350 blows up the shooting player */
+  "playerId": 0,
+  "angle": 45,
+  "velocity": 250
 }
 ```
 
 #### Turn Change
-
-Sent when a shot misses and the turn switches to the other player.
-
+Sent when a shot misses.
 ```json
-{
-  type: "turn_change",
-  playerId_turn: 0 | 1
-}
+{ "type": "turn_change", "playerId_turn": 1 }
 ```
 
-#### Game Ends
-
-Sent when a player wins the game.
-
+#### Game Over
+Sent when a shot hits the opponent's castle.
 ```json
-{
-  type: "game_over",
-  playerId_winner: 0 | 1
-}
+{ "type": "game_over", "playerId_winner": 0 }
 ```
 
 ---
 
 ## Sample Game Flow Diagram
 
-The following diagram illustrates a complete game session including successful registration, gameplay, and common error scenarios.
-
-**[📊 View Interactive Diagram](API-diagram.png)**
-
 ```mermaid
 sequenceDiagram
     participant C1 as Client 1 (Alice)
     participant Server
     participant C2 as Client 2 (Bob)
-    
-    Note over C1,C2: Registration Phase
-    C1->>Server: POST /api/v1/register<br/>{name: "Alice"}
-    Server-->>C1: 200 OK<br/>{playerId: 0}
-    Note over C1: Connected via WebSocket
-    
-    Note over C1,C2: ERROR CASE 1: Duplicate Name
-    C2->>Server: POST /api/v1/register<br/>{name: "Alice"}
-    Server-->>C2: 409 Conflict<br/>{details: "Player Alice already registered"}
-    
-    C2->>Server: POST /api/v1/register<br/>{name: "Bob"}
-    Server-->>C2: 200 OK<br/>{playerId: 1}
-    Note over C2: Connected via WebSocket
-    
-    Server->>C1: WS: game_start<br/>{gameId: 1}
-    Server->>C2: WS: game_start<br/>{gameId: 1}
-    Server->>C1: WS: turn_change<br/>{playerId_turn: 0}
-    Server->>C2: WS: turn_change<br/>{playerId_turn: 0}
-    
-    Note over C1,C2: ERROR CASE 2: Server Full
     participant C3 as Client 3
-    C3->>Server: POST /api/v1/register<br/>{name: "Charlie"}
-    Server-->>C3: 403 Bad Request<br/>{details: "Server is full"}
-    
+
+    Note over C1,Server: Cold start check
+    C1->>Server: GET /api/v1/health
+    Server-->>C1: 200 OK {status: "ok"}
+
+    Note over C1,Server: Game Creation
+    C1->>Server: POST /api/v1/games<br/>{playerName: "Alice"}
+    Server-->>C1: 201 Created<br/>{gameId, playerToken, inviteUrl, inviteCode}
+    Note over C1: Shares inviteUrl / inviteCode with Bob
+
+    Note over C2,Server: Bob joins via invite
+    C2->>Server: GET /api/v1/health
+    Server-->>C2: 200 OK {status: "ok"}
+    C2->>Server: POST /api/v1/invitations/accept<br/>{inviteCode: "K7M4", playerName: "Bob"}
+    Server-->>C2: 200 OK {gameId, playerToken}
+
+    Note over C1,C3: ERROR CASE: Third client tries the same invite
+    C3->>Server: POST /api/v1/invitations/accept<br/>{inviteCode: "K7M4", playerName: "Charlie"}
+    Server-->>C3: 400 Bad Request<br/>{code: "INVITATION_ALREADY_ACCEPTED",<br/>message: "This invitation has already been accepted"}
+
+    Note over C1,C2: Both players connect over WebSocket
+    C1->>Server: WSS ?gameId=...&sessionToken=(Alice)
+    C2->>Server: WSS ?gameId=...&sessionToken=(Bob)
+    Server->>C1: WS: game_start {opponentName: "Bob", battlefield}
+    Server->>C2: WS: game_start {opponentName: "Alice", battlefield}
+    Server->>C1: WS: turn_change {playerId_turn: 0}
+    Server->>C2: WS: turn_change {playerId_turn: 0}
+
+    Note over C1,C2: Optional lobby polling
+    C1->>Server: GET /api/v1/games/{gameId}/status?sessionToken=(Alice)
+    Server-->>C1: 200 OK {status: "active", playersConnected: 2, requiredPlayers: 2}
+
     Note over C1,C2: Game Play - Turn 1
-    C1->>Server: POST /api/v1/fire<br/>{gameId: 1, playerId: 0,<br/>angle: 45, velocity: 250}
+    C1->>Server: POST /api/v1/fire?sessionToken=(Alice)<br/>{gameId, angle: 45, velocity: 250}
     Server-->>C1: 200 OK
-    Server->>C1: WS: shot<br/>{playerId: 0, angle: 45, velocity: 250}
-    Server->>C2: WS: shot<br/>{playerId: 0, angle: 45, velocity: 250}
+    Server->>C1: WS: shot {playerId: 0, angle: 45, velocity: 250}
+    Server->>C2: WS: shot {playerId: 0, angle: 45, velocity: 250}
     Note over Server: Shot misses
-    Server->>C1: WS: turn_change<br/>{playerId_turn: 1}
-    Server->>C2: WS: turn_change<br/>{playerId_turn: 1}
-    
-    Note over C1,C2: ERROR CASE 3: Invalid Angle
-    C2->>Server: POST /api/v1/fire<br/>{gameId: 1, playerId: 1,<br/>angle: 400, velocity: 200}
-    Server-->>C2: 403 Bad Request<br/>{details: "The angle should be within 0-360 degrees."}
-    
-    Note over C1,C2: Game Play - Turn 2 (Retry)
-    C2->>Server: POST /api/v1/fire<br/>{gameId: 1, playerId: 1,<br/>angle: 135, velocity: 220}
+    Server->>C1: WS: turn_change {playerId_turn: 1}
+    Server->>C2: WS: turn_change {playerId_turn: 1}
+
+    Note over C1,C2: ERROR CASE: Invalid angle
+    C2->>Server: POST /api/v1/fire?sessionToken=(Bob)<br/>{gameId, angle: 400, velocity: 200}
+    Server-->>C2: 400 Bad Request<br/>{code: "INVALID_ANGLE",<br/>message: "Angle must be between 0 and 360 degrees"}
+
+    Note over C1,C2: Game Play - Turn 2 (retry)
+    C2->>Server: POST /api/v1/fire?sessionToken=(Bob)<br/>{gameId, angle: 135, velocity: 220}
     Server-->>C2: 200 OK
-    Server->>C1: WS: shot<br/>{playerId: 1, angle: 135, velocity: 220}
-    Server->>C2: WS: shot<br/>{playerId: 1, angle: 135, velocity: 220}
+    Server->>C1: WS: shot {playerId: 1, angle: 135, velocity: 220}
+    Server->>C2: WS: shot {playerId: 1, angle: 135, velocity: 220}
     Note over Server: Shot misses
-    Server->>C1: WS: turn_change<br/>{playerId_turn: 0}
-    Server->>C2: WS: turn_change<br/>{playerId_turn: 0}
-    
-    Note over C1,C2: Game Play - Turn 3 (Winning Shot)
-    C1->>Server: POST /api/v1/fire<br/>{gameId: 1, playerId: 0,<br/>angle: 50, velocity: 280}
+    Server->>C1: WS: turn_change {playerId_turn: 0}
+    Server->>C2: WS: turn_change {playerId_turn: 0}
+
+    Note over C1,C2: Game Play - Turn 3 (winning shot)
+    C1->>Server: POST /api/v1/fire?sessionToken=(Alice)<br/>{gameId, angle: 50, velocity: 280}
     Server-->>C1: 200 OK
-    Server->>C1: WS: shot<br/>{playerId: 0, angle: 50, velocity: 280}
-    Server->>C2: WS: shot<br/>{playerId: 0, angle: 50, velocity: 280}
-    Note over Server: Shot hits Client 2!
-    Server->>C1: WS: game_over<br/>{playerId_winner: 0}
-    Server->>C2: WS: game_over<br/>{playerId_winner: 0}
-    
+    Server->>C1: WS: shot {playerId: 0, angle: 50, velocity: 280}
+    Server->>C2: WS: shot {playerId: 0, angle: 50, velocity: 280}
+    Note over Server: Shot hits Bob's castle!
+    Server->>C1: WS: game_over {playerId_winner: 0}
+    Server->>C2: WS: game_over {playerId_winner: 0}
+
     Note over C1,C2: Game Ended - Alice Wins!
 ```
 
-### Key Points Illustrated:
-- **Successful Registration**: Both players register and receive unique player IDs (0 and 1)
-- **Game Start**: WebSocket message broadcast to both clients once 2 players are registered
-- **Turn-based Gameplay**: Players alternate firing shots
-- **Error Handling**: 
-  - Duplicate name registration returns 409 Conflict
-  - Invalid angle (400°) returns 403 Bad Request
-- **Game Conclusion**: Winning shot triggers `game_over` message to both clients
+### Key Points Illustrated
+- **Cold start**: both clients call `GET /api/v1/health` before their first game action.
+- **Private invitation**: only the game creator's shared link/code lets another player join — there is no open registration.
+- **One-time invitations**: a third client attempting to reuse an already-accepted invite gets `400 INVITATION_ALREADY_ACCEPTED`, since a private game only ever admits two players.
+- **Session-token identity**: `playerId` is never supplied by the client — it's derived from the session token on both HTTP and WebSocket requests.
+- **Turn-based gameplay**: players alternate firing; invalid input (e.g. out-of-range angle) is rejected with a descriptive error and does not consume the turn.
+- **Game conclusion**: a hit broadcasts `game_over` to both clients with the winner's player ID.
 

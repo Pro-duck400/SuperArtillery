@@ -15,7 +15,7 @@ dotenv.config();
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// Single game instance (MVP: only one game at a time)
+// Game manager instance (supports multiple concurrent games)
 const game = new GameManager();
 
 // Create Express app for HTTP endpoints
@@ -42,56 +42,71 @@ const httpServer = createServer(app);
 // Create WebSocket server attached to HTTP server
 const wss = new WebSocketServer({ server: httpServer });
 
-// Map to track which WebSocket belongs to which player
-const playerMap = new WeakMap<WebSocket, number>();
+// Map to track connection metadata: gameId and playerId for each WebSocket
+const connectionMetadata = new WeakMap<WebSocket, { gameId: string; playerId: 0 | 1 }>();
 
 // Start HTTP server
 httpServer.listen(PORT, () => {
   console.log(`🚀 SuperArtillery server running on port ${PORT}`);
   console.log(`   HTTP API: http://localhost:${PORT}/api/swagger`);
-  console.log(`   WebSocket: ws://localhost:${PORT}`);
-  console.log(`Waiting for 2 players to connect...`);
+  console.log(`   WebSocket: wss://localhost:${PORT}`);
 });
 
 wss.on('connection', (ws: WebSocket, req) => {
-  console.log('New WebSocket connection attempt...');
+  console.log('📡 New WebSocket connection attempt...');
 
-  // Extract playerId from query string (e.g., ws://localhost:3000?playerId=0)
+  // Extract gameId and sessionToken from query string
+  // Pattern: wss://server/?gameId=XXX&sessionToken=YYY
   const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const playerIdParam = url.searchParams.get('playerId');
+  const gameId = url.searchParams.get('gameId');
+  const sessionToken = url.searchParams.get('sessionToken');
 
-  if (!playerIdParam || (playerIdParam !== '0' && playerIdParam !== '1')) {
-    console.log('Connection rejected: missing or invalid playerId');
-    ws.send(JSON.stringify({ type: 'error', message: 'Invalid or missing playerId' }));
-    ws.close();
+  if (!gameId || !sessionToken) {
+    console.log('❌ Connection rejected: missing gameId or sessionToken');
+    const errorMsg = JSON.stringify({
+      type: 'error',
+      code: 'MISSING_AUTH',
+      message: 'gameId and sessionToken are required'
+    });
+    ws.send(errorMsg);
+    ws.close(1008, 'Missing authentication parameters');
     return;
   }
 
-  const playerId = parseInt(playerIdParam) as 0 | 1;
+  // Authenticate and connect player via session token
+  const result = game.connectPlayer(gameId, sessionToken, ws);
 
-  // Connect the player
-  const connected = game.connectPlayer(playerId, ws);
-
-  if (!connected) {
-    console.log(`Connection rejected: Player ${playerId} not registered`);
-    ws.send(JSON.stringify({ type: 'error', message: 'Player not registered' }));
-    ws.close();
+  if ('error' in result) {
+    console.log(`❌ Connection rejected: ${result.error}`);
+    const errorMsg = JSON.stringify({
+      type: 'error',
+      code: result.code,
+      message: result.error
+    });
+    ws.send(errorMsg);
+    ws.close(1008, 'Authentication failed');
     return;
   }
 
-  // Store player ID for this connection
-  playerMap.set(ws, playerId);
+  const playerId = result.playerId;
+  
+  // Store connection metadata
+  connectionMetadata.set(ws, { gameId, playerId });
 
-  console.log(`Player ${playerId} WebSocket connected. Registered players: ${game.getPlayerCount()}/2`);
+  console.log(`✅ Player ${playerId} connected to game ${gameId}`);
 
   // Note: Clients don't send WebSocket messages - they use HTTP endpoints instead
   // WebSocket is used only for server -> client broadcasts (game_start, shot, turn_change, game_over)
 
   // Handle disconnection
   ws.on('close', () => {
-    const pid = playerMap.get(ws);
-    console.log(`Player ${pid} WebSocket connection closed`);
-    game.disconnectPlayer(ws);
+    const metadata = connectionMetadata.get(ws);
+    if (metadata) {
+      console.log(
+        `❌ Player ${metadata.playerId} disconnected from game ${metadata.gameId}`
+      );
+      game.disconnectPlayer(metadata.gameId, metadata.playerId);
+    }
   });
 
   // Handle errors
@@ -107,17 +122,19 @@ wss.on('error', (error) => {
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\nShutting down server...');
+  console.log('\n🛑 Shutting down server...');
+  game.shutdown();
   httpServer.close(() => {
-    console.log('Server closed');
+    console.log('✅ Server closed');
     process.exit(0);
   });
 });
 
 process.on('SIGTERM', () => {
-  console.log('\nShutting down server...');
+  console.log('\n🛑 Shutting down server...');
+  game.shutdown();
   httpServer.close(() => {
-    console.log('Server closed');
+    console.log('✅ Server closed');
     process.exit(0);
   });
 });

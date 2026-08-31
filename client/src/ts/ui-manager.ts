@@ -6,8 +6,15 @@ export class UIManager {
   private playerNameInput: HTMLInputElement;
   private serverAddressInput: HTMLInputElement;
   private registerButton: HTMLButtonElement;
+  private joinGameButton: HTMLButtonElement;
+  private inviteInput: HTMLInputElement;
+  private inviteInputLabel: HTMLLabelElement;
   private registrationError: HTMLDivElement;
-  private statusEl: HTMLDivElement;
+  private inviteInfoEl: HTMLDivElement;
+  private inviteCodeTextEl: HTMLSpanElement;
+  private inviteUrlTextEl: HTMLSpanElement;
+  private copyInviteCodeButton: HTMLButtonElement;
+  private copyInviteUrlButton: HTMLButtonElement;
   private messageEl: HTMLDivElement;
   private angleInput: HTMLInputElement;
   private velocityInput: HTMLInputElement;
@@ -15,7 +22,8 @@ export class UIManager {
   private defaultServerAddress: string;
 
   // Event callbacks
-  private onRegisterCallback: ((name: string, serverAddress: string) => void) | null = null;
+  private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
+  private onJoinGameCallback: ((inviteTokenOrCode: string, name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
 
   constructor(defaultServerAddress: string) {
@@ -26,8 +34,15 @@ export class UIManager {
     this.playerNameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     this.registerButton = document.getElementById('registerButton') as HTMLButtonElement;
+    this.joinGameButton = document.getElementById('joinGameButton') as HTMLButtonElement;
+    this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
+    this.inviteInputLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
     this.registrationError = document.getElementById('registrationError') as HTMLDivElement;
-    this.statusEl = document.getElementById('status') as HTMLDivElement;
+    this.inviteInfoEl = document.getElementById('inviteInfo') as HTMLDivElement;
+    this.inviteCodeTextEl = document.getElementById('inviteCodeText') as HTMLSpanElement;
+    this.inviteUrlTextEl = document.getElementById('inviteUrlText') as HTMLSpanElement;
+    this.copyInviteCodeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
+    this.copyInviteUrlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
     this.messageEl = document.getElementById('message') as HTMLDivElement;
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
@@ -43,44 +58,73 @@ export class UIManager {
    * Set up DOM event listeners
    */
   private setupEventListeners(): void {
-    // Register button
-    this.registerButton.addEventListener('click', () => {
+    const validateInputs = (): { playerName: string; serverAddress: string } | null => {
       const playerName = this.playerNameInput.value.trim();
       const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
-      
+
       if (!playerName) {
         this.registrationError.textContent = 'Please enter your name';
-        return;
+        return null;
       }
 
       if (playerName.length < 2) {
         this.registrationError.textContent = 'Name must be at least 2 characters';
-        return;
+        return null;
       }
 
       try {
         const parsedUrl = new URL(serverAddress);
         if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
           this.registrationError.textContent = 'Server address must start with http:// or https://';
-          return;
+          return null;
         }
       } catch {
         this.registrationError.textContent = 'Please enter a valid server address, e.g. http://localhost:3000';
+        return null;
+      }
+
+      this.registrationError.textContent = '';
+      return { playerName, serverAddress };
+    };
+
+    this.registerButton.addEventListener('click', () => {
+      const valid = validateInputs();
+      if (!valid) {
         return;
       }
 
-      if (this.onRegisterCallback) {
-        this.registrationError.textContent = '';
-        this.onRegisterCallback(playerName, serverAddress);
+      if (this.onCreateGameCallback) {
+        this.onCreateGameCallback(valid.playerName, valid.serverAddress);
       }
     });
 
+    this.joinGameButton.addEventListener('click', () => {
+      const valid = validateInputs();
+      const inviteTokenOrCode = this.inviteInput.value.trim();
 
+      if (!valid) {
+        return;
+      }
 
-    // Enter key in name input
+      if (!inviteTokenOrCode) {
+        this.registrationError.textContent = 'Enter an invite code or full invite link first';
+        return;
+      }
+
+      if (this.onJoinGameCallback) {
+        this.registrationError.textContent = '';
+        this.onJoinGameCallback(inviteTokenOrCode, valid.playerName, valid.serverAddress);
+      }
+    });
+
     this.playerNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
-        this.registerButton.click();
+        // Trigger whichever action is actually available (Create is hidden in join-only mode).
+        if (this.registerButton.style.display !== 'none') {
+          this.registerButton.click();
+        } else {
+          this.joinGameButton.click();
+        }
       }
     });
 
@@ -114,30 +158,41 @@ export class UIManager {
   public setPlayerNames(playerId: number, playerName: string, opponentName: string): void {
     const leftNameEl = document.getElementById('playerNameLeft');
     const rightNameEl = document.getElementById('playerNameRight');
-    
+
     if (playerId === 0) {
         if (leftNameEl) {
             leftNameEl.textContent = playerName;
+            leftNameEl.classList.add('player-name-connected');
         }
         if (rightNameEl) {
             rightNameEl.textContent = opponentName;
+            rightNameEl.classList.add('player-name-connected');
         }
     } else {
         if (leftNameEl) {
             leftNameEl.textContent = opponentName;
+            leftNameEl.classList.add('player-name-connected');
         }
         if (rightNameEl) {
             rightNameEl.textContent = playerName;
+            rightNameEl.classList.add('player-name-connected');
         }
     }
   }
 
 
   /**
-   * Register callback for registration event
+   * Register callback for creating a new private game
    */
-  public onRegister(callback: (name: string, serverAddress: string) => void): void {
-    this.onRegisterCallback = callback;
+  public onCreateGame(callback: (name: string, serverAddress: string) => void): void {
+    this.onCreateGameCallback = callback;
+  }
+
+  /**
+   * Register callback for joining an existing game via invite token or code
+   */
+  public onJoinGame(callback: (inviteTokenOrCode: string, name: string, serverAddress: string) => void): void {
+    this.onJoinGameCallback = callback;
   }
 
   /**
@@ -152,7 +207,8 @@ export class UIManager {
    */
   public showRegistering(): void {
     this.registerButton.disabled = true;
-    this.registerButton.textContent = 'Registering...';
+    this.joinGameButton.disabled = true;
+    this.registerButton.textContent = 'Creating...';
   }
 
   /**
@@ -161,23 +217,59 @@ export class UIManager {
   public showRegistrationError(error: string): void {
     this.registrationError.textContent = error;
     this.registerButton.disabled = false;
-    this.registerButton.textContent = 'Join Game';
+    this.joinGameButton.disabled = false;
+    this.registerButton.textContent = 'Create Private Game';
+  }
+
+  public showInviteInfo(code: string, inviteUrl: string): void {
+    this.inviteInfoEl.style.display = 'block';
+    this.inviteCodeTextEl.textContent = code;
+    this.inviteUrlTextEl.textContent = inviteUrl;
+
+    this.wireCopyButton(this.copyInviteCodeButton, code);
+    this.wireCopyButton(this.copyInviteUrlButton, inviteUrl);
+  }
+
+  /**
+   * Wire a button to copy the given text to the clipboard, with brief "Copied!" feedback.
+   */
+  private wireCopyButton(button: HTMLButtonElement, textToCopy: string): void {
+    const defaultLabel = '📋 Copy';
+    button.textContent = defaultLabel;
+    button.onclick = () => {
+      navigator.clipboard
+        .writeText(textToCopy)
+        .then(() => {
+          button.textContent = '✅ Copied!';
+          setTimeout(() => {
+            button.textContent = defaultLabel;
+          }, 1500);
+        })
+        .catch(() => {
+          button.textContent = 'Copy failed';
+        });
+    };
+  }
+
+  /**
+   * Configure the lobby for a player arriving via an invite link/code: only the
+   * name field and Join button are relevant, so hide Create Game and the
+   * invite code/link input (pre-filled internally) to avoid confusing the user.
+   */
+  public enterJoinOnlyMode(inviteTokenOrCode: string): void {
+    this.inviteInput.value = inviteTokenOrCode;
+    this.registerButton.style.display = 'none';
+    this.inviteInputLabel.style.display = 'none';
+    this.joinGameButton.textContent = 'Join Game';
+    this.playerNameInput.focus();
   }
 
   /**
    * Switch from registration to game panel
    */
-  public showGamePanel(playerId: number): void {
+  public showGamePanel(): void {
     this.registrationPanel.style.display = 'none';
     this.gamePanel.style.display = 'block';
-    this.statusEl.textContent = `Registered as Player ${playerId + 1}`;
-  }
-
-  /**
-   * Update status text
-   */
-  public setStatus(text: string): void {
-    this.statusEl.textContent = text;
   }
 
   /**
@@ -188,20 +280,15 @@ export class UIManager {
   }
 
   /**
-   * Update UI based on turn state
-   */
-  /**
    * Update UI based on turn state and highlight current player's name
    * @param isMyTurn Whether it's this client's turn
    */
   public updateTurnUI(currentTurn: 0 | 1, isMyTurn: boolean): void {
     this.fireButton.disabled = !isMyTurn;
     if (isMyTurn) {
-      this.statusEl.textContent = 'Your Turn';
       this.angleInput.disabled = false;
       this.velocityInput.disabled = false;
     } else {
-      this.statusEl.textContent = "Opponent's Turn";
       this.angleInput.disabled = true;
       this.velocityInput.disabled = true;
     }

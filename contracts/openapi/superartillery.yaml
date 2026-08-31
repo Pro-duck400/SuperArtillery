@@ -7,13 +7,15 @@ servers:
   - url: http://localhost:3000
 tags:
   - name: Health
-  - name: Players
+  - name: Games
+  - name: Invitations
   - name: Gameplay
 paths:
   /api/v1/health:
     get:
       tags: [Health]
-      summary: Health check for the server
+      summary: Enhanced health check for the server
+      description: Returns server health, game count, and capacity information
       responses:
         '200':
           description: Server is healthy
@@ -22,38 +24,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
 
-  /api/v1/register:
+  /api/v1/games:
     post:
-      tags: [Players]
-      summary: Register a player
-      description: Register a player on the server.
+      tags: [Games]
+      summary: Create a new private game
+      description: Create a new private two-player game and return invitation tokens/codes
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: '#/components/schemas/CreateGameRequest'
+      responses:
+        '201':
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGameResponse'
+        '400':
+          description: Invalid player name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Server at maximum capacity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/invitations/accept:
+    post:
+      tags: [Invitations]
+      summary: Accept a game invitation
+      description: Accept an invitation via token or short code and join the game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptInvitationRequest'
       responses:
         '200':
-          description: Registration successful
+          description: Invitation accepted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisterSuccessResponse'
+                $ref: '#/components/schemas/AcceptInvitationResponse'
         '400':
-          description: Name is missing or invalid
+          description: Invalid invitation or player name
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Server is full
+        '410':
+          description: Invitation expired
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Player name already registered
+
+  /api/v1/games/{gameId}/status:
+    get:
+      tags: [Games]
+      summary: Get game status
+      description: Poll game status (requires valid session token)
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Player session token for authentication
+      responses:
+        '200':
+          description: Game status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameStatusResponse'
+        '401':
+          description: Invalid session token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Game not found or expired
           content:
             application/json:
               schema:
@@ -62,8 +126,15 @@ paths:
   /api/v1/fire:
     post:
       tags: [Gameplay]
-      summary: Fire a shot
-      description: If accepted, the server broadcasts `shot` and then either `turn_change` or `game_over`.
+      summary: Fire a shot (session token authenticated)
+      description: Fire a projectile. Requires gameId and sessionToken. Server derives player identity from token.
+      parameters:
+        - name: sessionToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Player session token for authentication
       requestBody:
         required: true
         content:
@@ -72,9 +143,21 @@ paths:
               $ref: '#/components/schemas/FireRequest'
       responses:
         '200':
-          description: Fire action accepted
+          description: Fire action accepted (server broadcasts shot + turn_change/game_over via WebSocket)
         '400':
           description: Validation or game-state error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid session token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Game not found
           content:
             application/json:
               schema:
@@ -130,67 +213,154 @@ components:
           items:
             $ref: '#/components/schemas/Castle'
 
-    RegisterRequest:
+    # Private Games Requests/Responses
+
+    CreateGameRequest:
       type: object
       additionalProperties: false
-      required: [name]
+      required: [playerName]
       properties:
-        name:
+        playerName:
           type: string
           minLength: 1
+          maxLength: 15
+          description: Display name for the initiating player (15 chars max, must start with alphanumeric)
 
-    RegisterSuccessResponse:
+    CreateGameResponse:
       type: object
       additionalProperties: false
-      required: [playerId]
+      required: [gameId, playerToken, inviteUrl, inviteCode]
       properties:
-        playerId:
-          $ref: '#/components/schemas/PlayerId'
+        gameId:
+          type: string
+          description: Opaque game ID
+        playerToken:
+          type: string
+          description: Session token for this player (high entropy, one-time)
+        inviteUrl:
+          type: string
+          format: uri
+          description: Full invitation link with embedded token (shareable)
+        inviteCode:
+          type: string
+          minLength: 4
+          maxLength: 4
+          description: Short 4-character alphanumeric code (easy to type)
+
+    AcceptInvitationRequest:
+      type: object
+      additionalProperties: false
+      required: [playerName]
+      properties:
+        inviteToken:
+          type: string
+          description: Full invitation token from link (if accepting via link)
+        inviteCode:
+          type: string
+          minLength: 4
+          maxLength: 4
+          description: Short invite code (if accepting via code)
+        playerName:
+          type: string
+          minLength: 1
+          maxLength: 15
+          description: Display name for the invited player
+
+    AcceptInvitationResponse:
+      type: object
+      additionalProperties: false
+      required: [gameId, playerToken]
+      properties:
+        gameId:
+          type: string
+          description: Opaque game ID
+        playerToken:
+          type: string
+          description: Session token for this player (high entropy, one-time)
+
+    GameStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [status, playersConnected, requiredPlayers]
+      properties:
+        status:
+          type: string
+          enum: [pending, active, finished, expired]
+          description: Current game status
+        playersConnected:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: Number of players currently connected via WebSocket
+        requiredPlayers:
+          type: integer
+          const: 2
+          description: Required number of players for the game to start
 
     FireRequest:
       type: object
       additionalProperties: false
-      required: [gameId, playerId, angle, velocity]
+      required: [gameId, angle, velocity]
       properties:
         gameId:
-          type: integer
-          minimum: 1
-        playerId:
-          $ref: '#/components/schemas/PlayerId'
+          type: string
+          description: Opaque game ID
         angle:
           type: number
           minimum: 0
-          maximum: 999
+          maximum: 360
+          description: Projectile angle in degrees
         velocity:
           type: number
           exclusiveMinimum: 0
+          description: Projectile velocity (must be positive)
 
     ErrorResponse:
       type: object
       additionalProperties: false
-      required: [details]
+      required: [code, message]
       properties:
-        details:
+        code:
           type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional additional error context
 
     HealthResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, players, version]
+      required: [status, timestamp, uptime, gameCount, invitationCount, maxGamesReached, version]
       properties:
         status:
           type: string
-          enum: [ok]
+          enum: [ok, degraded]
+          description: Server status (degraded if at max capacity)
         timestamp:
           type: string
           format: date-time
         uptime:
           type: number
-        players:
+          description: Server uptime in seconds
+        gameCount:
           type: integer
           minimum: 0
+          description: Number of active games
+        invitationCount:
+          type: integer
+          minimum: 0
+          description: Number of pending invitations
+        maxGamesReached:
+          type: boolean
+          description: True if server is at maximum capacity
         version:
           type: string
+
+    # WebSocket Message Types
 
     GameStartMessage:
       type: object
@@ -201,9 +371,11 @@ components:
           type: string
           const: game_start
         gameId:
-          type: integer
+          type: string
+          description: Opaque game ID
         opponentName:
           type: string
+          description: Display name of the opponent
         battlefield:
           $ref: '#/components/schemas/Battlefield'
 

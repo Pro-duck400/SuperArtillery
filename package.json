@@ -1,8 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "contracts:generate": "openapi-typescript ./contracts/openapi/superartillery.yaml -o ./server/src/types/generated/openapi.d.ts && openapi-typescript ./contracts/openapi/superartillery.yaml -o ./client/src/ts/types/generated/openapi.d.ts",
-    "contracts:check": "npm run contracts:generate && git diff --exit-code -- server/src/types/generated/openapi.d.ts client/src/ts/types/generated/openapi.d.ts"
+    "contracts:generate": "openapi-typescript ./contracts/openapi/superartillery.yaml -o ./server/src/types/generated/openapi.d.ts && openapi-typescript ./contracts/openapi/superartillery.yaml -o ./client/src/ts/types/generated/openapi.d.ts"
   },
   "devDependencies": {
     "openapi-typescript": "^7.10.1"

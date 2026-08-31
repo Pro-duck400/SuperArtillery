@@ -88,19 +88,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 #### REST API Endpoints
 
-**Authentication**
-- [ ] `POST /api/auth/register` - Create account
-- [ ] `POST /api/auth/login` - Login
-- [ ] `POST /api/auth/logout` - Logout
-- [ ] `GET /api/auth/refresh` - Refresh JWT token
-- [ ] `GET /api/auth/profile` - Get user profile
-
-**Lobby & Matchmaking**
-- [ ] `POST /api/game/create` - Create private game
-- [ ] `POST /api/game/:id/join` - Join private game with code
-
 **Game Info**
-- [ ] `GET /api/game/:id` - Get game metadata
 - [ ] `GET /api/game/:id/state` - Get current game state
 - [ ] `GET /api/game/:id/replay` - Get replay data
 - [ ] `GET /api/games/recent` - Recent games list
@@ -119,27 +107,10 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 ---
 
-### 👥 Multiplayer & Matchmaking
-
-#### Matchmaking System
-- [ ] Queue management (FIFO)
-- [ ] Skill-based matchmaking (ELO rating)
-- [ ] Queue timeout handling
-- [ ] Multiple concurrent games support
-- [ ] Room creation and lifecycle management
-- [ ] Maximum players per room (2)
-- [ ] Game session tracking
-
-#### Player Management
-- [ ] Player registration and authentication
-
----
-
 ### 🎨 UI/UX Enhancements
 
 #### Lobby & Menus
 - [ ] Main menu (Play, Stats, Settings, About)
-- [ ] Matchmaking lobby with queue position
 - [ ] Player name/nickname input
 - [ ] Avatar selection (optional)
 - [ ] Game mode selection (quick match, private, vs AI)
