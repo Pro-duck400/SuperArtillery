@@ -23,5 +23,6 @@ This folder contains formal, concise API contracts in two widely used specs:
 ## Notes
 
 - Contract follows server implementation as the source of truth.
-- `POST /api/v1/register` returns `403` when the server is full.
-- WebSocket connection requires `playerId` in the query string.
+- Canonical OpenAPI source lives at `contracts/openapi/superartillery.yaml` (not in this folder).
+- WebSocket connections require both `gameId` and `sessionToken` in the query string; the server never trusts a client-supplied `playerId`.
+- The legacy `POST /api/v1/register` endpoint has been removed; use `POST /api/v1/games` and `POST /api/v1/invitations/accept` instead.

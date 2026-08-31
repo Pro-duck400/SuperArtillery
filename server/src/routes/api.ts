@@ -145,26 +145,5 @@ export function createApiRouter(game: GameManager): Router {
     return res.status(200).send();
   });
 
-  // Keep legacy /v1/register endpoint for backward compatibility
-  // (though it will likely be deprecated)
-  router.post('/v1/register', (req, res) => {
-    const { name } = req.body;
-
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      const errorResponse: ErrorResponse = {
-        code: 'INVALID_PLAYER_NAME',
-        message: 'Player name is required'
-      };
-      return res.status(400).json(errorResponse);
-    }
-
-    // This endpoint is deprecated - return error
-    const errorResponse: ErrorResponse = {
-      code: 'ENDPOINT_DEPRECATED',
-      message: 'Use POST /api/v1/games to create a new game'
-    };
-    return res.status(410).json(errorResponse);
-  });
-
   return router;
 }

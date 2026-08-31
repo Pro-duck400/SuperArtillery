@@ -190,25 +190,6 @@ export class ApiClient {
   }
 
   /**
-   * Legacy register endpoint (deprecated)
-   */
-  public async register(name: string): Promise<{ playerId: 0 | 1 }> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name })
-    });
-
-    if (!response.ok) {
-      throw new Error(await this.extractErrorMessage(response, 'Registration failed'));
-    }
-
-    return response.json();
-  }
-
-  /**
    * Fetch with timeout
    */
   private async fetchWithTimeout(

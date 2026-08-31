@@ -24,7 +24,6 @@ export class UIManager {
   // Event callbacks
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onJoinGameCallback: ((inviteTokenOrCode: string, name: string, serverAddress: string) => void) | null = null;
-  private onRegisterCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
 
   constructor(defaultServerAddress: string) {
@@ -96,8 +95,6 @@ export class UIManager {
 
       if (this.onCreateGameCallback) {
         this.onCreateGameCallback(valid.playerName, valid.serverAddress);
-      } else if (this.onRegisterCallback) {
-        this.onRegisterCallback(valid.playerName, valid.serverAddress);
       }
     });
 
@@ -191,13 +188,6 @@ export class UIManager {
    */
   public onJoinGame(callback: (inviteTokenOrCode: string, name: string, serverAddress: string) => void): void {
     this.onJoinGameCallback = callback;
-  }
-
-  /**
-   * Legacy callback for registration event
-   */
-  public onRegister(callback: (name: string, serverAddress: string) => void): void {
-    this.onRegisterCallback = callback;
   }
 
   /**

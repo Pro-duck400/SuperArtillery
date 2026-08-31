@@ -31,7 +31,6 @@ export class GameClient {
   private onTurnChangeCallback: ((playerId: number, isMyTurn: boolean) => void) | null = null;
   private onGameStartCallback: ((gameId: string, battlefield: BattlefieldConfig) => void) | null = null;
   private onGameOverCallback: ((winnerId: number, didIWin: boolean) => void) | null = null;
-  private onConnectedCallback: (() => void) | null = null;
 
   constructor(apiBaseUrl: string, wsBaseUrl: string, game: Game) {
     this.game = game;
@@ -139,10 +138,6 @@ export class GameClient {
 
     // Now wait until both players' sockets are connected
     await this.pollGameStatus();
-
-    if (this.onConnectedCallback) {
-      this.onConnectedCallback();
-    }
   }
 
   /**
@@ -203,31 +198,6 @@ export class GameClient {
       // Then poll periodically
       this.statusPollInterval = window.setInterval(poll, pollInterval);
     });
-  }
-
-  /**
-   * Register a player (legacy, for backward compatibility)
-   */
-  public async register(playerName: string): Promise<void> {
-    try {
-      const { playerId } = await this.apiClient.register(playerName);
-      this.game.setPlayer(playerId, playerName);
-      console.log(`Registered as Player ${playerId} (${playerName})`);
-
-      // Connect WebSocket with playerId (legacy)
-      const wsUrl = `${this.wsBaseUrl}?playerId=${playerId}`;
-      this.wsClient = new WebSocketClient(wsUrl);
-      this.wsClient.onMessage((message) => this.handleMessage(message));
-      await this.wsClient.connect();
-
-      if (this.onConnectedCallback) {
-        this.onConnectedCallback();
-      }
-    } catch (error) {
-      throw new Error(
-        `Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
   }
 
   /**
@@ -302,10 +272,6 @@ export class GameClient {
   /**
    * Event callback registrations
    */
-  public onConnected(callback: () => void): void {
-    this.onConnectedCallback = callback;
-  }
-
   public onGameStart(
     callback: (gameId: string, battlefield: BattlefieldConfig) => void
   ): void {

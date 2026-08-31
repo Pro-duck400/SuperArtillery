@@ -10,7 +10,6 @@ tags:
   - name: Games
   - name: Invitations
   - name: Gameplay
-  - name: Legacy
 paths:
   /api/v1/health:
     get:
@@ -164,43 +163,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/v1/register:
-    post:
-      tags: [Legacy]
-      summary: Register a player (DEPRECATED)
-      description: Legacy endpoint. Use POST /api/v1/games instead.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '200':
-          description: Registration successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RegisterSuccessResponse'
-        '400':
-          description: Name is missing or invalid
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Server is full
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '410':
-          description: Endpoint deprecated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
 components:
   schemas:
     PlayerId:
@@ -334,25 +296,6 @@ components:
           type: integer
           const: 2
           description: Required number of players for the game to start
-
-    # Legacy/Common Schemas
-
-    RegisterRequest:
-      type: object
-      additionalProperties: false
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 1
-
-    RegisterSuccessResponse:
-      type: object
-      additionalProperties: false
-      required: [playerId]
-      properties:
-        playerId:
-          $ref: '#/components/schemas/PlayerId'
 
     FireRequest:
       type: object
