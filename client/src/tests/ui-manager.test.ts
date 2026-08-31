@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UIManager } from './ui-manager';
+import { UIManager } from '../ts/ui-manager';
 
 describe('UIManager private game flow', () => {
   beforeEach(() => {
@@ -14,12 +14,12 @@ describe('UIManager private game flow', () => {
           <div id="registrationError"></div>
           <div id="inviteInfo">
             <span id="inviteCodeText"></span>
+            <button id="copyInviteCodeButton"></button>
             <span id="inviteUrlText"></span>
             <button id="copyInviteUrlButton"></button>
           </div>
         </div>
         <div id="gamePanel" style="display: none;">
-          <div id="status"></div>
           <canvas id="gameCanvas" width="280" height="160"></canvas>
           <div id="playerNamesRow">
             <div id="playerNameLeft"></div>
@@ -74,10 +74,10 @@ describe('UIManager private game flow', () => {
     const ui = new UIManager('http://localhost:3000');
     const inviteInfo = document.getElementById('inviteInfo') as HTMLDivElement;
 
-    ui.showInviteInfo('ABC123', 'https://example.com/?invite=token');
+    ui.showInviteInfo('ABCD', 'https://example.com/?invite=token');
 
     expect(inviteInfo.style.display).toBe('block');
-    expect(inviteInfo.textContent).toContain('ABC123');
+    expect(inviteInfo.textContent).toContain('ABCD');
     expect(inviteInfo.textContent).toContain('https://example.com/?invite=token');
   });
 
@@ -86,7 +86,7 @@ describe('UIManager private game flow', () => {
     Object.assign(navigator, { clipboard: { writeText } });
 
     const ui = new UIManager('http://localhost:3000');
-    ui.showInviteInfo('ABC123', 'https://example.com/?invite=token');
+    ui.showInviteInfo('ABCD', 'https://example.com/?invite=token');
 
     const copyButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
     copyButton.click();

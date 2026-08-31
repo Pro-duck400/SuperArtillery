@@ -21,7 +21,7 @@ export interface PlayerSession {
  */
 export interface Invitation {
   invitationTokenHash: string; // Hash of the full invitation token (from link)
-  inviteCode: string; // 6-char alphanumeric code (user-typeable)
+  inviteCode: string; // 4-char alphanumeric code (user-typeable)
   inviteCodeHash: string; // Hash of the invite code for verification
   expiresAt: number; // Timestamp in ms when invitation expires
   accepted: boolean; // Track one-time acceptance
@@ -59,7 +59,7 @@ export interface CreateGameResponse {
   gameId: string;
   playerToken: string; // Only sent to initiator
   inviteUrl: string; // Full invitation link
-  inviteCode: string; // 6-char short code
+  inviteCode: string; // 4-char short code
 }
 
 export interface AcceptInvitationResponse {

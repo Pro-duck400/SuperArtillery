@@ -34,9 +34,11 @@ const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
 const uiManager = new UIManager(DEFAULT_SERVER_ADDRESS);
 let gameClient: GameClient | null = null;
+let clientName = '';
+let opponentName = '';
 
 function wireGameClientEvents(client: GameClient): void {
-  client.onGameStart((gameId: string, battlefield) => {
+  client.onGameStart((_gameId: string, battlefield) => {
     renderer.applyBattlefield(battlefield);
     animator.configureScene(
       renderer.getCanvasWidth(),
@@ -47,7 +49,7 @@ function wireGameClientEvents(client: GameClient): void {
 
     const playerId = client.getPlayerId();
     // Get opponent name from GameStartMessage if available
-    let opponentName = '';
+    opponentName = '';
     const lastGameStartMessage = client.getLastGameStartMessage();
     if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
       opponentName = lastGameStartMessage.opponentName;
@@ -55,11 +57,10 @@ function wireGameClientEvents(client: GameClient): void {
 
     // Switch from the registration/lobby panel (invite info) to the battlefield now that the opponent has joined.
     if (playerId !== null) {
-      uiManager.showGamePanel(playerId);
+      uiManager.showGamePanel();
       uiManager.setPlayerNames(playerId, clientName, opponentName);
     }
 
-    uiManager.setStatus(`Game #${gameId} - You are Player ${(playerId ?? 0) + 1}`);
     uiManager.setMessage('Game starting! Waiting for first turn...');
   });
 
@@ -79,7 +80,10 @@ function wireGameClientEvents(client: GameClient): void {
 
   client.onTurnChange((playerId: number, isMyTurn: boolean) => {
     uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
-    uiManager.setMessage(isMyTurn ? 'Your turn!' : "Opponent's turn");
+    renderer.setActiveTurn(playerId as 0 | 1);
+    renderer.render(null);
+    const turnPlayerName = isMyTurn ? clientName : opponentName;
+    uiManager.setMessage(`${turnPlayerName} turn`);
   });
 
   client.onGameOver((_winnerId: number, didIWin: boolean) => {
@@ -88,7 +92,6 @@ function wireGameClientEvents(client: GameClient): void {
 }
 
 // Wire up UI events
-let clientName = '';
 const lobbyState = {
   lastInviteUrl: '',
   lastInviteCode: ''
@@ -123,7 +126,6 @@ uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
     lobbyState.lastInviteCode = createResult.inviteCode;
     uiManager.showInviteInfo(createResult.inviteCode, createResult.inviteUrl);
 
-    uiManager.setStatus(`Game created. Waiting for opponent...`);
     uiManager.setMessage(`Share this code: ${createResult.inviteCode}`);
 
     await gameClient.connectToGame();
@@ -146,7 +148,6 @@ uiManager.onJoinGame(async (inviteTokenOrCode: string, playerName: string, serve
     const accepted = await gameClient.acceptInvitation(inviteValue, playerName);
 
     lobbyState.lastInviteCode = accepted.gameId;
-    uiManager.setStatus(`Joined game ${accepted.gameId}. Waiting for opponent...`);
     uiManager.setMessage('Connected to private game');
 
     await gameClient.connectToGame();

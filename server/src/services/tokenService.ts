@@ -37,14 +37,14 @@ export class TokenService {
   }
 
   /**
-   * Generate a short, user-typeable 6-character alphanumeric code
+   * Generate a short, user-typeable 4-character alphanumeric code
    * Characters: A-Z, 0-9 (no lowercase to reduce confusion)
-   * Entropy: ~31 bits (6^36 possibilities)
-   * @returns 6-character uppercase alphanumeric string
+   * Entropy: ~20.7 bits (36^4 possibilities)
+   * @returns 4-character uppercase alphanumeric string
    */
   static generateInviteCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const codeLength = 6;
+    const codeLength = 4;
     const charBytes = randomBytes(codeLength);
     
     let code = '';

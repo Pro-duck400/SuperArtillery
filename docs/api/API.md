@@ -55,7 +55,7 @@ Creates a new private, two-player game in memory and returns tokens/links for th
   "gameId": "opaque-game-id",
   "playerToken": "opaque-session-token",
   "inviteUrl": "https://example.com/?invite=opaque-invite-token",
-  "inviteCode": "K7M4Q2"
+  "inviteCode": "K7M4"
 }
 ```
 
@@ -67,7 +67,7 @@ Creates a new private, two-player game in memory and returns tokens/links for th
 
 ### Accept an Invitation
 
-Accepts a private game invitation via the full token (from the link) or the short 6-character code. One-time use only.
+Accepts a private game invitation via the full token (from the link) or the short 4-character code. One-time use only.
 
 **POST** `/api/v1/invitations/accept`
 
@@ -77,7 +77,7 @@ Accepts a private game invitation via the full token (from the link) or the shor
 ```
 or
 ```json
-{ "inviteCode": "K7M4Q2", "playerName": "Bob" }
+{ "inviteCode": "K7M4", "playerName": "Bob" }
 ```
 
 **Response `200`:**
@@ -213,11 +213,11 @@ sequenceDiagram
     Note over C2,Server: Bob joins via invite
     C2->>Server: GET /api/v1/health
     Server-->>C2: 200 OK {status: "ok"}
-    C2->>Server: POST /api/v1/invitations/accept<br/>{inviteCode: "K7M4Q2", playerName: "Bob"}
+    C2->>Server: POST /api/v1/invitations/accept<br/>{inviteCode: "K7M4", playerName: "Bob"}
     Server-->>C2: 200 OK {gameId, playerToken}
 
     Note over C1,C3: ERROR CASE: Third client tries the same invite
-    C3->>Server: POST /api/v1/invitations/accept<br/>{inviteCode: "K7M4Q2", playerName: "Charlie"}
+    C3->>Server: POST /api/v1/invitations/accept<br/>{inviteCode: "K7M4", playerName: "Charlie"}
     Server-->>C3: 400 Bad Request<br/>{code: "INVITATION_ALREADY_ACCEPTED",<br/>message: "This invitation has already been accepted"}
 
     Note over C1,C2: Both players connect over WebSocket

@@ -51,11 +51,11 @@ describe('TokenService', () => {
   });
 
   describe('generateInviteCode', () => {
-    it('generates a 6-character alphanumeric code', () => {
+    it('generates a 4-character alphanumeric code', () => {
       const code = TokenService.generateInviteCode();
       expect(code).toBeDefined();
-      expect(code.length).toBe(6);
-      expect(/^[A-Z0-9]{6}$/.test(code)).toBe(true);
+      expect(code.length).toBe(4);
+      expect(/^[A-Z0-9]{4}$/.test(code)).toBe(true);
     });
 
     it('generates unique codes', () => {
@@ -71,7 +71,7 @@ describe('TokenService', () => {
     it('only uses uppercase letters and numbers', () => {
       for (let i = 0; i < 50; i++) {
         const code = TokenService.generateInviteCode();
-        expect(/^[A-Z0-9]{6}$/.test(code)).toBe(true);
+        expect(/^[A-Z0-9]{4}$/.test(code)).toBe(true);
       }
     });
   });

@@ -22,8 +22,8 @@ describe('GameManager', () => {
         expect(result.playerToken).toBeDefined();
         expect(result.inviteUrl).toBeDefined();
         expect(result.inviteCode).toBeDefined();
-        expect(result.inviteCode.length).toBe(6);
-        expect(/^[A-Z0-9]{6}$/.test(result.inviteCode)).toBe(true);
+        expect(result.inviteCode.length).toBe(4);
+        expect(/^[A-Z0-9]{4}$/.test(result.inviteCode)).toBe(true);
       } else {
         throw new Error('Should not have error');
       }
@@ -49,7 +49,7 @@ describe('GameManager', () => {
         expect(result.inviteUrl).toContain('invite=');
         expect(result.inviteUrl).toContain('?invite=');
         expect(result.inviteCode).not.toBe(result.playerToken);
-        expect(result.inviteCode.length).toBe(6);
+        expect(result.inviteCode.length).toBe(4);
       } else {
         throw new Error('Should not have error');
       }

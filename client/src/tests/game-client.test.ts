@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GameClient } from './game-client';
-import { Game } from './game';
+import { GameClient } from '../ts/game-client';
+import { Game } from '../ts/game';
 
 describe('GameClient private-game flow', () => {
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe('GameClient private-game flow', () => {
       gameId: 'game-123',
       playerToken: 'token-a',
       inviteUrl: 'https://example.com/?invite=token-a',
-      inviteCode: 'ABC123'
+      inviteCode: 'ABCD'
     });
 
     await client.createGame('Alice');

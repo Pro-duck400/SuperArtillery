@@ -168,7 +168,7 @@ export class GameManager {
     // Find the game matching the invitation
     let game: PrivateGame | undefined;
     
-    if (inviteTokenOrCode.length === 6) {
+    if (inviteTokenOrCode.length === 4) {
       // Short code provided
       const codeHash = TokenService.hashToken(inviteTokenOrCode.toUpperCase());
       game = Array.from(this.games.values()).find(

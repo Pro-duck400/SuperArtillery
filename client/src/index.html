@@ -25,13 +25,16 @@
         <button id="registerButton">Create Private Game</button>
         <label id="inviteInputLabel" style="display: flex; align-items: center; gap: 8px;">
           Invite code or link:
-          <input type="text" id="inviteInput" placeholder="ABC123 or invite link" />
+          <input type="text" id="inviteInput" placeholder="ABCD or invite link" />
         </label>
         <button id="joinGameButton">Join with Invite</button>
       </div>
       <div id="registrationError" style="color: red; margin-top: 10px;"></div>
       <div id="inviteInfo" style="margin-top: 12px; display: none;">
-        <div>Invite code: <span id="inviteCodeText"></span></div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          Invite code: <span id="inviteCodeText"></span>
+          <button id="copyInviteCodeButton" title="Copy invite code" style="font-size: 12px; padding: 2px 6px;">📋 Copy</button>
+        </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           Invite URL: <span id="inviteUrlText"></span>
           <button id="copyInviteUrlButton" title="Copy invite URL" style="font-size: 12px; padding: 2px 6px;">📋 Copy</button>
@@ -41,8 +44,6 @@
     
     <!-- Game Panel (hidden initially) -->
     <div id="gamePanel" style="display: none;">
-      <div id="status">Connecting...</div>
-      
       <canvas id="gameCanvas" width="280" height="160"></canvas>
             <div id="playerNamesRow" style="display: flex; justify-content: space-between; margin: 8px 0 8px 0;">
               <div id="playerNameLeft" class="player-name, player-name-left">...</div>

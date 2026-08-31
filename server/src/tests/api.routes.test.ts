@@ -23,7 +23,7 @@ describe('API routes', () => {
 
     expect(response.body.gameId).toBeTruthy();
     expect(response.body.playerToken).toBeTruthy();
-    expect(response.body.inviteCode).toMatch(/^[A-Z0-9]{6}$/i);
+    expect(response.body.inviteCode).toMatch(/^[A-Z0-9]{4}$/i);
     expect(response.body.inviteUrl).toContain('invite=');
   });
 

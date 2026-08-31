@@ -335,7 +335,7 @@ export interface components {
              * @description Full invitation link with embedded token (shareable)
              */
             inviteUrl: string;
-            /** @description Short 6-character alphanumeric code (easy to type) */
+            /** @description Short 4-character alphanumeric code (easy to type) */
             inviteCode: string;
         };
         AcceptInvitationRequest: {

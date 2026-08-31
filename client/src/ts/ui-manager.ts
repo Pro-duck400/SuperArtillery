@@ -13,8 +13,8 @@ export class UIManager {
   private inviteInfoEl: HTMLDivElement;
   private inviteCodeTextEl: HTMLSpanElement;
   private inviteUrlTextEl: HTMLSpanElement;
+  private copyInviteCodeButton: HTMLButtonElement;
   private copyInviteUrlButton: HTMLButtonElement;
-  private statusEl: HTMLDivElement;
   private messageEl: HTMLDivElement;
   private angleInput: HTMLInputElement;
   private velocityInput: HTMLInputElement;
@@ -41,8 +41,8 @@ export class UIManager {
     this.inviteInfoEl = document.getElementById('inviteInfo') as HTMLDivElement;
     this.inviteCodeTextEl = document.getElementById('inviteCodeText') as HTMLSpanElement;
     this.inviteUrlTextEl = document.getElementById('inviteUrlText') as HTMLSpanElement;
+    this.copyInviteCodeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
     this.copyInviteUrlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
-    this.statusEl = document.getElementById('status') as HTMLDivElement;
     this.messageEl = document.getElementById('message') as HTMLDivElement;
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
@@ -119,7 +119,12 @@ export class UIManager {
 
     this.playerNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
-        this.registerButton.click();
+        // Trigger whichever action is actually available (Create is hidden in join-only mode).
+        if (this.registerButton.style.display !== 'none') {
+          this.registerButton.click();
+        } else {
+          this.joinGameButton.click();
+        }
       }
     });
 
@@ -221,19 +226,27 @@ export class UIManager {
     this.inviteCodeTextEl.textContent = code;
     this.inviteUrlTextEl.textContent = inviteUrl;
 
+    this.wireCopyButton(this.copyInviteCodeButton, code);
+    this.wireCopyButton(this.copyInviteUrlButton, inviteUrl);
+  }
+
+  /**
+   * Wire a button to copy the given text to the clipboard, with brief "Copied!" feedback.
+   */
+  private wireCopyButton(button: HTMLButtonElement, textToCopy: string): void {
     const defaultLabel = '📋 Copy';
-    this.copyInviteUrlButton.textContent = defaultLabel;
-    this.copyInviteUrlButton.onclick = () => {
+    button.textContent = defaultLabel;
+    button.onclick = () => {
       navigator.clipboard
-        .writeText(inviteUrl)
+        .writeText(textToCopy)
         .then(() => {
-          this.copyInviteUrlButton.textContent = '✅ Copied!';
+          button.textContent = '✅ Copied!';
           setTimeout(() => {
-            this.copyInviteUrlButton.textContent = defaultLabel;
+            button.textContent = defaultLabel;
           }, 1500);
         })
         .catch(() => {
-          this.copyInviteUrlButton.textContent = 'Copy failed';
+          button.textContent = 'Copy failed';
         });
     };
   }
@@ -254,17 +267,9 @@ export class UIManager {
   /**
    * Switch from registration to game panel
    */
-  public showGamePanel(playerId: number): void {
+  public showGamePanel(): void {
     this.registrationPanel.style.display = 'none';
     this.gamePanel.style.display = 'block';
-    this.statusEl.textContent = `Registered as Player ${playerId + 1}`;
-  }
-
-  /**
-   * Update status text
-   */
-  public setStatus(text: string): void {
-    this.statusEl.textContent = text;
   }
 
   /**
@@ -275,20 +280,15 @@ export class UIManager {
   }
 
   /**
-   * Update UI based on turn state
-   */
-  /**
    * Update UI based on turn state and highlight current player's name
    * @param isMyTurn Whether it's this client's turn
    */
   public updateTurnUI(currentTurn: 0 | 1, isMyTurn: boolean): void {
     this.fireButton.disabled = !isMyTurn;
     if (isMyTurn) {
-      this.statusEl.textContent = 'Your Turn';
       this.angleInput.disabled = false;
       this.velocityInput.disabled = false;
     } else {
-      this.statusEl.textContent = "Opponent's Turn";
       this.angleInput.disabled = true;
       this.velocityInput.disabled = true;
     }

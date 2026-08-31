@@ -243,9 +243,9 @@ components:
           description: Full invitation link with embedded token (shareable)
         inviteCode:
           type: string
-          minLength: 6
-          maxLength: 6
-          description: Short 6-character alphanumeric code (easy to type)
+          minLength: 4
+          maxLength: 4
+          description: Short 4-character alphanumeric code (easy to type)
 
     AcceptInvitationRequest:
       type: object
@@ -257,8 +257,8 @@ components:
           description: Full invitation token from link (if accepting via link)
         inviteCode:
           type: string
-          minLength: 6
-          maxLength: 6
+          minLength: 4
+          maxLength: 4
           description: Short invite code (if accepting via code)
         playerName:
           type: string
