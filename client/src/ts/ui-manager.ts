@@ -8,8 +8,12 @@ export class UIManager {
   private registerButton: HTMLButtonElement;
   private joinGameButton: HTMLButtonElement;
   private inviteInput: HTMLInputElement;
+  private inviteInputLabel: HTMLLabelElement;
   private registrationError: HTMLDivElement;
   private inviteInfoEl: HTMLDivElement;
+  private inviteCodeTextEl: HTMLSpanElement;
+  private inviteUrlTextEl: HTMLSpanElement;
+  private copyInviteUrlButton: HTMLButtonElement;
   private statusEl: HTMLDivElement;
   private messageEl: HTMLDivElement;
   private angleInput: HTMLInputElement;
@@ -33,8 +37,12 @@ export class UIManager {
     this.registerButton = document.getElementById('registerButton') as HTMLButtonElement;
     this.joinGameButton = document.getElementById('joinGameButton') as HTMLButtonElement;
     this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
+    this.inviteInputLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
     this.registrationError = document.getElementById('registrationError') as HTMLDivElement;
     this.inviteInfoEl = document.getElementById('inviteInfo') as HTMLDivElement;
+    this.inviteCodeTextEl = document.getElementById('inviteCodeText') as HTMLSpanElement;
+    this.inviteUrlTextEl = document.getElementById('inviteUrlText') as HTMLSpanElement;
+    this.copyInviteUrlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
     this.statusEl = document.getElementById('status') as HTMLDivElement;
     this.messageEl = document.getElementById('message') as HTMLDivElement;
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
@@ -148,20 +156,24 @@ export class UIManager {
   public setPlayerNames(playerId: number, playerName: string, opponentName: string): void {
     const leftNameEl = document.getElementById('playerNameLeft');
     const rightNameEl = document.getElementById('playerNameRight');
-    
+
     if (playerId === 0) {
         if (leftNameEl) {
             leftNameEl.textContent = playerName;
+            leftNameEl.classList.add('player-name-connected');
         }
         if (rightNameEl) {
             rightNameEl.textContent = opponentName;
+            rightNameEl.classList.add('player-name-connected');
         }
     } else {
         if (leftNameEl) {
             leftNameEl.textContent = opponentName;
+            leftNameEl.classList.add('player-name-connected');
         }
         if (rightNameEl) {
             rightNameEl.textContent = playerName;
+            rightNameEl.classList.add('player-name-connected');
         }
     }
   }
@@ -216,7 +228,37 @@ export class UIManager {
 
   public showInviteInfo(code: string, inviteUrl: string): void {
     this.inviteInfoEl.style.display = 'block';
-    this.inviteInfoEl.textContent = `Invite code: ${code}\nInvite URL: ${inviteUrl}`;
+    this.inviteCodeTextEl.textContent = code;
+    this.inviteUrlTextEl.textContent = inviteUrl;
+
+    const defaultLabel = '📋 Copy';
+    this.copyInviteUrlButton.textContent = defaultLabel;
+    this.copyInviteUrlButton.onclick = () => {
+      navigator.clipboard
+        .writeText(inviteUrl)
+        .then(() => {
+          this.copyInviteUrlButton.textContent = '✅ Copied!';
+          setTimeout(() => {
+            this.copyInviteUrlButton.textContent = defaultLabel;
+          }, 1500);
+        })
+        .catch(() => {
+          this.copyInviteUrlButton.textContent = 'Copy failed';
+        });
+    };
+  }
+
+  /**
+   * Configure the lobby for a player arriving via an invite link/code: only the
+   * name field and Join button are relevant, so hide Create Game and the
+   * invite code/link input (pre-filled internally) to avoid confusing the user.
+   */
+  public enterJoinOnlyMode(inviteTokenOrCode: string): void {
+    this.inviteInput.value = inviteTokenOrCode;
+    this.registerButton.style.display = 'none';
+    this.inviteInputLabel.style.display = 'none';
+    this.joinGameButton.textContent = 'Join Game';
+    this.playerNameInput.focus();
   }
 
   /**

@@ -15,6 +15,10 @@ import type {
 import { calculateVelocityComponents, checkCastleCollision } from '../utils/physics';
 import { TokenService } from './tokenService';
 
+// Fallback used only when a request has no Origin/Referer header (e.g. direct API calls/tests)
+const DEFAULT_CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:5173';
+
+
 /**
  * Multi-game manager supporting private, in-memory only games
  * 
@@ -64,7 +68,7 @@ export class GameManager {
    * @param playerName The initiator's display name
    * @returns Game creation response with tokens and invite code
    */
-  public createGame(playerName: string): CreateGameResponse | { error: string; code: string } {
+  public createGame(playerName: string, clientOrigin: string = DEFAULT_CLIENT_ORIGIN): CreateGameResponse | { error: string; code: string } {
     // Validate and normalize player name
     const normalizedName = TokenService.normalizeName(playerName);
     if (!normalizedName) {
@@ -121,8 +125,11 @@ export class GameManager {
     this.games.set(gameId, game);
     console.log(`✅ Game ${gameId} created by ${normalizedName}`);
 
-    // Build invite URL - use the deployed client URL with invite token param
-    const inviteUrl = `https://alkoz-lab.github.io/SuperArtillery/?invite=${inviteToken}`;
+    // Build invite URL using the origin the request actually came from,
+    // so it works for local dev, staging, and production alike.
+    // The token is base64 (+, /, =), so it must be percent-encoded - otherwise "+"
+    // gets decoded as a space by URLSearchParams on the client, corrupting the token.
+    const inviteUrl = `${clientOrigin}/?invite=${encodeURIComponent(inviteToken)}`;
 
     return {
       gameId,

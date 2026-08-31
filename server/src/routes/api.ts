@@ -1,6 +1,27 @@
 import { Router } from 'express';
+import type { Request } from 'express';
 import { GameManager } from '../services/gameManager';
 import type { HealthResponse, ErrorResponse } from '../types/private-game';
+
+// Derives the origin the request actually came from (Origin header, then Referer),
+// so invite links work in local dev, staging, and production without hardcoding a host.
+function getClientOrigin(req: Request): string | undefined {
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin) {
+    return origin;
+  }
+
+  const referer = req.headers.referer;
+  if (typeof referer === 'string' && referer) {
+    try {
+      return new URL(referer).origin;
+    } catch {
+      // ignore malformed referer
+    }
+  }
+
+  return undefined;
+}
 
 export function createApiRouter(game: GameManager): Router {
   const router = Router();
@@ -23,8 +44,9 @@ export function createApiRouter(game: GameManager): Router {
   // POST /api/v1/games - Create a private game
   router.post('/v1/games', (req, res) => {
     const { playerName } = req.body;
+    const clientOrigin = getClientOrigin(req);
 
-    const result = game.createGame(playerName);
+    const result = game.createGame(playerName, clientOrigin);
 
     if ('error' in result) {
       const statusCode = result.code === 'MAX_GAMES_REACHED' ? 503 : 400;

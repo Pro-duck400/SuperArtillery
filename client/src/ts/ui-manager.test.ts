@@ -10,9 +10,13 @@ describe('UIManager private game flow', () => {
           <input id="serverAddressInput" value="" />
           <button id="registerButton">Create Private Game</button>
           <button id="joinGameButton">Join with Invite</button>
-          <input id="inviteInput" value="" />
+          <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
           <div id="registrationError"></div>
-          <div id="inviteInfo"></div>
+          <div id="inviteInfo">
+            <span id="inviteCodeText"></span>
+            <span id="inviteUrlText"></span>
+            <button id="copyInviteUrlButton"></button>
+          </div>
         </div>
         <div id="gamePanel" style="display: none;">
           <div id="status"></div>
@@ -75,6 +79,20 @@ describe('UIManager private game flow', () => {
     expect(inviteInfo.style.display).toBe('block');
     expect(inviteInfo.textContent).toContain('ABC123');
     expect(inviteInfo.textContent).toContain('https://example.com/?invite=token');
+  });
+
+  it('copies the invite URL to the clipboard when the copy button is clicked', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    const ui = new UIManager('http://localhost:3000');
+    ui.showInviteInfo('ABC123', 'https://example.com/?invite=token');
+
+    const copyButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
+    copyButton.click();
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith('https://example.com/?invite=token');
   });
 
   it('updates player names and turn state correctly', () => {

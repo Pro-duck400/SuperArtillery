@@ -36,11 +36,6 @@ const uiManager = new UIManager(DEFAULT_SERVER_ADDRESS);
 let gameClient: GameClient | null = null;
 
 function wireGameClientEvents(client: GameClient): void {
-  client.onConnected(() => {
-    uiManager.setStatus('Connected! Waiting for opponent...');
-    uiManager.setMessage('Waiting for another player to join...');
-  });
-
   client.onGameStart((gameId: string, battlefield) => {
     renderer.applyBattlefield(battlefield);
     animator.configureScene(
@@ -57,20 +52,11 @@ function wireGameClientEvents(client: GameClient): void {
     if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
       opponentName = lastGameStartMessage.opponentName;
     }
-    // Set both names in DOM
-    const leftNameEl = document.getElementById('playerNameLeft');
-    const rightNameEl = document.getElementById('playerNameRight');
-    if (playerId === 0) {
-      if (rightNameEl) {
-        rightNameEl.textContent = opponentName;
-        rightNameEl.style.color = '#ffffff';
-      }
 
-    } else {
-      if (leftNameEl) {
-        leftNameEl.textContent = opponentName;
-        leftNameEl.style.color = '#ffffff';
-      }
+    // Switch from the registration/lobby panel (invite info) to the battlefield now that the opponent has joined.
+    if (playerId !== null) {
+      uiManager.showGamePanel(playerId);
+      uiManager.setPlayerNames(playerId, clientName, opponentName);
     }
 
     uiManager.setStatus(`Game #${gameId} - You are Player ${(playerId ?? 0) + 1}`);
@@ -118,6 +104,12 @@ function parseInviteInput(value: string): string {
   return match ? decodeURIComponent(match[1]) : trimmed;
 }
 
+// If the page was opened via an invite link, only the name + Join controls are relevant.
+const inviteFromUrl = new URLSearchParams(window.location.search).get('invite');
+if (inviteFromUrl) {
+  uiManager.enterJoinOnlyMode(inviteFromUrl);
+}
+
 uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
@@ -133,14 +125,8 @@ uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
 
     uiManager.setStatus(`Game created. Waiting for opponent...`);
     uiManager.setMessage(`Share this code: ${createResult.inviteCode}`);
-    await gameClient.connectToGame();
 
-    const playerId = gameClient.getPlayerId();
-    if (playerId !== null) {
-      uiManager.showGamePanel(playerId);
-      const opponentName = 'waiting for opponent...';
-      uiManager.setPlayerNames(playerId, clientName, opponentName);
-    }
+    await gameClient.connectToGame();
   } catch (error) {
     console.error('Create game failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Game creation failed. Please try again.';
@@ -162,14 +148,8 @@ uiManager.onJoinGame(async (inviteTokenOrCode: string, playerName: string, serve
     lobbyState.lastInviteCode = accepted.gameId;
     uiManager.setStatus(`Joined game ${accepted.gameId}. Waiting for opponent...`);
     uiManager.setMessage('Connected to private game');
-    await gameClient.connectToGame();
 
-    const playerId = gameClient.getPlayerId();
-    if (playerId !== null) {
-      uiManager.showGamePanel(playerId);
-      const opponentName = 'waiting for opponent...';
-      uiManager.setPlayerNames(playerId, clientName, opponentName);
-    }
+    await gameClient.connectToGame();
   } catch (error) {
     console.error('Join game failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unable to join game. Please try again.';

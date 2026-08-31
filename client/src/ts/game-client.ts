@@ -119,10 +119,9 @@ export class GameClient {
       throw new Error('No game session found');
     }
 
-    // Start polling game status until both players are connected
-    await this.pollGameStatus();
-
-    // Connect WebSocket with gameId and sessionToken
+    // Connect WebSocket with gameId and sessionToken first - the server only counts
+    // a player as "connected" once its socket is open, so polling status beforehand
+    // would deadlock (both clients waiting for a count that never increments).
     const wsUrl = `${this.wsBaseUrl}?gameId=${encodeURIComponent(
       this.gameSession.gameId
     )}&sessionToken=${encodeURIComponent(this.gameSession.sessionToken)}`;
@@ -132,13 +131,17 @@ export class GameClient {
 
     try {
       await this.wsClient.connect();
-      if (this.onConnectedCallback) {
-        this.onConnectedCallback();
-      }
     } catch (error) {
       throw new Error(
         `Failed to connect to game: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+
+    // Now wait until both players' sockets are connected
+    await this.pollGameStatus();
+
+    if (this.onConnectedCallback) {
+      this.onConnectedCallback();
     }
   }
 
