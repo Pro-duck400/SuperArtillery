@@ -1,23 +1,29 @@
 import { Router } from 'express';
 import type { Request } from 'express';
+import { readFileSync } from 'fs';
 import { GameManager } from '../services/gameManager';
 import type { HealthResponse, ErrorResponse } from '../types/private-game';
 
-// Derives the origin the request actually came from (Origin header, then Referer),
-// so invite links work in local dev, staging, and production without hardcoding a host.
-function getClientOrigin(req: Request): string | undefined {
-  const origin = req.headers.origin;
-  if (typeof origin === 'string' && origin) {
-    return origin;
-  }
-
+// Derive a full base URL for the client that preserves any pathname when possible.
+// Prefer the full Referer (origin + pathname) so invite links include the app path
+// (e.g. https://user.github.io/SuperArtillery/). Fall back to Origin if Referer
+// is absent or malformed.
+function getClientBaseUrl(req: Request): string | undefined {
   const referer = req.headers.referer;
   if (typeof referer === 'string' && referer) {
     try {
-      return new URL(referer).origin;
+      const u = new URL(referer);
+      // Ensure pathname ends with '/'
+      const pathname = u.pathname.endsWith('/') ? u.pathname : `${u.pathname}/`;
+      return `${u.origin}${pathname}`;
     } catch {
       // ignore malformed referer
     }
+  }
+
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin) {
+    return origin;
   }
 
   return undefined;
@@ -25,6 +31,20 @@ function getClientOrigin(req: Request): string | undefined {
 
 export function createApiRouter(game: GameManager): Router {
   const router = Router();
+
+  // Determine server version from env or package.json once at startup
+  const SERVER_VERSION: string =
+    process.env.VERSION ||
+    (() => {
+      try {
+        const pkg = JSON.parse(
+          readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+        );
+        return typeof pkg.version === 'string' ? pkg.version : 'dev';
+      } catch (e) {
+        return 'dev';
+      }
+    })();
 
   // GET /api/v1/health - Enhanced health check
   router.get('/v1/health', (_req, res) => {
@@ -36,7 +56,7 @@ export function createApiRouter(game: GameManager): Router {
       gameCount: stats.gameCount,
       invitationCount: stats.invitationCount,
       maxGamesReached: stats.maxGamesReached,
-      version: '1.0.0'
+      version: SERVER_VERSION
     };
     res.json(healthResponse);
   });
@@ -44,7 +64,7 @@ export function createApiRouter(game: GameManager): Router {
   // POST /api/v1/games - Create a private game
   router.post('/v1/games', (req, res) => {
     const { playerName } = req.body;
-    const clientOrigin = getClientOrigin(req);
+    const clientOrigin = getClientBaseUrl(req);
 
     const result = game.createGame(playerName, clientOrigin);
 

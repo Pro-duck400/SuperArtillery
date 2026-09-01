@@ -8,10 +8,30 @@ import { GameClient } from './game-client';
 
 console.log('SuperArtillery initializing...');
 
-const DEFAULT_SERVER_ADDRESS = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const BUILT_IN_DEFAULT = 'http://localhost:3000';
+
+function getDefaultServerAddress(): string {
+  const envUrl = import.meta.env.VITE_SERVER_URL;
+  if (envUrl) return envUrl;
+
+  // Runtime detection: prefer localhost for local dev, github pages -> use production server
+  const host = window.location.hostname || '';
+  const pathname = window.location.pathname || '';
+
+  if (host === 'localhost' || host.startsWith('127.') || host === '') {
+    return BUILT_IN_DEFAULT;
+  }
+
+  if (host.endsWith('github.io') || pathname.startsWith('/SuperArtillery')) {
+    return 'https://superartillery-server-production.up.railway.app';
+  }
+
+  return BUILT_IN_DEFAULT;
+}
 
 function resolveServerBaseUrls(serverAddress: string): { apiBaseUrl: string; wsBaseUrl: string } {
-  const parsedUrl = new URL(serverAddress.trim() || DEFAULT_SERVER_ADDRESS);
+  const chosen = (serverAddress && serverAddress.trim()) || getDefaultServerAddress();
+  const parsedUrl = new URL(chosen);
   const apiBaseUrl = parsedUrl.origin;
   const wsProtocol = parsedUrl.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsBaseUrl = `${wsProtocol}//${parsedUrl.host}`;
@@ -32,7 +52,7 @@ console.log('Renderer initialized');
 // Create core components
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
-const uiManager = new UIManager(DEFAULT_SERVER_ADDRESS);
+const uiManager = new UIManager(getDefaultServerAddress());
 let gameClient: GameClient | null = null;
 let clientName = '';
 let opponentName = '';

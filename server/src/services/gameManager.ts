@@ -125,11 +125,23 @@ export class GameManager {
     this.games.set(gameId, game);
     console.log(`✅ Game ${gameId} created by ${normalizedName}`);
 
-    // Build invite URL using the origin the request actually came from,
-    // so it works for local dev, staging, and production alike.
-    // The token is base64 (+, /, =), so it must be percent-encoded - otherwise "+"
-    // gets decoded as a space by URLSearchParams on the client, corrupting the token.
-    const inviteUrl = `${clientOrigin}/?invite=${encodeURIComponent(inviteToken)}`;
+    // Build invite URL using the base URL the request came from (origin + pathname when
+    // available). This preserves GitHub Pages paths like /SuperArtillery/ instead of
+    // linking to the root of the domain.
+    // The token is base64 (+, /, =), so it must be percent-encoded.
+    let inviteUrl: string;
+    const base = clientOrigin || DEFAULT_CLIENT_ORIGIN;
+    try {
+      const u = new URL(base);
+      if (!u.pathname.endsWith('/')) {
+        u.pathname = `${u.pathname}/`;
+      }
+      u.search = `invite=${encodeURIComponent(inviteToken)}`;
+      inviteUrl = u.toString();
+    } catch (e) {
+      // Fallback: naive join
+      inviteUrl = `${base.endsWith('/') ? base : `${base}/`}?invite=${encodeURIComponent(inviteToken)}`;
+    }
 
     return {
       gameId,
@@ -141,7 +153,7 @@ export class GameManager {
 
   /**
    * Accept an invitation via token or code
-   * @param inviteTokenOrCode Either the full invitation token or 6-char code
+   * @param inviteTokenOrCode Either the full invitation token or 4-char code
    * @param playerName The invited player's display name
    * @returns Invitation acceptance response with game ID and session token
    */
