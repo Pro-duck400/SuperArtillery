@@ -7,9 +7,11 @@ import { randomBytes, randomUUID, createHash } from 'crypto';
  * - All tokens generated with crypto.randomBytes
  * - Tokens are hashed before storage in memory
  * - Token values are never logged or exposed to clients in error messages
- * - Short codes (6 chars) use alphanumeric subset for user typing
+ * - Short codes (4 chars) use alphanumeric subset for user typing
  */
 export class TokenService {
+  public static readonly INVITE_CODE_LENGTH = 4;
+
   /**
    * Generate an opaque game ID using UUID
    * @returns Cryptographically random UUID string
@@ -44,9 +46,9 @@ export class TokenService {
    */
   static generateInviteCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const codeLength = 4;
+    const codeLength = TokenService.INVITE_CODE_LENGTH;
     const charBytes = randomBytes(codeLength);
-    
+
     let code = '';
     for (let i = 0; i < codeLength; i++) {
       code += chars[charBytes[i] % chars.length];

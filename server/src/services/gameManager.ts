@@ -30,6 +30,54 @@ const DEFAULT_CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:5173';
  * - Activity-based TTL for active games
  */
 export class GameManager {
+  static readonly HTTP_STATUS = {
+    OK: 200,
+    CREATED: 201,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    NOT_FOUND: 404,
+    GONE: 410,
+    SERVICE_UNAVAILABLE: 503
+  } as const;
+
+  static readonly ERROR_CODES = {
+    INVALID_PLAYER_NAME: 'INVALID_PLAYER_NAME',
+    MAX_GAMES_REACHED: 'MAX_GAMES_REACHED',
+    MISSING_INVITE: 'MISSING_INVITE',
+    INVALID_INVITATION: 'INVALID_INVITATION',
+    INVITATION_ALREADY_ACCEPTED: 'INVITATION_ALREADY_ACCEPTED',
+    INVITATION_EXPIRED: 'INVITATION_EXPIRED',
+    GAME_UNAVAILABLE: 'GAME_UNAVAILABLE',
+    GAME_NOT_FOUND: 'GAME_NOT_FOUND',
+    INVALID_SESSION_TOKEN: 'INVALID_SESSION_TOKEN',
+    MISSING_SESSION_TOKEN: 'MISSING_SESSION_TOKEN',
+    MISSING_FIELDS: 'MISSING_FIELDS',
+    INVALID_FIELD_TYPES: 'INVALID_FIELD_TYPES',
+    GAME_NOT_ACTIVE: 'GAME_NOT_ACTIVE',
+    NOT_YOUR_TURN: 'NOT_YOUR_TURN',
+    INVALID_ANGLE: 'INVALID_ANGLE',
+    INVALID_VELOCITY: 'INVALID_VELOCITY'
+  } as const;
+
+  static readonly ERROR_MESSAGES = {
+    INVALID_PLAYER_NAME: 'Player name must be 15 characters or less and start with a letter or number',
+    MAX_GAMES_REACHED: 'Server is at maximum capacity. Please try again later.',
+    MISSING_INVITE: 'Invitation token or code is required',
+    INVALID_INVITATION: 'Invitation not found or has expired',
+    INVITATION_ALREADY_ACCEPTED: 'This invitation has already been accepted',
+    INVITATION_EXPIRED: 'Invitation has expired. Create a new game.',
+    GAME_UNAVAILABLE: 'This game is no longer available',
+    GAME_NOT_FOUND: 'Game not found or has expired',
+    INVALID_SESSION_TOKEN: 'Invalid session token for this game',
+    MISSING_SESSION_TOKEN: 'Session token is required',
+    MISSING_FIELDS: 'gameId, sessionToken, angle, and velocity are required',
+    INVALID_FIELD_TYPES: 'gameId must be string, angle and velocity must be numbers',
+    GAME_NOT_ACTIVE: 'Game has not started or has ended',
+    NOT_YOUR_TURN: 'Wait for your turn',
+    INVALID_ANGLE: 'Angle must be between 0 and 360 degrees',
+    INVALID_VELOCITY: 'Velocity must be positive'
+  } as const;
+
   private games: Map<string, PrivateGame> = new Map();
   private cleanupInterval: NodeJS.Timeout | null = null;
 
@@ -73,16 +121,16 @@ export class GameManager {
     const normalizedName = TokenService.normalizeName(playerName);
     if (!normalizedName) {
       return {
-        error: 'Player name must be 15 characters or less and start with a letter or number',
-        code: 'INVALID_PLAYER_NAME'
+        error: GameManager.ERROR_MESSAGES.INVALID_PLAYER_NAME,
+        code: GameManager.ERROR_CODES.INVALID_PLAYER_NAME
       };
     }
 
     // Check if max games reached
     if (this.games.size >= this.MAX_ACTIVE_GAMES) {
       return {
-        error: 'Server is at maximum capacity. Please try again later.',
-        code: 'MAX_GAMES_REACHED'
+        error: GameManager.ERROR_MESSAGES.MAX_GAMES_REACHED,
+        code: GameManager.ERROR_CODES.MAX_GAMES_REACHED
       };
     }
 
@@ -165,22 +213,22 @@ export class GameManager {
     const normalizedName = TokenService.normalizeName(playerName);
     if (!normalizedName) {
       return {
-        error: 'Player name must be 15 characters or less and start with a letter or number',
-        code: 'INVALID_PLAYER_NAME'
+        error: GameManager.ERROR_MESSAGES.INVALID_PLAYER_NAME,
+        code: GameManager.ERROR_CODES.INVALID_PLAYER_NAME
       };
     }
 
     if (!inviteTokenOrCode) {
       return {
-        error: 'Invitation token or code is required',
-        code: 'MISSING_INVITE'
+        error: GameManager.ERROR_MESSAGES.MISSING_INVITE,
+        code: GameManager.ERROR_CODES.MISSING_INVITE
       };
     }
 
     // Find the game matching the invitation
     let game: PrivateGame | undefined;
     
-    if (inviteTokenOrCode.length === 4) {
+    if (inviteTokenOrCode.length === TokenService.INVITE_CODE_LENGTH) {
       // Short code provided
       const codeHash = TokenService.hashToken(inviteTokenOrCode.toUpperCase());
       game = Array.from(this.games.values()).find(
@@ -196,31 +244,31 @@ export class GameManager {
 
     if (!game) {
       return {
-        error: 'Invitation not found or has expired',
-        code: 'INVALID_INVITATION'
+        error: GameManager.ERROR_MESSAGES.INVALID_INVITATION,
+        code: GameManager.ERROR_CODES.INVALID_INVITATION
       };
     }
 
     // Check if invitation is still valid
     if (game.invitation.accepted) {
       return {
-        error: 'This invitation has already been accepted',
-        code: 'INVITATION_ALREADY_ACCEPTED'
+        error: GameManager.ERROR_MESSAGES.INVITATION_ALREADY_ACCEPTED,
+        code: GameManager.ERROR_CODES.INVITATION_ALREADY_ACCEPTED
       };
     }
 
     if (game.invitation.expiresAt < Date.now()) {
       game.status = 'expired';
       return {
-        error: 'Invitation has expired. Create a new game.',
-        code: 'INVITATION_EXPIRED'
+        error: GameManager.ERROR_MESSAGES.INVITATION_EXPIRED,
+        code: GameManager.ERROR_CODES.INVITATION_EXPIRED
       };
     }
 
     if (game.status !== 'pending') {
       return {
-        error: 'This game is no longer available',
-        code: 'GAME_UNAVAILABLE'
+        error: GameManager.ERROR_MESSAGES.GAME_UNAVAILABLE,
+        code: GameManager.ERROR_CODES.GAME_UNAVAILABLE
       };
     }
 
@@ -253,8 +301,8 @@ export class GameManager {
     const game = this.games.get(gameId);
     if (!game) {
       return {
-        error: 'Game not found or has expired',
-        code: 'GAME_NOT_FOUND'
+        error: GameManager.ERROR_MESSAGES.GAME_NOT_FOUND,
+        code: GameManager.ERROR_CODES.GAME_NOT_FOUND
       };
     }
 
@@ -264,8 +312,8 @@ export class GameManager {
 
     if (!isInitiator && !isInvited) {
       return {
-        error: 'Invalid session token for this game',
-        code: 'INVALID_SESSION_TOKEN'
+        error: GameManager.ERROR_MESSAGES.INVALID_SESSION_TOKEN,
+        code: GameManager.ERROR_CODES.INVALID_SESSION_TOKEN
       };
     }
 
@@ -295,23 +343,20 @@ export class GameManager {
     const game = this.games.get(gameId);
     if (!game) {
       return {
-        error: 'Game not found or has expired',
-        code: 'GAME_NOT_FOUND'
+        error: GameManager.ERROR_MESSAGES.GAME_NOT_FOUND,
+        code: GameManager.ERROR_CODES.GAME_NOT_FOUND
       };
     }
 
     // Determine which player this is by validating session token
-    const isInitiator = TokenService.verifyToken(sessionToken, game.initiator.sessionTokenHash);
-    const isInvited = TokenService.verifyToken(sessionToken, game.invited.sessionTokenHash);
+    const playerId = this.getPlayerIdFromToken(game.id, sessionToken);
 
-    if (!isInitiator && !isInvited) {
+    if (playerId == null) {
       return {
-        error: 'Invalid session token for this game',
-        code: 'INVALID_SESSION_TOKEN'
+        error: GameManager.ERROR_MESSAGES.INVALID_SESSION_TOKEN,
+        code: GameManager.ERROR_CODES.INVALID_SESSION_TOKEN
       };
     }
-
-    const playerId = isInitiator ? 0 : 1;
 
     // Store WebSocket connection
     if (playerId === 0) {
@@ -320,7 +365,7 @@ export class GameManager {
       game.invited.websocket = ws;
     }
 
-    console.log(`✅ Player ${playerId} (${isInitiator ? game.initiator.name : game.invited.name}) connected to game ${gameId}`);
+    console.log(`✅ Player ${playerId} (${playerId == 0 ? game.initiator.name : game.invited.name}) connected to game ${gameId}`);
 
     // Try to start game if both players are connected
     if (!game.gameStarted) {
@@ -447,9 +492,9 @@ export class GameManager {
     if (!game) {
       return {
         success: false,
-        error: 'Game not found or has expired',
-        code: 'GAME_NOT_FOUND',
-        statusCode: 404
+        error: GameManager.ERROR_MESSAGES.GAME_NOT_FOUND,
+        code: GameManager.ERROR_CODES.GAME_NOT_FOUND,
+        statusCode: GameManager.HTTP_STATUS.NOT_FOUND
       };
     }
 
@@ -458,27 +503,27 @@ export class GameManager {
     if (playerId === null) {
       return {
         success: false,
-        error: 'Invalid session token for this game',
-        code: 'INVALID_SESSION_TOKEN',
-        statusCode: 401
+        error: GameManager.ERROR_MESSAGES.INVALID_SESSION_TOKEN,
+        code: GameManager.ERROR_CODES.INVALID_SESSION_TOKEN,
+        statusCode: GameManager.HTTP_STATUS.UNAUTHORIZED
       };
     }
 
     if (!game.gameStarted || game.status !== 'active') {
       return {
         success: false,
-        error: 'Game has not started or has ended',
-        code: 'GAME_NOT_ACTIVE',
-        statusCode: 400
+        error: GameManager.ERROR_MESSAGES.GAME_NOT_ACTIVE,
+        code: GameManager.ERROR_CODES.GAME_NOT_ACTIVE,
+        statusCode: GameManager.HTTP_STATUS.BAD_REQUEST
       };
     }
 
     if (playerId !== game.currentTurn) {
       return {
         success: false,
-        error: 'Wait for your turn',
-        code: 'NOT_YOUR_TURN',
-        statusCode: 400
+        error: GameManager.ERROR_MESSAGES.NOT_YOUR_TURN,
+        code: GameManager.ERROR_CODES.NOT_YOUR_TURN,
+        statusCode: GameManager.HTTP_STATUS.BAD_REQUEST
       };
     }
 
@@ -486,9 +531,9 @@ export class GameManager {
     if (typeof angle !== 'number' || angle < 0 || angle > 360) {
       return {
         success: false,
-        error: 'Angle must be between 0 and 360 degrees',
-        code: 'INVALID_ANGLE',
-        statusCode: 400
+        error: GameManager.ERROR_MESSAGES.INVALID_ANGLE,
+        code: GameManager.ERROR_CODES.INVALID_ANGLE,
+        statusCode: GameManager.HTTP_STATUS.BAD_REQUEST
       };
     }
 
@@ -496,9 +541,9 @@ export class GameManager {
     if (typeof velocity !== 'number' || velocity <= 0) {
       return {
         success: false,
-        error: 'Velocity must be positive',
-        code: 'INVALID_VELOCITY',
-        statusCode: 400
+        error: GameManager.ERROR_MESSAGES.INVALID_VELOCITY,
+        code: GameManager.ERROR_CODES.INVALID_VELOCITY,
+        statusCode: GameManager.HTTP_STATUS.BAD_REQUEST
       };
     }
 
@@ -678,12 +723,5 @@ export class GameManager {
       invitationCount,
       maxGamesReached: this.games.size >= this.MAX_ACTIVE_GAMES
     };
-  }
-
-  /**
-   * Get player count (for backward compatibility)
-   */
-  public getPlayerCount(): number {
-    return this.games.size;
   }
 }

@@ -1,3 +1,4 @@
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { GameManager } from '../services/gameManager';
 import { WebSocket } from 'ws';
 

@@ -57,7 +57,7 @@ Contract source of truth:
 Supporting docs:
 
 - [docs/API.md](docs/API.md)
-- [docs/SuperArtillery.Apple][.Basic](docs/SuperArtillery.Apple][.Basic)
+- [docs/SuperArtillery.Apple\]\[.Basic](docs/SuperArtillery.Apple][.Basic)
 
 ## Common Commands
 
@@ -70,6 +70,8 @@ cd ../client && npm run build
 ## Deploy Server To Railway And Client To GitHub Pages
 
 This repository includes a GitHub Actions workflow that deploys the server to Railway and builds and deploys the Vite client from `client/` to GitHub Pages.
+
+URL of service deployed to Railway: [https://superartillery-server-production.up.railway.app/](https://superartillery-server-production.up.railway.app/api/v1/health)
 
 1. Add the `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID`, and `VITE_SERVER_URL` repository secrets. `VITE_SERVER_URL` is the public Railway URL, including `https://` and without a trailing slash.
 2. In Railway, create a project and service for this repository, leave the service root directory empty, and ensure the service uses `railway.toml` from the repository root.
