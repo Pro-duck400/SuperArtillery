@@ -1,6 +1,7 @@
 // Canvas rendering
 import type { Projectile } from './types/game';
 import type { BattlefieldConfig } from './types/messages';
+import { Terrain } from './terrain';
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -8,6 +9,7 @@ export class Renderer {
   private groundY = 140;
   private castleWidth = 10;
   private castleHeight = 10;
+  private battlefield: BattlefieldConfig | null = null;
   private castleLeftByPlayerId: Record<0 | 1, number> = { 0: 20, 1: 260 };
   private activeCastlePlayerId: 0 | 1 | null = null;
 
@@ -28,8 +30,11 @@ export class Renderer {
     this.ctx.strokeStyle = '#654321';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    this.ctx.moveTo(0, this.groundY);
-    this.ctx.lineTo(this.canvas.width, this.groundY);
+    if (!this.battlefield) return;
+    this.ctx.moveTo(0, Terrain.getY(this.battlefield, 0));
+    for (let x = this.battlefield.terrain.sampleWidth; x <= this.canvas.width; x += this.battlefield.terrain.sampleWidth) {
+      this.ctx.lineTo(x, Terrain.getY(this.battlefield, x));
+    }
     this.ctx.stroke();
   }
 
@@ -40,7 +45,7 @@ export class Renderer {
       this.ctx.lineWidth = 2;
       this.ctx.strokeRect(
         leftX - padding,
-        this.groundY - this.castleHeight - padding,
+        this.getCastleBaseY(leftX) - this.castleHeight - padding,
         this.castleWidth + padding * 2,
         this.castleHeight + padding * 2
       );
@@ -49,13 +54,14 @@ export class Renderer {
     this.ctx.fillStyle = '#808080';
     this.ctx.fillRect(
       leftX,
-      this.groundY - this.castleHeight,
+      this.getCastleBaseY(leftX) - this.castleHeight,
       this.castleWidth,
       this.castleHeight
     );
   }
 
   public applyBattlefield(battlefield: BattlefieldConfig): void {
+    this.battlefield = battlefield;
     this.canvas.width = battlefield.canvasWidth;
     this.canvas.height = battlefield.canvasHeight;
     this.groundY = battlefield.groundY;
@@ -73,7 +79,20 @@ export class Renderer {
     return this.groundY;
   }
 
-  public getCastleTopY(): number {
+  public getTerrainY(x: number): number {
+    return this.battlefield ? Terrain.getY(this.battlefield, x) : this.groundY;
+  }
+
+  private getCastleBaseY(leftX: number): number {
+    const castle = this.battlefield?.castles.find((item) => item.left_x === leftX);
+    return castle?.base_y ?? this.groundY;
+  }
+
+  public getCastleTopY(playerId?: 0 | 1): number {
+    if (playerId !== undefined) {
+      const castle = this.battlefield?.castles.find((item) => item.playerId === playerId);
+      if (castle) return castle.base_y - this.castleHeight;
+    }
     return this.groundY - this.castleHeight;
   }
 

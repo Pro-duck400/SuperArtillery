@@ -311,6 +311,7 @@ export interface components {
         Castle: {
             playerId: components["schemas"]["PlayerId"];
             left_x: number;
+            base_y: number;
         };
         Battlefield: {
             canvasWidth: number;
@@ -320,6 +321,16 @@ export interface components {
             castleWidth: number;
             castleHeight: number;
             castles: components["schemas"]["Castle"][];
+            terrain: {
+                version: number;
+                seed: number;
+                sampleWidth: number;
+                minY: number;
+                maxY: number;
+                hillCenter: number;
+                hillWidth: number;
+                hillHeight: number;
+            };
         };
         CreateGameRequest: {
             /** @description Display name for the initiating player (15 chars max, must start with alphanumeric) */

@@ -2,6 +2,15 @@ import { WebSocket } from 'ws';
 import { describe, expect, it } from 'vitest';
 import type { PrivateGame } from '../types/private-game';
 import { GameRules } from '../services/gameRules';
+import { createBattlefield } from '../utils/battlefield';
+
+function createFlatBattlefield() {
+  const battlefield = createBattlefield(1);
+  battlefield.terrain.hillHeight = 0;
+  battlefield.castles[0].base_y = battlefield.groundY;
+  battlefield.castles[1].base_y = battlefield.groundY;
+  return battlefield;
+}
 
 function createGame(): PrivateGame {
   return {
@@ -46,6 +55,7 @@ describe('GameRules', () => {
     expect(game.gameStarted).toBe(true);
     expect(game.currentTurn).toBe(0);
     expect(game.lastActivityAt).toBe(200);
+    expect(game.battlefield).toEqual(result?.battlefield);
   });
 
   it('transitions a pending game to expired when the initiator disconnects', () => {
@@ -61,6 +71,7 @@ describe('GameRules', () => {
     const game = createGame();
     game.status = 'active';
     game.gameStarted = true;
+    game.battlefield = createFlatBattlefield();
 
     const result = new GameRules().disconnect(game, 1, 400);
 
@@ -72,6 +83,7 @@ describe('GameRules', () => {
     const game = createGame();
     game.status = 'active';
     game.gameStarted = true;
+    game.battlefield = createFlatBattlefield();
 
     const result = new GameRules().fire(game, 0, 45, 10, 500);
 
@@ -84,6 +96,7 @@ describe('GameRules', () => {
     const game = createGame();
     game.status = 'active';
     game.gameStarted = true;
+    game.battlefield = createFlatBattlefield();
 
     const result = new GameRules().fire(game, 0, 0, 550, 600);
 

@@ -1,5 +1,6 @@
 import type { Battlefield } from '../types/messages';
-import { calculateVelocityComponents, checkCastleCollision } from './physics';
+import { getTerrainY } from './battlefield';
+import { calculateVelocityComponents, checkCastleCollision, checkTerrainCollision } from './physics';
 
 export function calculateCastleHitTime(
   battlefield: Battlefield,
@@ -13,9 +14,9 @@ export function calculateCastleHitTime(
   const adjustedAngle = playerId === 1 ? 180 - angle : angle;
   const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
   const x0 = firingCastle.left_x + battlefield.castleWidth / 2;
-  const y0 = battlefield.groundY - battlefield.castleHeight;
+  const y0 = firingCastle.base_y - battlefield.castleHeight;
 
-  return checkCastleCollision(
+  const castleHitTime = checkCastleCollision(
     x0,
     y0,
     vx,
@@ -24,6 +25,19 @@ export function calculateCastleHitTime(
     targetCastle.left_x + battlefield.castleWidth / 2,
     battlefield.castleWidth,
     battlefield.castleHeight,
-    battlefield.groundY
+    targetCastle.base_y
   );
+  const terrainHitTime = checkTerrainCollision(
+    x0,
+    y0,
+    vx,
+    vy,
+    battlefield.gravity,
+    (x) => getTerrainY(battlefield, x),
+    battlefield.canvasWidth
+  );
+
+  if (castleHitTime === null) return null;
+  if (terrainHitTime !== null && terrainHitTime < castleHitTime) return null;
+  return castleHitTime;
 }

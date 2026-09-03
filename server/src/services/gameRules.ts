@@ -25,7 +25,8 @@ export class GameRules {
     game.currentTurn = 0;
     game.lastActivityAt = now;
 
-    return { battlefield: createBattlefield() };
+      game.battlefield = createBattlefield();
+      return { battlefield: game.battlefield };
   }
 
   public disconnect(
@@ -61,7 +62,9 @@ export class GameRules {
     now: number = Date.now()
   ): FireTransition {
     game.lastActivityAt = now;
-    const hitTime = calculateCastleHitTime(createBattlefield(), playerId, angle, velocity);
+    const battlefield = game.battlefield ?? createBattlefield();
+    game.battlefield = battlefield;
+    const hitTime = calculateCastleHitTime(battlefield, playerId, angle, velocity);
 
     if (hitTime !== null) {
       game.status = 'finished';

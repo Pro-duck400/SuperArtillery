@@ -19,7 +19,7 @@
 ### 🔴 Critical Simplifications for MVP
 
 #### What We're CUTTING (to be added later):
-- ❌ **No terrain generation** - Just a flat horizontal line
+- ✅ **Seeded terrain generation** - A server-defined hill is shared by both clients
 - ❌ **No wind** - Pure gravity physics only
 - ❌ **No animations** - Projectile disappears on hit (no explosion)
 - ❌ **No rounds/scoring** - Game ends on first hit (one-shot game)
@@ -30,7 +30,7 @@
 - ❌ **No validation** - Trust client physics calculations
 - ❌ **No persistence** - No database, all in-memory
 - ❌ **No REST API** - Pure WebSocket communication
-- ❌ **Fixed castle positions** - Always at x=20 and x=260
+- ✅ **Terrain-following castle positions** - Castles are randomized on opposite sides
 
 ---
 

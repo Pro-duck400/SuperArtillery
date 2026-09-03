@@ -182,17 +182,19 @@ components:
     Castle:
       type: object
       additionalProperties: false
-      required: [playerId, left_x]
+      required: [playerId, left_x, base_y]
       properties:
         playerId:
           $ref: '#/components/schemas/PlayerId'
         left_x:
           type: number
+        base_y:
+          type: number
 
     Battlefield:
       type: object
       additionalProperties: false
-      required: [canvasWidth, canvasHeight, gravity, groundY, castleWidth, castleHeight, castles]
+      required: [canvasWidth, canvasHeight, gravity, groundY, castleWidth, castleHeight, castles, terrain]
       properties:
         canvasWidth:
           type: number
@@ -212,6 +214,32 @@ components:
           maxItems: 2
           items:
             $ref: '#/components/schemas/Castle'
+        terrain:
+          type: object
+          additionalProperties: false
+          required: [version, seed, sampleWidth, minY, maxY, hillCenter, hillWidth, hillHeight]
+          properties:
+            version:
+              type: integer
+              minimum: 1
+            seed:
+              type: integer
+              minimum: 0
+            sampleWidth:
+              type: number
+              exclusiveMinimum: 0
+            minY:
+              type: number
+            maxY:
+              type: number
+            hillCenter:
+              type: number
+            hillWidth:
+              type: number
+              exclusiveMinimum: 0
+            hillHeight:
+              type: number
+              minimum: 0
 
     # Private Games Requests/Responses
 

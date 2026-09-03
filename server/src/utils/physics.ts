@@ -132,4 +132,24 @@ export function calculateVelocityComponents(angle: number, velocity: number): { 
   };
 }
 
+export function checkTerrainCollision(
+  x0: number,
+  y0: number,
+  vx: number,
+  vy: number,
+  gravity: number,
+  terrainY: (x: number) => number,
+  canvasWidth: number,
+  maxTime: number = 10
+): number | null {
+  const step = 0.01;
+  for (let time = step; time <= maxTime; time += step) {
+    const x = x0 + vx * time;
+    if (x < 0 || x > canvasWidth) return null;
+    const y = y0 + vy * time + 0.5 * gravity * time * time;
+    if (y >= terrainY(x)) return time;
+  }
+  return null;
+}
+
 export { checkCastleCollision };
