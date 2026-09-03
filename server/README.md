@@ -32,6 +32,9 @@ npm start
 
 # Type check
 npm run type-check
+
+# Run unit and integration tests
+npm run test
 ```
 
 ## Environment Variables
@@ -42,27 +45,7 @@ Copy .env.example to .env and configure:
 PORT=3000
 NODE_ENV=development
 ```
-
-## API Surface
-
-REST endpoints:
-
-- GET /api/v1/health
-- POST /api/v1/register
-- POST /api/v1/fire
-
 Swagger UI:
 
 - http://localhost:3000/api/swagger
 
-## WebSocket Messages (Server -> Client)
-
-- game_start
-- shot
-- turn_change
-- game_over
-
-## Notes
-
-- Do not manually edit generated contract type files.
-- Update contracts first, regenerate, then update implementation.

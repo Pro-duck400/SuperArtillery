@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import type { Battlefield } from './messages';
 
 /**
  * Game status lifecycle
@@ -48,6 +49,7 @@ export interface PrivateGame {
   // Game state
   currentTurn: 0 | 1;
   gameStarted: boolean;
+  battlefield?: Battlefield;
   gameFinishedAt?: number; // Timestamp when game finished (for grace period)
 }
 
@@ -76,11 +78,12 @@ export interface GameStatusResponse {
 export interface HealthResponse {
   status: 'ok' | 'degraded';
   timestamp: string;
-  uptime: number;
+  uptime: string;
   gameCount: number;
   invitationCount: number;
   maxGamesReached: boolean;
   version: string;
+  contractVersion: string;
 }
 
 /**

@@ -29,6 +29,13 @@ jobs:
       - name: Install server dependencies
         run: npm ci
 
+      - name: Determine build version
+        working-directory: .
+        run: |
+          VERSION=$(node -p "require('./server/package.json').version")
+          echo "BUILD_VERSION=${VERSION}+build.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "Building server version ${VERSION}+build.${GITHUB_RUN_NUMBER}"
+
       - name: Build server
         run: npm run build
 
@@ -55,6 +62,13 @@ jobs:
 
       - name: Install client dependencies
         run: npm ci
+
+      - name: Determine build version
+        working-directory: .
+        run: |
+          VERSION=$(node -p "require('./client/package.json').version")
+          echo "BUILD_VERSION=${VERSION}+build.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "Building client version ${VERSION}+build.${GITHUB_RUN_NUMBER}"
 
       - name: Build client
         run: npm run build

@@ -5,13 +5,35 @@ import { Renderer } from './renderer';
 import { ProjectileAnimator } from './projectile-animator';
 import { UIManager } from './ui-manager';
 import { GameClient } from './game-client';
+import { CONTRACT_VERSION } from './contract-version';
+import { CLIENT_VERSION } from './client-version';
 
 console.log('SuperArtillery initializing...');
 
-const DEFAULT_SERVER_ADDRESS = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const clientVersion = document.getElementById('clientVersion');
+if (clientVersion) {
+  clientVersion.textContent = `Client v${CLIENT_VERSION} | Contract v${CONTRACT_VERSION}`;
+}
+
+const BUILT_IN_DEFAULT = 'http://localhost:3000';
+
+function getDefaultServerAddress(): string {
+  const envUrl = import.meta.env.VITE_SERVER_URL;
+  if (envUrl) return envUrl;
+
+  // Runtime detection: local development uses the local server; hosted clients use Railway.
+  const host = window.location.hostname || '';
+
+  if (host === 'localhost' || host.startsWith('127.') || host === '') {
+    return BUILT_IN_DEFAULT;
+  }
+
+  return 'https://superartillery-server-production.up.railway.app';
+}
 
 function resolveServerBaseUrls(serverAddress: string): { apiBaseUrl: string; wsBaseUrl: string } {
-  const parsedUrl = new URL(serverAddress.trim() || DEFAULT_SERVER_ADDRESS);
+  const chosen = (serverAddress && serverAddress.trim()) || getDefaultServerAddress();
+  const parsedUrl = new URL(chosen);
   const apiBaseUrl = parsedUrl.origin;
   const wsProtocol = parsedUrl.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsBaseUrl = `${wsProtocol}//${parsedUrl.host}`;
@@ -32,7 +54,7 @@ console.log('Renderer initialized');
 // Create core components
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
-const uiManager = new UIManager(DEFAULT_SERVER_ADDRESS);
+const uiManager = new UIManager(getDefaultServerAddress());
 let gameClient: GameClient | null = null;
 let clientName = '';
 let opponentName = '';
@@ -87,7 +109,7 @@ function wireGameClientEvents(client: GameClient): void {
   });
 
   client.onGameOver((_winnerId: number, didIWin: boolean) => {
-    uiManager.showGameOver(didIWin);
+    uiManager.showGameOver(didIWin, clientName, opponentName);
   });
 }
 

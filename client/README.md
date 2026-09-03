@@ -29,6 +29,9 @@ npm run build
 
 # Type check
 npm run type-check
+
+# Run unit tests
+npm run test
 ```
 
 Default local URL:

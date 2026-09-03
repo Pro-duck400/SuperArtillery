@@ -3,6 +3,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createApiRouter } from '../routes/api';
 import { GameManager } from '../services/gameManager';
+import { CONTRACT_VERSION } from '../contract-version';
 
 describe('API routes', () => {
   let app: express.Express;
@@ -84,7 +85,10 @@ describe('API routes', () => {
       status: 'ok',
       gameCount: expect.any(Number),
       invitationCount: expect.any(Number),
-      maxGamesReached: expect.any(Boolean)
+      maxGamesReached: expect.any(Boolean),
+      timestamp: expect.any(String),
+      uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
+      contractVersion: CONTRACT_VERSION
     });
   });
 });

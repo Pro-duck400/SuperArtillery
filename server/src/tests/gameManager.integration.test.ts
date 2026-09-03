@@ -1,3 +1,4 @@
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { GameManager } from '../services/gameManager';
 import { WebSocket } from 'ws';
 
@@ -93,7 +94,7 @@ describe('Integration: Private Games Flow', () => {
 
       const mockWs = { readyState: WebSocket.OPEN, close: vi.fn() } as any;
       gameManager.connectPlayer(created.gameId, created.playerToken, mockWs);
-      gameManager.disconnectPlayer(created.gameId, 0);
+      gameManager.disconnectPlayer(created.gameId, 0, mockWs);
 
       status = gameManager.getGameStatus(created.gameId, created.playerToken);
       if ('error' in status) {
@@ -114,7 +115,7 @@ describe('Integration: Private Games Flow', () => {
       gameManager.connectPlayer(created.gameId, created.playerToken, mockWsA);
       gameManager.connectPlayer(created.gameId, accepted.playerToken, mockWsB);
 
-      gameManager.disconnectPlayer(created.gameId, 0);
+      gameManager.disconnectPlayer(created.gameId, 0, mockWsA);
 
       const status = gameManager.getGameStatus(created.gameId, created.playerToken);
       if ('error' in status) {
@@ -168,6 +169,23 @@ describe('Integration: Private Games Flow', () => {
   });
 
   describe('Replay and reconnection', () => {
+    it('ignores a stale socket closing after a replacement connects', () => {
+      const created = gameManager.createGame('Alice');
+      if ('error' in created) throw new Error('Should create game');
+
+      const firstSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      const replacementSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      gameManager.connectPlayer(created.gameId, created.playerToken, firstSocket);
+      gameManager.connectPlayer(created.gameId, created.playerToken, replacementSocket);
+
+      gameManager.disconnectPlayer(created.gameId, 0, firstSocket);
+
+      const status = gameManager.getGameStatus(created.gameId, created.playerToken);
+      if ('error' in status) throw new Error('Should get game status');
+      expect(status.status).toBe('pending');
+      expect(status.playersConnected).toBe(1);
+    });
+
     it('Player can query game status before connecting WebSocket', () => {
       const created = gameManager.createGame('Alice');
       if ('error' in created) throw new Error('Should create game');

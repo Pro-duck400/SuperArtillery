@@ -3,6 +3,7 @@ import { Game } from './game';
 import { WebSocketClient } from './network/websocket';
 import { ApiClient, type CreateGameResponse, type AcceptInvitationResponse } from './network/api';
 import type { BattlefieldConfig, GameMessage, GameStartMessage } from './types/messages';
+import { CONTRACT_VERSION } from './contract-version';
 
 export interface ShotEventData {
   playerId: number;
@@ -123,10 +124,17 @@ export class GameClient {
     // would deadlock (both clients waiting for a count that never increments).
     const wsUrl = `${this.wsBaseUrl}?gameId=${encodeURIComponent(
       this.gameSession.gameId
-    )}&sessionToken=${encodeURIComponent(this.gameSession.sessionToken)}`;
+    )}&sessionToken=${encodeURIComponent(this.gameSession.sessionToken)}&contractVersion=${encodeURIComponent(CONTRACT_VERSION)}`;
 
     this.wsClient = new WebSocketClient(wsUrl);
     this.wsClient.onMessage((message) => this.handleMessage(message));
+    let rejectProtocolError: ((error: Error) => void) | null = null;
+    const protocolError = new Promise<never>((_, reject) => {
+      rejectProtocolError = reject;
+    });
+    this.wsClient.onError((error) => {
+      rejectProtocolError?.(new Error(error.message));
+    });
 
     try {
       await this.wsClient.connect();
@@ -137,7 +145,7 @@ export class GameClient {
     }
 
     // Now wait until both players' sockets are connected
-    await this.pollGameStatus();
+    await Promise.race([this.pollGameStatus(), protocolError]);
   }
 
   /**

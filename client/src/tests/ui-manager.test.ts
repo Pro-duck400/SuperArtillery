@@ -7,7 +7,14 @@ describe('UIManager private game flow', () => {
       <div id="app">
         <div id="registrationPanel" style="display: block;">
           <input id="playerNameInput" value="" />
-          <input id="serverAddressInput" value="" />
+          <span class="server-address-combobox">
+            <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
+            <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
+            <span id="serverAddressOptions" role="listbox" hidden>
+              <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
+              <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
+            </span>
+          </span>
           <button id="registerButton">Create Private Game</button>
           <button id="joinGameButton">Join with Invite</button>
           <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
@@ -34,6 +41,24 @@ describe('UIManager private game flow', () => {
         </div>
       </div>
     `;
+  });
+
+  it('provides editable server address choices', () => {
+    new UIManager('https://superartillery-server-production.up.railway.app');
+    const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
+    const toggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
+    const options = document.querySelectorAll<HTMLButtonElement>('[role="option"]');
+
+    expect(serverInput.value).toBe('https://superartillery-server-production.up.railway.app');
+    toggle.click();
+    expect(document.getElementById('serverAddressOptions')?.hidden).toBe(false);
+    expect(Array.from(options).map((option) => option.dataset.serverAddress)).toEqual([
+      'https://superartillery-server-production.up.railway.app',
+      'http://localhost:3000'
+    ]);
+
+    options[1].click();
+    expect(serverInput.value).toBe('http://localhost:3000');
   });
 
   it('allows creating a private game from the lobby', () => {
@@ -109,5 +134,18 @@ describe('UIManager private game flow', () => {
 
     ui.updateTurnUI(1, false);
     expect(right.classList.contains('player-name-active-turn')).toBe(true);
+  });
+
+  it('shows both player names in the game over message', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const message = document.getElementById('message') as HTMLDivElement;
+    const fireButton = document.getElementById('fireButton') as HTMLButtonElement;
+
+    ui.showGameOver(false, 'Alex', 'Bob');
+    expect(message.textContent).toBe('😔 Alex lost. Bob won!');
+    expect(fireButton.disabled).toBe(true);
+
+    ui.showGameOver(true, 'Alex', 'Bob');
+    expect(message.textContent).toBe('🎉 Alex won! Bob lost.');
   });
 });

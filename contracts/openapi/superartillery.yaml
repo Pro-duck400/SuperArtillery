@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.0.0
+  version: 1.0.1
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -182,17 +182,19 @@ components:
     Castle:
       type: object
       additionalProperties: false
-      required: [playerId, left_x]
+      required: [playerId, left_x, base_y]
       properties:
         playerId:
           $ref: '#/components/schemas/PlayerId'
         left_x:
           type: number
+        base_y:
+          type: number
 
     Battlefield:
       type: object
       additionalProperties: false
-      required: [canvasWidth, canvasHeight, gravity, groundY, castleWidth, castleHeight, castles]
+      required: [canvasWidth, canvasHeight, gravity, groundY, castleWidth, castleHeight, castles, terrain]
       properties:
         canvasWidth:
           type: number
@@ -212,6 +214,36 @@ components:
           maxItems: 2
           items:
             $ref: '#/components/schemas/Castle'
+        terrain:
+          type: object
+          additionalProperties: false
+          required: [version, seed, sampleWidth, minY, maxY, leftY, rightY, hillCenter, hillWidth, hillHeight]
+          properties:
+            version:
+              type: integer
+              minimum: 1
+            seed:
+              type: integer
+              minimum: 0
+            sampleWidth:
+              type: number
+              exclusiveMinimum: 0
+            minY:
+              type: number
+            maxY:
+              type: number
+            leftY:
+              type: number
+            rightY:
+              type: number
+            hillCenter:
+              type: number
+            hillWidth:
+              type: number
+              exclusiveMinimum: 0
+            hillHeight:
+              type: number
+              minimum: 0
 
     # Private Games Requests/Responses
 
@@ -334,7 +366,7 @@ components:
     HealthResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, gameCount, invitationCount, maxGamesReached, version]
+      required: [status, timestamp, uptime, gameCount, invitationCount, maxGamesReached, version, contractVersion]
       properties:
         status:
           type: string
@@ -344,8 +376,9 @@ components:
           type: string
           format: date-time
         uptime:
-          type: number
-          description: Server uptime in seconds
+          type: string
+          pattern: '^\\d+\\.\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$'
+          description: Server uptime formatted as D.HH:mm:ss.ggg
         gameCount:
           type: integer
           minimum: 0
@@ -359,6 +392,9 @@ components:
           description: True if server is at maximum capacity
         version:
           type: string
+        contractVersion:
+          type: string
+          description: Client/server protocol contract version
 
     # WebSocket Message Types
 
@@ -416,12 +452,32 @@ components:
         playerId_winner:
           $ref: '#/components/schemas/PlayerId'
 
+    WebSocketErrorMessage:
+      type: object
+      additionalProperties: false
+      required: [type, code, message]
+      properties:
+        type:
+          type: string
+          const: error
+        code:
+          type: string
+          description: Machine-readable WebSocket error code
+        message:
+          type: string
+          description: Human-readable WebSocket error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional error context
+
     GameMessage:
       oneOf:
         - $ref: '#/components/schemas/GameStartMessage'
         - $ref: '#/components/schemas/ShotMessage'
         - $ref: '#/components/schemas/TurnChangeMessage'
         - $ref: '#/components/schemas/GameOverMessage'
+        - $ref: '#/components/schemas/WebSocketErrorMessage'
       discriminator:
         propertyName: type
         mapping:
@@ -429,3 +485,4 @@ components:
           shot: '#/components/schemas/ShotMessage'
           turn_change: '#/components/schemas/TurnChangeMessage'
           game_over: '#/components/schemas/GameOverMessage'
+          error: '#/components/schemas/WebSocketErrorMessage'

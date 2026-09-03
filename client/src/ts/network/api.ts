@@ -21,11 +21,12 @@ export interface GameStatusResponse {
 export interface HealthResponse {
   status: 'ok' | 'degraded';
   timestamp: string;
-  uptime: number;
+  uptime: string;
   gameCount: number;
   invitationCount: number;
   maxGamesReached: boolean;
   version: string;
+  contractVersion: string;
 }
 
 export interface ErrorResponse {

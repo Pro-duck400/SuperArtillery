@@ -1,42 +1,79 @@
 import { Router } from 'express';
 import type { Request } from 'express';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { GameManager } from '../services/gameManager';
 import type { HealthResponse, ErrorResponse } from '../types/private-game';
+import { HTTP_STATUS } from '../httpStatus';
+import { CONTRACT_VERSION } from '../contract-version';
 
-// Derives the origin the request actually came from (Origin header, then Referer),
-// so invite links work in local dev, staging, and production without hardcoding a host.
-function getClientOrigin(req: Request): string | undefined {
-  const origin = req.headers.origin;
-  if (typeof origin === 'string' && origin) {
-    return origin;
-  }
-
+// Derive a full base URL for the client that preserves any pathname when possible.
+// Prefer the full Referer (origin + pathname) so invite links include the app path
+// (e.g. https://user.github.io/SuperArtillery/). Fall back to Origin if Referer
+// is absent or malformed.
+function getClientBaseUrl(req: Request): string | undefined {
   const referer = req.headers.referer;
   if (typeof referer === 'string' && referer) {
     try {
-      return new URL(referer).origin;
+      const u = new URL(referer);
+      // Ensure pathname ends with '/'
+      const pathname = u.pathname.endsWith('/') ? u.pathname : `${u.pathname}/`;
+      return `${u.origin}${pathname}`;
     } catch {
       // ignore malformed referer
     }
   }
 
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin) {
+    return origin;
+  }
+
   return undefined;
+}
+
+function formatUptime(uptimeSeconds: number): string {
+  const totalMilliseconds = Math.floor(uptimeSeconds * 1000);
+  const days = Math.floor(totalMilliseconds / 86400000);
+  const hours = Math.floor(totalMilliseconds / 3600000) % 24;
+  const minutes = Math.floor(totalMilliseconds / 60000) % 60;
+  const seconds = Math.floor(totalMilliseconds / 1000) % 60;
+  const milliseconds = totalMilliseconds % 1000;
+
+  return `${days}.${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
 }
 
 export function createApiRouter(game: GameManager): Router {
   const router = Router();
 
+  // Determine server version from env or package.json once at startup
+  const SERVER_VERSION: string =
+    process.env.VERSION ||
+    (() => {
+      try {
+        const pkg = JSON.parse(
+          readFileSync(join(__dirname, '../../package.json'), 'utf8')
+        );
+        return typeof pkg.version === 'string' ? pkg.version : 'dev';
+      } catch (e) {
+        return 'dev';
+      }
+    })();
+
   // GET /api/v1/health - Enhanced health check
   router.get('/v1/health', (_req, res) => {
     const stats = game.getStats();
+    const timestamp = new Date();
+    const uptime = process.uptime();
     const healthResponse: HealthResponse = {
       status: stats.maxGamesReached ? 'degraded' : 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
+      timestamp: timestamp.toISOString(),
+      uptime: formatUptime(uptime),
       gameCount: stats.gameCount,
       invitationCount: stats.invitationCount,
       maxGamesReached: stats.maxGamesReached,
-      version: '1.0.0'
+      version: SERVER_VERSION,
+      contractVersion: CONTRACT_VERSION
     };
     res.json(healthResponse);
   });
@@ -44,12 +81,12 @@ export function createApiRouter(game: GameManager): Router {
   // POST /api/v1/games - Create a private game
   router.post('/v1/games', (req, res) => {
     const { playerName } = req.body;
-    const clientOrigin = getClientOrigin(req);
+    const clientOrigin = getClientBaseUrl(req);
 
     const result = game.createGame(playerName, clientOrigin);
 
     if ('error' in result) {
-      const statusCode = result.code === 'MAX_GAMES_REACHED' ? 503 : 400;
+      const statusCode = result.code === GameManager.ERROR_CODES.MAX_GAMES_REACHED ? HTTP_STATUS.SERVICE_UNAVAILABLE : HTTP_STATUS.BAD_REQUEST;
       const errorResponse: ErrorResponse = {
         code: result.code,
         message: result.error
@@ -57,7 +94,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(statusCode).json(errorResponse);
     }
 
-    return res.status(201).json(result);
+    return res.status(HTTP_STATUS.CREATED).json(result);
   });
 
   // POST /api/v1/invitations/accept - Accept an invitation
@@ -70,7 +107,7 @@ export function createApiRouter(game: GameManager): Router {
     const result = game.acceptInvitation(inviteTokenOrCode, playerName);
 
     if ('error' in result) {
-      const statusCode = result.code === 'INVITATION_EXPIRED' ? 410 : 400;
+      const statusCode = result.code === GameManager.ERROR_CODES.INVITATION_EXPIRED ? HTTP_STATUS.GONE : HTTP_STATUS.BAD_REQUEST;
       const errorResponse: ErrorResponse = {
         code: result.code,
         message: result.error
@@ -78,7 +115,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(statusCode).json(errorResponse);
     }
 
-    return res.status(200).json(result);
+    return res.status(HTTP_STATUS.OK).json(result);
   });
 
   // GET /api/v1/games/:gameId/status - Get game status (requires session token)
@@ -88,16 +125,16 @@ export function createApiRouter(game: GameManager): Router {
 
     if (!sessionToken) {
       const errorResponse: ErrorResponse = {
-        code: 'MISSING_SESSION_TOKEN',
-        message: 'Session token is required'
+        code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
+        message: GameManager.ERROR_MESSAGES.MISSING_SESSION_TOKEN
       };
-      return res.status(401).json(errorResponse);
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json(errorResponse);
     }
 
     const result = game.getGameStatus(gameId, sessionToken);
 
     if ('error' in result) {
-      const statusCode = result.code === 'GAME_NOT_FOUND' ? 404 : 401;
+      const statusCode = result.code === GameManager.ERROR_CODES.GAME_NOT_FOUND ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.UNAUTHORIZED;
       const errorResponse: ErrorResponse = {
         code: result.code,
         message: result.error
@@ -105,7 +142,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(statusCode).json(errorResponse);
     }
 
-    return res.status(200).json(result);
+    return res.status(HTTP_STATUS.OK).json(result);
   });
 
   // POST /api/v1/fire - Fire a projectile (updated for session tokens)
@@ -116,19 +153,19 @@ export function createApiRouter(game: GameManager): Router {
     // Validate required fields
     if (!gameId || !sessionToken || angle === undefined || velocity === undefined) {
       const errorResponse: ErrorResponse = {
-        code: 'MISSING_FIELDS',
-        message: 'gameId, sessionToken, angle, and velocity are required'
+        code: GameManager.ERROR_CODES.MISSING_FIELDS,
+        message: GameManager.ERROR_MESSAGES.MISSING_FIELDS
       };
-      return res.status(400).json(errorResponse);
+      return res.status(HTTP_STATUS.BAD_REQUEST).json(errorResponse);
     }
 
     // Validate types
     if (typeof gameId !== 'string' || typeof angle !== 'number' || typeof velocity !== 'number') {
       const errorResponse: ErrorResponse = {
-        code: 'INVALID_FIELD_TYPES',
-        message: 'gameId must be string, angle and velocity must be numbers'
+        code: GameManager.ERROR_CODES.INVALID_FIELD_TYPES,
+        message: GameManager.ERROR_MESSAGES.INVALID_FIELD_TYPES
       };
-      return res.status(400).json(errorResponse);
+      return res.status(HTTP_STATUS.BAD_REQUEST).json(errorResponse);
     }
 
     // Call game manager to handle fire
@@ -142,7 +179,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(result.statusCode).json(errorResponse);
     }
 
-    return res.status(200).send();
+    return res.status(HTTP_STATUS.OK).send();
   });
 
   return router;

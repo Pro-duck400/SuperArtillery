@@ -9,6 +9,7 @@ import path from 'path';
 import { parse as parseYaml } from 'yaml';
 import { GameManager } from './services/gameManager';
 import { createApiRouter } from './routes/api';
+import { CONTRACT_VERSION } from './contract-version';
 
 // Load environment variables
 dotenv.config();
@@ -60,6 +61,22 @@ wss.on('connection', (ws: WebSocket, req) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const gameId = url.searchParams.get('gameId');
   const sessionToken = url.searchParams.get('sessionToken');
+  const contractVersion = url.searchParams.get('contractVersion');
+
+  if (contractVersion !== CONTRACT_VERSION) {
+    const errorMsg = JSON.stringify({
+      type: 'error',
+      code: 'CONTRACT_VERSION_MISMATCH',
+      message: `Client contract version ${contractVersion || 'missing'} is not supported. Server requires ${CONTRACT_VERSION}.`,
+      details: {
+        expected: CONTRACT_VERSION,
+        received: contractVersion
+      }
+    });
+    ws.send(errorMsg);
+    ws.close(1008, 'Contract version mismatch');
+    return;
+  }
 
   if (!gameId || !sessionToken) {
     console.log('❌ Connection rejected: missing gameId or sessionToken');
@@ -105,7 +122,7 @@ wss.on('connection', (ws: WebSocket, req) => {
       console.log(
         `❌ Player ${metadata.playerId} disconnected from game ${metadata.gameId}`
       );
-      game.disconnectPlayer(metadata.gameId, metadata.playerId);
+      game.disconnectPlayer(metadata.gameId, metadata.playerId, ws);
     }
   });
 

@@ -1,0 +1,37 @@
+export const GAME_ERROR_CODES = {
+  INVALID_PLAYER_NAME: 'INVALID_PLAYER_NAME',
+  MAX_GAMES_REACHED: 'MAX_GAMES_REACHED',
+  MISSING_INVITE: 'MISSING_INVITE',
+  INVALID_INVITATION: 'INVALID_INVITATION',
+  INVITATION_ALREADY_ACCEPTED: 'INVITATION_ALREADY_ACCEPTED',
+  INVITATION_EXPIRED: 'INVITATION_EXPIRED',
+  GAME_UNAVAILABLE: 'GAME_UNAVAILABLE',
+  GAME_NOT_FOUND: 'GAME_NOT_FOUND',
+  INVALID_SESSION_TOKEN: 'INVALID_SESSION_TOKEN',
+  MISSING_SESSION_TOKEN: 'MISSING_SESSION_TOKEN',
+  MISSING_FIELDS: 'MISSING_FIELDS',
+  INVALID_FIELD_TYPES: 'INVALID_FIELD_TYPES',
+  GAME_NOT_ACTIVE: 'GAME_NOT_ACTIVE',
+  NOT_YOUR_TURN: 'NOT_YOUR_TURN',
+  INVALID_ANGLE: 'INVALID_ANGLE',
+  INVALID_VELOCITY: 'INVALID_VELOCITY'
+} as const;
+
+export const GAME_ERROR_MESSAGES = {
+  INVALID_PLAYER_NAME: 'Player name must be 15 characters or less and start with a letter or number',
+  MAX_GAMES_REACHED: 'Server is at maximum capacity. Please try again later.',
+  MISSING_INVITE: 'Invitation token or code is required',
+  INVALID_INVITATION: 'Invitation not found or has expired',
+  INVITATION_ALREADY_ACCEPTED: 'This invitation has already been accepted',
+  INVITATION_EXPIRED: 'Invitation has expired. Create a new game.',
+  GAME_UNAVAILABLE: 'This game is no longer available',
+  GAME_NOT_FOUND: 'Game not found or has expired',
+  INVALID_SESSION_TOKEN: 'Invalid session token for this game',
+  MISSING_SESSION_TOKEN: 'Session token is required',
+  MISSING_FIELDS: 'gameId, sessionToken, angle, and velocity are required',
+  INVALID_FIELD_TYPES: 'gameId must be string, angle and velocity must be numbers',
+  GAME_NOT_ACTIVE: 'Game has not started or has ended',
+  NOT_YOUR_TURN: 'Wait for your turn',
+  INVALID_ANGLE: 'Angle must be between 0 and 360 degrees',
+  INVALID_VELOCITY: 'Velocity must be positive'
+} as const;

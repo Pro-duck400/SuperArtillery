@@ -1,9 +1,11 @@
 // WebSocket client for real-time game communication
 import type { GameMessage } from '../types/messages';
+import type { WebSocketErrorMessage } from '../types/messages';
 
 export class WebSocketClient {
   private ws: WebSocket | null = null;
   private messageHandlers: Array<(message: GameMessage) => void> = [];
+  private errorHandlers: Array<(error: WebSocketErrorMessage) => void> = [];
   private url: string;
 
   constructor(url: string) {
@@ -28,6 +30,10 @@ export class WebSocketClient {
         try {
           const message = JSON.parse(event.data) as GameMessage;
           console.log('📥 Received WebSocket message:', message);
+          if (message.type === 'error') {
+            this.errorHandlers.forEach((handler) => handler(message));
+            return;
+          }
           this.messageHandlers.forEach((handler) => handler(message));
         } catch (error) {
           console.error('Failed to parse message:', error);
@@ -42,6 +48,10 @@ export class WebSocketClient {
 
   public onMessage(handler: (message: GameMessage) => void): void {
     this.messageHandlers.push(handler);
+  }
+
+  public onError(handler: (error: WebSocketErrorMessage) => void): void {
+    this.errorHandlers.push(handler);
   }
 
   public disconnect(): void {
