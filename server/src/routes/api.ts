@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { readFileSync } from 'fs';
 import { GameManager } from '../services/gameManager';
 import type { HealthResponse, ErrorResponse } from '../types/private-game';
+import { HTTP_STATUS } from '../httpStatus';
 
 // Derive a full base URL for the client that preserves any pathname when possible.
 // Prefer the full Referer (origin + pathname) so invite links include the app path
@@ -69,7 +70,7 @@ export function createApiRouter(game: GameManager): Router {
     const result = game.createGame(playerName, clientOrigin);
 
     if ('error' in result) {
-      const statusCode = result.code === GameManager.ERROR_CODES.MAX_GAMES_REACHED ? GameManager.HTTP_STATUS.SERVICE_UNAVAILABLE : GameManager.HTTP_STATUS.BAD_REQUEST;
+      const statusCode = result.code === GameManager.ERROR_CODES.MAX_GAMES_REACHED ? HTTP_STATUS.SERVICE_UNAVAILABLE : HTTP_STATUS.BAD_REQUEST;
       const errorResponse: ErrorResponse = {
         code: result.code,
         message: result.error
@@ -77,7 +78,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(statusCode).json(errorResponse);
     }
 
-    return res.status(GameManager.HTTP_STATUS.CREATED).json(result);
+    return res.status(HTTP_STATUS.CREATED).json(result);
   });
 
   // POST /api/v1/invitations/accept - Accept an invitation
@@ -90,7 +91,7 @@ export function createApiRouter(game: GameManager): Router {
     const result = game.acceptInvitation(inviteTokenOrCode, playerName);
 
     if ('error' in result) {
-      const statusCode = result.code === GameManager.ERROR_CODES.INVITATION_EXPIRED ? GameManager.HTTP_STATUS.GONE : GameManager.HTTP_STATUS.BAD_REQUEST;
+      const statusCode = result.code === GameManager.ERROR_CODES.INVITATION_EXPIRED ? HTTP_STATUS.GONE : HTTP_STATUS.BAD_REQUEST;
       const errorResponse: ErrorResponse = {
         code: result.code,
         message: result.error
@@ -98,7 +99,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(statusCode).json(errorResponse);
     }
 
-    return res.status(GameManager.HTTP_STATUS.OK).json(result);
+    return res.status(HTTP_STATUS.OK).json(result);
   });
 
   // GET /api/v1/games/:gameId/status - Get game status (requires session token)
@@ -111,13 +112,13 @@ export function createApiRouter(game: GameManager): Router {
         code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
         message: GameManager.ERROR_MESSAGES.MISSING_SESSION_TOKEN
       };
-      return res.status(GameManager.HTTP_STATUS.UNAUTHORIZED).json(errorResponse);
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json(errorResponse);
     }
 
     const result = game.getGameStatus(gameId, sessionToken);
 
     if ('error' in result) {
-      const statusCode = result.code === GameManager.ERROR_CODES.GAME_NOT_FOUND ? GameManager.HTTP_STATUS.NOT_FOUND : GameManager.HTTP_STATUS.UNAUTHORIZED;
+      const statusCode = result.code === GameManager.ERROR_CODES.GAME_NOT_FOUND ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.UNAUTHORIZED;
       const errorResponse: ErrorResponse = {
         code: result.code,
         message: result.error
@@ -125,7 +126,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(statusCode).json(errorResponse);
     }
 
-    return res.status(GameManager.HTTP_STATUS.OK).json(result);
+    return res.status(HTTP_STATUS.OK).json(result);
   });
 
   // POST /api/v1/fire - Fire a projectile (updated for session tokens)
@@ -139,7 +140,7 @@ export function createApiRouter(game: GameManager): Router {
         code: GameManager.ERROR_CODES.MISSING_FIELDS,
         message: GameManager.ERROR_MESSAGES.MISSING_FIELDS
       };
-      return res.status(GameManager.HTTP_STATUS.BAD_REQUEST).json(errorResponse);
+      return res.status(HTTP_STATUS.BAD_REQUEST).json(errorResponse);
     }
 
     // Validate types
@@ -148,7 +149,7 @@ export function createApiRouter(game: GameManager): Router {
         code: GameManager.ERROR_CODES.INVALID_FIELD_TYPES,
         message: GameManager.ERROR_MESSAGES.INVALID_FIELD_TYPES
       };
-      return res.status(GameManager.HTTP_STATUS.BAD_REQUEST).json(errorResponse);
+      return res.status(HTTP_STATUS.BAD_REQUEST).json(errorResponse);
     }
 
     // Call game manager to handle fire
@@ -162,7 +163,7 @@ export function createApiRouter(game: GameManager): Router {
       return res.status(result.statusCode).json(errorResponse);
     }
 
-    return res.status(GameManager.HTTP_STATUS.OK).send();
+    return res.status(HTTP_STATUS.OK).send();
   });
 
   return router;
