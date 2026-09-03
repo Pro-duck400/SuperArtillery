@@ -327,6 +327,8 @@ export interface components {
                 sampleWidth: number;
                 minY: number;
                 maxY: number;
+                leftY: number;
+                rightY: number;
                 hillCenter: number;
                 hillWidth: number;
                 hillHeight: number;
@@ -403,8 +405,8 @@ export interface components {
             status: "ok" | "degraded";
             /** Format: date-time */
             timestamp: string;
-            /** @description Server uptime in seconds */
-            uptime: number;
+            /** @description Server uptime formatted as D.HH:mm:ss.ggg */
+            uptime: string;
             /** @description Number of active games */
             gameCount: number;
             /** @description Number of pending invitations */
@@ -412,6 +414,8 @@ export interface components {
             /** @description True if server is at maximum capacity */
             maxGamesReached: boolean;
             version: string;
+            /** @description Client/server protocol contract version */
+            contractVersion: string;
         };
         GameStartMessage: {
             /**
@@ -451,7 +455,22 @@ export interface components {
             type: "game_over";
             playerId_winner: components["schemas"]["PlayerId"];
         };
-        GameMessage: components["schemas"]["GameStartMessage"] | components["schemas"]["ShotMessage"] | components["schemas"]["TurnChangeMessage"] | components["schemas"]["GameOverMessage"];
+        WebSocketErrorMessage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+            /** @description Machine-readable WebSocket error code */
+            code: string;
+            /** @description Human-readable WebSocket error message */
+            message: string;
+            /** @description Optional error context */
+            details?: {
+                [key: string]: unknown;
+            };
+        };
+        GameMessage: components["schemas"]["GameStartMessage"] | components["schemas"]["ShotMessage"] | components["schemas"]["TurnChangeMessage"] | components["schemas"]["GameOverMessage"] | components["schemas"]["WebSocketErrorMessage"];
     };
     responses: never;
     parameters: never;

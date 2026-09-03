@@ -28,4 +28,21 @@ describe('battlefield generation', () => {
     expect(terrainY).toBeLessThan(battlefield.terrain.maxY);
     expect(terrainY).toBeGreaterThanOrEqual(battlefield.terrain.minY);
   });
+
+  it('generates independent side elevations below the hill peak', () => {
+    const first = createBattlefield(12345);
+    const second = createBattlefield(54321);
+    const hillPeakY = getTerrainY(first, first.terrain.hillCenter);
+    const leftEdge = first.terrain.hillCenter - first.terrain.hillWidth;
+    const rightEdge = first.terrain.hillCenter + first.terrain.hillWidth;
+
+    expect(first.terrain.leftY).not.toBe(first.terrain.rightY);
+    expect(first.terrain.leftY).not.toBe(second.terrain.leftY);
+    expect(getTerrainY(first, 0)).toBe(first.terrain.leftY);
+    expect(getTerrainY(first, leftEdge)).toBe(first.terrain.leftY);
+    expect(getTerrainY(first, rightEdge)).toBe(first.terrain.rightY);
+    expect(getTerrainY(first, first.canvasWidth)).toBe(first.terrain.rightY);
+    expect(getTerrainY(first, 0)).toBeGreaterThanOrEqual(hillPeakY);
+    expect(getTerrainY(first, first.canvasWidth)).toBeGreaterThanOrEqual(hillPeakY);
+  });
 });

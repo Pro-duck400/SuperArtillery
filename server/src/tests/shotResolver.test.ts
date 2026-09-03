@@ -5,6 +5,8 @@ import { calculateCastleHitTime } from '../utils/shotResolver';
 function createFlatBattlefield() {
   const battlefield = createBattlefield(1);
   battlefield.terrain.hillHeight = 0;
+  battlefield.terrain.leftY = battlefield.groundY;
+  battlefield.terrain.rightY = battlefield.groundY;
   battlefield.castles[0].base_y = battlefield.groundY;
   battlefield.castles[1].base_y = battlefield.groundY;
   return battlefield;

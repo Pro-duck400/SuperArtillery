@@ -14,11 +14,12 @@ describe('GameClient private-game flow', () => {
     const healthSpy = vi.spyOn((client as any).apiClient, 'healthCheckWithRetry').mockResolvedValue({
       status: 'ok',
       timestamp: new Date().toISOString(),
-      uptime: 1,
+      uptime: '0.00:00:01.000',
       gameCount: 0,
       invitationCount: 0,
       maxGamesReached: false,
-      version: '1.0.0'
+      version: '1.0.0',
+      contractVersion: '1.0.0'
     });
     const apiSpy = vi.spyOn((client as any).apiClient, 'createGame').mockResolvedValue({
       gameId: 'game-123',

@@ -14,6 +14,8 @@ Both application build commands regenerate their contract types before compiling
 npm run contracts:generate
 ```
 
+This command also generates the client and server `CONTRACT_VERSION` constants from `info.version` in the OpenAPI document, plus the client `CLIENT_VERSION` constant from `client/package.json`. Do not edit those generated files manually.
+
 This generates TypeScript contract types for both applications:
 
 - server/src/types/generated/openapi.d.ts

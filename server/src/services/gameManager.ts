@@ -238,9 +238,6 @@ export class GameManager {
     if (currentSocket !== ws) return;
 
     this.gameRules.disconnect(game, playerId);
-
-    console.log(`Player ${playerId} disconnected from game ${gameId}`);
-
   }
 
   /**

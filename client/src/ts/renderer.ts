@@ -27,10 +27,22 @@ export class Renderer {
   }
 
   public drawGround(): void {
-    this.ctx.strokeStyle = '#654321';
+    if (!this.battlefield) return;
+
+    this.ctx.fillStyle = '#4CAF50';
+    this.ctx.strokeStyle = '#4CAF50';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    if (!this.battlefield) return;
+    this.ctx.moveTo(0, Terrain.getY(this.battlefield, 0));
+    for (let x = this.battlefield.terrain.sampleWidth; x <= this.canvas.width; x += this.battlefield.terrain.sampleWidth) {
+      this.ctx.lineTo(x, Terrain.getY(this.battlefield, x));
+    }
+    this.ctx.lineTo(this.canvas.width, this.canvas.height);
+    this.ctx.lineTo(0, this.canvas.height);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    this.ctx.beginPath();
     this.ctx.moveTo(0, Terrain.getY(this.battlefield, 0));
     for (let x = this.battlefield.terrain.sampleWidth; x <= this.canvas.width; x += this.battlefield.terrain.sampleWidth) {
       this.ctx.lineTo(x, Terrain.getY(this.battlefield, x));
@@ -39,19 +51,7 @@ export class Renderer {
   }
 
   public drawCastle(leftX: number, isActive: boolean = false): void {
-    if (isActive) {
-      const padding = 3;
-      this.ctx.strokeStyle = '#ffd700';
-      this.ctx.lineWidth = 2;
-      this.ctx.strokeRect(
-        leftX - padding,
-        this.getCastleBaseY(leftX) - this.castleHeight - padding,
-        this.castleWidth + padding * 2,
-        this.castleHeight + padding * 2
-      );
-    }
-
-    this.ctx.fillStyle = '#808080';
+    this.ctx.fillStyle = isActive ? '#ffd700' : '#808080';
     this.ctx.fillRect(
       leftX,
       this.getCastleBaseY(leftX) - this.castleHeight,

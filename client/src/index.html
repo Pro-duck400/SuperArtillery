@@ -18,7 +18,14 @@
         </label>
         <label>
           Server address:
-          <input type="text" id="serverAddressInput" placeholder="" />
+          <span class="server-address-combobox">
+            <input type="text" id="serverAddressInput" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
+            <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
+            <span id="serverAddressOptions" role="listbox" hidden>
+              <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
+              <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
+            </span>
+          </span>
         </label>
       </div>
       <div style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
@@ -64,6 +71,7 @@
       
       <div id="message"></div>
     </div>
+    <div id="clientVersion" aria-label="Client version"></div>
   </div>
   
   <script type="module" src="/ts/main.ts"></script>

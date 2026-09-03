@@ -5,6 +5,8 @@ export class UIManager {
   private gamePanel: HTMLDivElement;
   private playerNameInput: HTMLInputElement;
   private serverAddressInput: HTMLInputElement;
+  private serverAddressToggle: HTMLButtonElement;
+  private serverAddressOptions: HTMLSpanElement;
   private registerButton: HTMLButtonElement;
   private joinGameButton: HTMLButtonElement;
   private inviteInput: HTMLInputElement;
@@ -33,6 +35,8 @@ export class UIManager {
     this.gamePanel = document.getElementById('gamePanel') as HTMLDivElement;
     this.playerNameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
+    this.serverAddressToggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
+    this.serverAddressOptions = document.getElementById('serverAddressOptions') as HTMLSpanElement;
     this.registerButton = document.getElementById('registerButton') as HTMLButtonElement;
     this.joinGameButton = document.getElementById('joinGameButton') as HTMLButtonElement;
     this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
@@ -48,7 +52,6 @@ export class UIManager {
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
     this.serverAddressInput.value = defaultServerAddress;
-    this.serverAddressInput.placeholder = defaultServerAddress;
 
     this.setupEventListeners();
     this.playerNameInput.focus();
@@ -58,6 +61,23 @@ export class UIManager {
    * Set up DOM event listeners
    */
   private setupEventListeners(): void {
+    const setOptionsExpanded = (expanded: boolean): void => {
+      this.serverAddressOptions.hidden = !expanded;
+      this.serverAddressToggle.setAttribute('aria-expanded', String(expanded));
+      this.serverAddressInput.setAttribute('aria-expanded', String(expanded));
+    };
+
+    this.serverAddressToggle.addEventListener('click', () => {
+      setOptionsExpanded(this.serverAddressOptions.hidden === true);
+    });
+
+    this.serverAddressOptions.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
+      option.addEventListener('click', () => {
+        this.serverAddressInput.value = option.dataset.serverAddress || '';
+        setOptionsExpanded(false);
+      });
+    });
+
     const validateInputs = (): { playerName: string; serverAddress: string } | null => {
       const playerName = this.playerNameInput.value.trim();
       const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
@@ -319,8 +339,10 @@ export class UIManager {
   /**
    * Show game over message
    */
-  public showGameOver(won: boolean): void {
-    this.messageEl.textContent = won ? '🎉 You won!' : '😔 You lost';
+  public showGameOver(won: boolean, playerName: string, opponentName: string): void {
+    this.messageEl.textContent = won
+      ? `🎉 ${playerName} won! ${opponentName} lost.`
+      : `😔 ${playerName} lost. ${opponentName} won!`;
     this.fireButton.disabled = true;
   }
 }

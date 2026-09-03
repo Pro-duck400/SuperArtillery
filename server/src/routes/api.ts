@@ -5,6 +5,7 @@ import { join } from 'path';
 import { GameManager } from '../services/gameManager';
 import type { HealthResponse, ErrorResponse } from '../types/private-game';
 import { HTTP_STATUS } from '../httpStatus';
+import { CONTRACT_VERSION } from '../contract-version';
 
 // Derive a full base URL for the client that preserves any pathname when possible.
 // Prefer the full Referer (origin + pathname) so invite links include the app path
@@ -31,6 +32,17 @@ function getClientBaseUrl(req: Request): string | undefined {
   return undefined;
 }
 
+function formatUptime(uptimeSeconds: number): string {
+  const totalMilliseconds = Math.floor(uptimeSeconds * 1000);
+  const days = Math.floor(totalMilliseconds / 86400000);
+  const hours = Math.floor(totalMilliseconds / 3600000) % 24;
+  const minutes = Math.floor(totalMilliseconds / 60000) % 60;
+  const seconds = Math.floor(totalMilliseconds / 1000) % 60;
+  const milliseconds = totalMilliseconds % 1000;
+
+  return `${days}.${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+}
+
 export function createApiRouter(game: GameManager): Router {
   const router = Router();
 
@@ -51,14 +63,17 @@ export function createApiRouter(game: GameManager): Router {
   // GET /api/v1/health - Enhanced health check
   router.get('/v1/health', (_req, res) => {
     const stats = game.getStats();
+    const timestamp = new Date();
+    const uptime = process.uptime();
     const healthResponse: HealthResponse = {
       status: stats.maxGamesReached ? 'degraded' : 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
+      timestamp: timestamp.toISOString(),
+      uptime: formatUptime(uptime),
       gameCount: stats.gameCount,
       invitationCount: stats.invitationCount,
       maxGamesReached: stats.maxGamesReached,
-      version: SERVER_VERSION
+      version: SERVER_VERSION,
+      contractVersion: CONTRACT_VERSION
     };
     res.json(healthResponse);
   });

@@ -19,16 +19,10 @@ body {
   padding: 20px;
 }
 
-h1 {
-  margin-bottom: 20px;
-  font-size: 2.5em;
-}
-
-#status {
-  margin-bottom: 10px;
-  font-weight: bold;
-  font-size: 1.2em;
-  color: #4CAF50;
+#clientVersion {
+  margin-top: 12px;
+  color: #888;
+  font-size: 11px;
 }
 
 canvas {
@@ -39,12 +33,6 @@ canvas {
   image-rendering: pixelated;
 }
 
-.player-name {
-  width: 120px; 
-  font-weight: bold; 
-  color: #ffffff60;
-}
-
 .player-name-left {
   text-align: left; 
 }
@@ -53,12 +41,12 @@ canvas {
   text-align: right; 
 }
 
-.player-name-active-turn {
-  color: #ffd700;
-}
-
 .player-name-connected {
   color: #ffffff;
+}
+
+.player-name-active-turn {
+  color: #ffd700;
 }
 
 #controls {
@@ -105,6 +93,60 @@ input[type="number"] {
   font-size: 16px;
 }
 
+.server-address-combobox {
+  position: relative;
+  display: flex;
+  width: 220px;
+}
+
+.server-address-combobox > input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 34px;
+}
+
+#serverAddressToggle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  padding: 0 9px;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+}
+
+#serverAddressToggle:hover {
+  background: #444;
+}
+
+#serverAddressOptions {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  padding: 4px;
+  border: 1px solid #444;
+  background: #333;
+}
+
+#serverAddressOptions button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  overflow-wrap: anywhere;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+#serverAddressOptions button:hover,
+#serverAddressOptions button:focus {
+  background: #4CAF50;
+}
+
 input[type="number"]:disabled {
   background-color: #222;
   color: #666;
@@ -141,15 +183,16 @@ button:not(:disabled):hover {
 }
 
 @media (max-width: 600px) {
-  h1 {
-    font-size: 2em;
-  }
-
   #registrationPanel input[type="text"] {
     width: 100%;
     min-width: 220px;
   }
-  
+
+  .server-address-combobox {
+    width: 100%;
+    min-width: 220px;
+  }
+
   #controls {
     flex-direction: column;
   }

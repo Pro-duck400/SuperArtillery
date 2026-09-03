@@ -28,11 +28,9 @@ Used by the client to detect a sleeping/cold-starting server before create/accep
 {
   "status": "ok" | "degraded",
   "timestamp": "2026-08-31T12:00:00.000Z",
-  "uptime": 123.45,
   "gameCount": 3,
-  "invitationCount": 1,
-  "maxGamesReached": false,
-  "version": "1.0.0"
+  ...
+  "version": "1.0.1"
 }
 ```
 
