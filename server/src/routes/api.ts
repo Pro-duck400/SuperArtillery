@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Request } from 'express';
 import { readFileSync } from 'fs';
+import { join } from 'path';
 import { GameManager } from '../services/gameManager';
 import type { HealthResponse, ErrorResponse } from '../types/private-game';
 import { HTTP_STATUS } from '../httpStatus';
@@ -39,7 +40,7 @@ export function createApiRouter(game: GameManager): Router {
     (() => {
       try {
         const pkg = JSON.parse(
-          readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+          readFileSync(join(__dirname, '../../package.json'), 'utf8')
         );
         return typeof pkg.version === 'string' ? pkg.version : 'dev';
       } catch (e) {
