@@ -34,68 +34,62 @@ Used by the client to detect a sleeping/cold-starting server before create/accep
 }
 ```
 
+### Create a Private Game
+```
+
 ---
 
-### Create a Private Game
+    "inviteUrl": "https://example.com/SuperArtillery/?invite=K7M4&server=https%3A%2F%2Fapi.example.com",
 
 Creates a new private, two-player game in memory and returns tokens/links for the initiator to share.
 
-**POST** `/api/v1/games`
+  ```
 
-**Payload:**
-```json
-{ "playerName": "Alice" }
-```
+  ---
 
-**Response `201`:**
-```json
-{
-  "gameId": "opaque-game-id",
-  "playerToken": "opaque-session-token",
-  "inviteUrl": "https://example.com/?invite=opaque-invite-token",
-  "inviteCode": "K7M4"
-}
-```
+  Creates a new private, two-player game in memory. The client URL preserves the deployed application path in the generated invitation link.
 
-**Errors:**
-- `400 INVALID_PLAYER_NAME` — name missing/too long/invalid first character.
-- `503 MAX_GAMES_REACHED` — server at maximum concurrent-game capacity.
+  **POST** `/api/v1/games`
 
----
+  **Payload:**
+  ```json
+  { "playerName": "Alice", "clientUrl": "https://example.com/SuperArtillery/" }
+  ```
 
-### Accept an Invitation
+  **Response `201`:**
+  ```json
+  {
+    "gameId": "opaque-game-id",
+    "playerToken": "opaque-session-token",
+    "inviteUrl": "https://example.com/SuperArtillery/?invite=K7M4&server=https%3A%2F%2Fapi.example.com",
+    "inviteCode": "K7M4"
+  }
+  ```
 
-Accepts a private game invitation via the full token (from the link) or the short 4-character code. One-time use only.
+  **Errors:**
+  - `400 INVALID_PLAYER_NAME` — name missing/too long/invalid first character.
+  - `503 MAX_GAMES_REACHED` — server at maximum concurrent-game capacity.
 
-**POST** `/api/v1/invitations/accept`
+  ---
 
-**Payload:**
-```json
-{ "inviteToken": "opaque-invite-token", "playerName": "Bob" }
-```
-or
-```json
-{ "inviteCode": "K7M4", "playerName": "Bob" }
-```
+  ### Accept an Invitation
 
-**Response `200`:**
-```json
-{
-  "gameId": "opaque-game-id",
-  "playerToken": "opaque-session-token"
-}
-```
+  Accepts a private game invitation via the short 4-character code from the link or display. One-time use only.
+
+  **POST** `/api/v1/invitations/accept`
+
+  **Payload:**
+  ```json
+  { "inviteCode": "K7M4", "playerName": "Bob" }
+  ```
 
 **Errors:**
 - `400 INVALID_PLAYER_NAME` — invalid display name.
-- `400 MISSING_INVITE` — no token or code supplied.
-- `400 INVALID_INVITATION` — unknown token/code.
+- `400 MISSING_INVITE` — no invite code supplied.
+- `400 INVALID_INVITATION` — unknown invite code.
 - `400 INVITATION_ALREADY_ACCEPTED` — invitation was already used by another player (e.g. a third client trying to join a game that already has two players).
 - `400 GAME_UNAVAILABLE` — game exists but is no longer pending.
-- `410 INVITATION_EXPIRED` — invitation TTL elapsed.
-
 ---
-
 ### Get Game Status
 
 Polls non-sensitive lobby state. Requires a valid session token.
@@ -111,14 +105,7 @@ Polls non-sensitive lobby state. Requires a valid session token.
 }
 ```
 
-**Errors:**
-- `401` — missing/invalid session token.
-- `404 GAME_NOT_FOUND` — unknown or expired game.
-
----
-
 ### Fire Action
-
 Fires a shot for the current player's turn. Player identity is derived server-side from the session token — the client never supplies a `playerId`. On success, the server broadcasts `shot` to both players over WebSocket, followed by either `turn_change` or `game_over`.
 
 **POST** `/api/v1/fire?sessionToken=...`
@@ -130,7 +117,6 @@ Fires a shot for the current player's turn. Player identity is derived server-si
 
 **Response:** `200` (no body)
 
-**Errors** (`400` unless noted):
 - `404 GAME_NOT_FOUND`
 - `401 INVALID_SESSION_TOKEN`
 - `GAME_NOT_ACTIVE` — game hasn't started or has ended.
@@ -168,7 +154,6 @@ Sent to both players once both WebSocket connections are open.
 #### Shots Fired
 Broadcast to both players after a successful `POST /api/v1/fire`.
 ```json
-{
   "type": "shot",
   "playerId": 0,
   "angle": 45,
@@ -245,12 +230,6 @@ sequenceDiagram
 
     Note over C1,C2: Game Play - Turn 2 (retry)
     C2->>Server: POST /api/v1/fire?sessionToken=(Bob)<br/>{gameId, angle: 135, velocity: 220}
-    Server-->>C2: 200 OK
-    Server->>C1: WS: shot {playerId: 1, angle: 135, velocity: 220}
-    Server->>C2: WS: shot {playerId: 1, angle: 135, velocity: 220}
-    Note over Server: Shot misses
-    Server->>C1: WS: turn_change {playerId_turn: 0}
-    Server->>C2: WS: turn_change {playerId_turn: 0}
 
     Note over C1,C2: Game Play - Turn 3 (winning shot)
     C1->>Server: POST /api/v1/fire?sessionToken=(Alice)<br/>{gameId, angle: 50, velocity: 280}

@@ -31,7 +31,7 @@ describe('GameClient private-game flow', () => {
     await client.createGame('Alice');
 
     expect(healthSpy).toHaveBeenCalled();
-    expect(apiSpy).toHaveBeenCalledWith('Alice');
+    expect(apiSpy).toHaveBeenCalledWith('Alice', window.location.href);
     expect(client.getGameSession()?.gameId).toBe('game-123');
     expect(client.hasActiveSession()).toBe(true);
   });

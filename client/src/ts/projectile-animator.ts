@@ -10,6 +10,7 @@ export class ProjectileAnimator {
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
   private gravity = 600;
+  private wind = 0;
   private canvasWidth: number;
 
   constructor(renderer: Renderer, canvasWidth: number) {
@@ -17,9 +18,10 @@ export class ProjectileAnimator {
     this.canvasWidth = canvasWidth;
   }
 
-  public configureScene(canvasWidth: number, _groundY: number, _launchY: number, gravity: number): void {
+  public configureScene(canvasWidth: number, _groundY: number, _launchY: number, gravity: number, wind: number): void {
     this.canvasWidth = canvasWidth;
     this.gravity = gravity;
+    this.wind = wind;
   }
 
   /**
@@ -83,7 +85,7 @@ export class ProjectileAnimator {
 
     if (deltaTime > 0 && deltaTime < 0.1) {
       // Update projectile physics
-      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime, this.gravity);
+      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime, this.gravity, this.wind);
       
       // Add to trajectory
       this.trajectory.push({ x: this.currentProjectile.x, y: this.currentProjectile.y });

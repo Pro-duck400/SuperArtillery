@@ -19,6 +19,7 @@ export class InvitationService {
   public createGame(
     playerName: string,
     clientOrigin: string,
+    serverOrigin: string = 'http://localhost:3000',
     now: number = Date.now()
   ): InvitationResult<CreateGameResponse> {
     const normalizedName = TokenService.normalizeName(playerName);
@@ -28,8 +29,7 @@ export class InvitationService {
 
     const gameId = TokenService.generateGameId();
     const sessionToken = TokenService.generateSessionToken();
-    const inviteToken = TokenService.generateInviteToken();
-    const inviteCode = TokenService.generateInviteCode();
+    const inviteCode = this.generateUniqueInviteCode();
     const expiresAt = now + GAME_CONFIG.invitationTtlMs;
 
     const game: PrivateGame = {
@@ -39,7 +39,6 @@ export class InvitationService {
       expiresAt,
       lastActivityAt: now,
       invitation: {
-        invitationTokenHash: TokenService.hashToken(inviteToken),
         inviteCode,
         inviteCodeHash: TokenService.hashToken(inviteCode),
         expiresAt,
@@ -64,13 +63,13 @@ export class InvitationService {
     return {
       gameId,
       playerToken: sessionToken,
-      inviteUrl: this.createInviteUrl(clientOrigin || this.defaultClientOrigin, inviteToken),
+      inviteUrl: this.createInviteUrl(clientOrigin || this.defaultClientOrigin, inviteCode, serverOrigin),
       inviteCode
     };
   }
 
   public acceptInvitation(
-    inviteTokenOrCode: string | undefined,
+    inviteCode: string | undefined,
     playerName: string,
     now: number = Date.now()
   ): InvitationResult<AcceptInvitationResponse> {
@@ -79,11 +78,11 @@ export class InvitationService {
       return this.error('INVALID_PLAYER_NAME');
     }
 
-    if (!inviteTokenOrCode) {
+    if (!inviteCode) {
       return this.error('MISSING_INVITE');
     }
 
-    const game = this.findGame(inviteTokenOrCode);
+    const game = this.findGame(inviteCode);
     if (!game) {
       return this.error('INVALID_INVITATION');
     }
@@ -112,29 +111,34 @@ export class InvitationService {
     };
   }
 
-  private findGame(inviteTokenOrCode: string): PrivateGame | undefined {
-    const tokenHash = TokenService.hashToken(
-      inviteTokenOrCode.length === TokenService.INVITE_CODE_LENGTH
-        ? inviteTokenOrCode.toUpperCase()
-        : inviteTokenOrCode
-    );
-    return Array.from(this.games.values()).find(game =>
-      inviteTokenOrCode.length === TokenService.INVITE_CODE_LENGTH
-        ? game.invitation.inviteCodeHash === tokenHash
-        : game.invitation.invitationTokenHash === tokenHash
-    );
+  private findGame(inviteCode: string): PrivateGame | undefined {
+    const codeHash = TokenService.hashToken(inviteCode.toUpperCase());
+    return Array.from(this.games.values()).find(game => game.invitation.inviteCodeHash === codeHash);
   }
 
-  private createInviteUrl(base: string, inviteToken: string): string {
+  private generateUniqueInviteCode(): string {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const inviteCode = TokenService.generateInviteCode();
+      const codeHash = TokenService.hashToken(inviteCode);
+      const alreadyUsed = Array.from(this.games.values()).some(
+        game => game.invitation.inviteCodeHash === codeHash
+      );
+      if (!alreadyUsed) return inviteCode;
+    }
+    throw new Error('Unable to generate a unique invite code');
+  }
+
+  private createInviteUrl(base: string, inviteCode: string, serverOrigin: string): string {
     try {
       const url = new URL(base);
       if (!url.pathname.endsWith('/')) {
         url.pathname = `${url.pathname}/`;
       }
-      url.search = `invite=${encodeURIComponent(inviteToken)}`;
+      url.searchParams.set('invite', inviteCode);
+      url.searchParams.set('server', serverOrigin);
       return url.toString();
     } catch {
-      return `${base.endsWith('/') ? base : `${base}/`}?invite=${encodeURIComponent(inviteToken)}`;
+      return `${base.endsWith('/') ? base : `${base}/`}?invite=${encodeURIComponent(inviteCode)}&server=${encodeURIComponent(serverOrigin)}`;
     }
   }
 

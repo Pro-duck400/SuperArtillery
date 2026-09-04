@@ -57,7 +57,7 @@ export class GameClient {
     }
 
     // Create the game
-    const response = await this.apiClient.createGame(playerName);
+    const response = await this.apiClient.createGame(playerName, window.location.href);
     
     // Store session
     this.gameSession = {
@@ -76,10 +76,10 @@ export class GameClient {
   }
 
   /**
-   * Accept an invitation via token or code
+  * Accept an invitation via invite code
    */
   public async acceptInvitation(
-    inviteTokenOrCode: string,
+    inviteCode: string,
     playerName: string
   ): Promise<AcceptInvitationResponse> {
     try {
@@ -93,7 +93,7 @@ export class GameClient {
     }
 
     // Accept the invitation
-    const response = await this.apiClient.acceptInvitation(inviteTokenOrCode, playerName);
+    const response = await this.apiClient.acceptInvitation(inviteCode, playerName);
 
     // Store session
     this.gameSession = {

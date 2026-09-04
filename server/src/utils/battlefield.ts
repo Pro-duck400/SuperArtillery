@@ -36,6 +36,7 @@ export function createBattlefield(seed: number = Math.floor(Math.random() * 0x10
     canvasWidth: 280,
     canvasHeight: 160,
     gravity: 100,
+    wind: randomBetween(random, -50, 50),
     groundY: 140,
     castleWidth: 10,
     castleHeight: 10,

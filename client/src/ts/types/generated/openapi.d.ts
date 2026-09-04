@@ -54,7 +54,7 @@ export interface paths {
         put?: never;
         /**
          * Create a new private game
-         * @description Create a new private two-player game and return invitation tokens/codes
+         * @description Create a new private two-player game and return an invitation code and link
          */
         post: {
             parameters: {
@@ -317,6 +317,8 @@ export interface components {
             canvasWidth: number;
             canvasHeight: number;
             gravity: number;
+            /** @description Signed horizontal wind acceleration; negative blows left and positive blows right */
+            wind: number;
             groundY: number;
             castleWidth: number;
             castleHeight: number;
@@ -337,6 +339,11 @@ export interface components {
         CreateGameRequest: {
             /** @description Display name for the initiating player (15 chars max, must start with alphanumeric) */
             playerName: string;
+            /**
+             * Format: uri
+             * @description Current client URL used to preserve the deployed application path in the invite link
+             */
+            clientUrl?: string;
         };
         CreateGameResponse: {
             /** @description Opaque game ID */
@@ -345,16 +352,14 @@ export interface components {
             playerToken: string;
             /**
              * Format: uri
-             * @description Full invitation link with embedded token (shareable)
+             * @description Full invitation link with the invite code and server URL (shareable)
              */
             inviteUrl: string;
             /** @description Short 4-character alphanumeric code (easy to type) */
             inviteCode: string;
         };
         AcceptInvitationRequest: {
-            /** @description Full invitation token from link (if accepting via link) */
-            inviteToken?: string;
-            /** @description Short invite code (if accepting via code) */
+            /** @description Short invite code from the invitation link or displayed code */
             inviteCode?: string;
             /** @description Display name for the invited player */
             playerName: string;

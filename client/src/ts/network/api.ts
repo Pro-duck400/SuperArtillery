@@ -89,13 +89,13 @@ export class ApiClient {
   /**
    * Create a new private game
    */
-  public async createGame(playerName: string): Promise<CreateGameResponse> {
+  public async createGame(playerName: string, clientUrl: string): Promise<CreateGameResponse> {
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/games`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ playerName })
+      body: JSON.stringify({ playerName, clientUrl })
     });
 
     if (!response.ok) {
@@ -111,14 +111,10 @@ export class ApiClient {
    * Accept an invitation
    */
   public async acceptInvitation(
-    inviteTokenOrCode: string,
+    inviteCode: string,
     playerName: string
   ): Promise<AcceptInvitationResponse> {
-    // Determine if it's a token or code based on length
-    const isCode = inviteTokenOrCode.length === 6;
-    const body = isCode
-      ? { inviteCode: inviteTokenOrCode, playerName }
-      : { inviteToken: inviteTokenOrCode, playerName };
+    const body = { inviteCode, playerName };
 
     const response = await this.fetchWithTimeout(
       `${this.baseUrl}/api/v1/invitations/accept`,

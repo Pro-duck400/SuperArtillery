@@ -22,7 +22,6 @@ function createGame(): PrivateGame {
     expiresAt: 1_000,
     lastActivityAt: 100,
     invitation: {
-      invitationTokenHash: 'invite-hash',
       inviteCode: 'ABCD',
       inviteCodeHash: 'code-hash',
       expiresAt: 1_000,

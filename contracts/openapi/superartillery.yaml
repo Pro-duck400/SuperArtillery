@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.0.1
+  version: 1.0.2
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -28,7 +28,7 @@ paths:
     post:
       tags: [Games]
       summary: Create a new private game
-      description: Create a new private two-player game and return invitation tokens/codes
+      description: Create a new private two-player game and return an invitation code and link
       requestBody:
         required: true
         content:
@@ -194,7 +194,7 @@ components:
     Battlefield:
       type: object
       additionalProperties: false
-      required: [canvasWidth, canvasHeight, gravity, groundY, castleWidth, castleHeight, castles, terrain]
+      required: [canvasWidth, canvasHeight, gravity, wind, groundY, castleWidth, castleHeight, castles, terrain]
       properties:
         canvasWidth:
           type: number
@@ -202,6 +202,11 @@ components:
           type: number
         gravity:
           type: number
+        wind:
+          type: number
+          minimum: -50
+          maximum: 50
+          description: Signed horizontal wind acceleration; negative blows left and positive blows right
         groundY:
           type: number
         castleWidth:
@@ -257,6 +262,10 @@ components:
           minLength: 1
           maxLength: 15
           description: Display name for the initiating player (15 chars max, must start with alphanumeric)
+        clientUrl:
+          type: string
+          format: uri
+          description: Current client URL used to preserve the deployed application path in the invite link
 
     CreateGameResponse:
       type: object
@@ -272,7 +281,7 @@ components:
         inviteUrl:
           type: string
           format: uri
-          description: Full invitation link with embedded token (shareable)
+          description: Full invitation link with the invite code and server URL (shareable)
         inviteCode:
           type: string
           minLength: 4
@@ -284,14 +293,11 @@ components:
       additionalProperties: false
       required: [playerName]
       properties:
-        inviteToken:
-          type: string
-          description: Full invitation token from link (if accepting via link)
         inviteCode:
           type: string
           minLength: 4
           maxLength: 4
-          description: Short invite code (if accepting via code)
+          description: Short invite code from the invitation link or displayed code
         playerName:
           type: string
           minLength: 1
