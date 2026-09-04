@@ -29,7 +29,7 @@ describe('GameManager', () => {
       }
     });
 
-    it('generates unique opaque game and invitation tokens', () => {
+    it('generates unique opaque game IDs and invitation codes', () => {
       const result1 = gameManager.createGame('Alice');
       const result2 = gameManager.createGame('Bob');
 

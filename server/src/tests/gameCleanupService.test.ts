@@ -11,7 +11,6 @@ function createGame(overrides: Partial<PrivateGame> = {}): PrivateGame {
     expiresAt: 100,
     lastActivityAt: 0,
     invitation: {
-      invitationTokenHash: 'invite-hash',
       inviteCode: 'ABCD',
       inviteCodeHash: 'code-hash',
       expiresAt: 100,

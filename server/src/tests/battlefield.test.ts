@@ -29,6 +29,15 @@ describe('battlefield generation', () => {
     expect(terrainY).toBeGreaterThanOrEqual(battlefield.terrain.minY);
   });
 
+  it('generates deterministic wind within the supported range', () => {
+    const first = createBattlefield(12345);
+    const second = createBattlefield(12345);
+
+    expect(first.wind).toBe(second.wind);
+    expect(first.wind).toBeGreaterThanOrEqual(-50);
+    expect(first.wind).toBeLessThanOrEqual(50);
+  });
+
   it('generates independent side elevations below the hill peak', () => {
     const first = createBattlefield(12345);
     const second = createBattlefield(54321);

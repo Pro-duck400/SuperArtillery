@@ -7,16 +7,16 @@ describe('UIManager private game flow', () => {
       <div id="app">
         <div id="registrationPanel" style="display: block;">
           <input id="playerNameInput" value="" />
-          <span class="server-address-combobox">
+          <label id="serverAddressLabel"><span class="server-address-combobox">
             <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
             <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
             <span id="serverAddressOptions" role="listbox" hidden>
               <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
               <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
             </span>
-          </span>
+          </span></label>
           <button id="registerButton">Create Private Game</button>
-          <button id="joinGameButton">Join with Invite</button>
+          <button id="joinGameButton" disabled>Join with Invite</button>
           <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
           <div id="registrationError"></div>
           <div id="inviteInfo">
@@ -89,10 +89,30 @@ describe('UIManager private game flow', () => {
 
     nameInput.value = 'Bob';
     serverInput.value = 'http://localhost:3000';
-    joinButton.click();
+    expect(joinButton.disabled).toBe(true);
 
     expect(joinSpy).not.toHaveBeenCalled();
-    expect(error.textContent).toContain('Enter an invite code');
+    expect(error.textContent).toBe('');
+  });
+
+  it('enables joining only for populated invite-code input and hides server selection for invite links', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const joinButton = document.getElementById('joinGameButton') as HTMLButtonElement;
+    const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
+    const serverLabel = document.getElementById('serverAddressLabel') as HTMLLabelElement;
+
+    expect(joinButton.disabled).toBe(true);
+    inviteInput.value = 'https://example.com/?invite=ABCD';
+    inviteInput.dispatchEvent(new Event('input'));
+    expect(joinButton.disabled).toBe(true);
+    inviteInput.value = 'ABCD';
+    inviteInput.dispatchEvent(new Event('input'));
+    expect(joinButton.disabled).toBe(false);
+
+    ui.setServerAddress('https://api.example.com');
+    ui.enterJoinOnlyMode('ABCD');
+    expect(serverLabel.style.display).toBe('none');
+    expect((document.getElementById('serverAddressInput') as HTMLInputElement).disabled).toBe(true);
   });
 
   it('shows invite details after creation', () => {
@@ -118,6 +138,20 @@ describe('UIManager private game flow', () => {
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith('https://example.com/?invite=token');
+  });
+
+  it('hides invite details after a connection timeout', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const inviteInfo = document.getElementById('inviteInfo') as HTMLDivElement;
+    const codeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
+    const urlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
+
+    ui.showInviteInfo('ABCD', 'https://example.com/?invite=ABCD');
+    ui.hideInviteInfo();
+
+    expect(inviteInfo.style.display).toBe('none');
+    expect(codeButton.onclick).toBeNull();
+    expect(urlButton.onclick).toBeNull();
   });
 
   it('updates player names and turn state correctly', () => {

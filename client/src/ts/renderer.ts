@@ -50,6 +50,30 @@ export class Renderer {
     this.ctx.stroke();
   }
 
+  public drawWind(): void {
+    if (!this.battlefield || this.battlefield.wind === 0) return;
+
+    const centerX = this.canvas.width / 2;
+    const y = 14;
+    const direction = Math.sign(this.battlefield.wind);
+    const length = Math.min(45, Math.abs(this.battlefield.wind));
+    const endX = centerX + direction * length;
+
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(centerX - direction * length, y);
+    this.ctx.lineTo(endX, y);
+    this.ctx.stroke();
+    this.ctx.beginPath();
+    this.ctx.moveTo(endX, y);
+    this.ctx.lineTo(endX - direction * 6, y - 4);
+    this.ctx.lineTo(endX - direction * 6, y + 4);
+    this.ctx.closePath();
+    this.ctx.fill();
+  }
+
   public drawCastle(leftX: number, isActive: boolean = false): void {
     this.ctx.fillStyle = isActive ? '#ffd700' : '#808080';
     this.ctx.fillRect(
@@ -137,6 +161,7 @@ export class Renderer {
 
   public render(projectile: Projectile | null, trajectory: Array<{ x: number; y: number }> = []): void {
     this.clear();
+    this.drawWind();
     this.drawGround();
     this.drawCastle(this.castleLeftByPlayerId[0], this.activeCastlePlayerId === 0);
     this.drawCastle(this.castleLeftByPlayerId[1], this.activeCastlePlayerId === 1);

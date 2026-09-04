@@ -30,15 +30,6 @@ export class TokenService {
   }
 
   /**
-   * Generate a high-entropy invitation token for the link
-   * Should be cryptographically random and difficult to guess
-   * @returns Base64-encoded random bytes (32 bytes = 256 bits)
-   */
-  static generateInviteToken(): string {
-    return randomBytes(32).toString('base64');
-  }
-
-  /**
    * Generate a short, user-typeable 4-character alphanumeric code
    * Characters: A-Z, 0-9 (no lowercase to reduce confusion)
    * Entropy: ~20.7 bits (36^4 possibilities)

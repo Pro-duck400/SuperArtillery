@@ -7,6 +7,7 @@ export class UIManager {
   private serverAddressInput: HTMLInputElement;
   private serverAddressToggle: HTMLButtonElement;
   private serverAddressOptions: HTMLSpanElement;
+  private serverAddressLabel: HTMLLabelElement;
   private registerButton: HTMLButtonElement;
   private joinGameButton: HTMLButtonElement;
   private inviteInput: HTMLInputElement;
@@ -25,7 +26,7 @@ export class UIManager {
 
   // Event callbacks
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
-  private onJoinGameCallback: ((inviteTokenOrCode: string, name: string, serverAddress: string) => void) | null = null;
+  private onJoinGameCallback: ((inviteCode: string, name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
 
   constructor(defaultServerAddress: string) {
@@ -37,6 +38,7 @@ export class UIManager {
     this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     this.serverAddressToggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
     this.serverAddressOptions = document.getElementById('serverAddressOptions') as HTMLSpanElement;
+    this.serverAddressLabel = this.serverAddressInput.closest('label') as HTMLLabelElement;
     this.registerButton = document.getElementById('registerButton') as HTMLButtonElement;
     this.joinGameButton = document.getElementById('joinGameButton') as HTMLButtonElement;
     this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
@@ -52,6 +54,7 @@ export class UIManager {
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
     this.serverAddressInput.value = defaultServerAddress;
+    this.joinGameButton.disabled = !/^[A-Za-z0-9]{4}$/.test(this.inviteInput.value.trim());
 
     this.setupEventListeners();
     this.playerNameInput.focus();
@@ -120,21 +123,25 @@ export class UIManager {
 
     this.joinGameButton.addEventListener('click', () => {
       const valid = validateInputs();
-      const inviteTokenOrCode = this.inviteInput.value.trim();
+      const inviteCode = this.inviteInput.value.trim();
 
       if (!valid) {
         return;
       }
 
-      if (!inviteTokenOrCode) {
-        this.registrationError.textContent = 'Enter an invite code or full invite link first';
+      if (!/^[A-Za-z0-9]{4}$/.test(inviteCode)) {
+        this.registrationError.textContent = 'Enter a 4-character invite code';
         return;
       }
 
       if (this.onJoinGameCallback) {
         this.registrationError.textContent = '';
-        this.onJoinGameCallback(inviteTokenOrCode, valid.playerName, valid.serverAddress);
+        this.onJoinGameCallback(inviteCode, valid.playerName, valid.serverAddress);
       }
+    });
+
+    this.inviteInput.addEventListener('input', () => {
+      this.joinGameButton.disabled = !/^[A-Za-z0-9]{4}$/.test(this.inviteInput.value.trim());
     });
 
     this.playerNameInput.addEventListener('keypress', (e) => {
@@ -211,7 +218,7 @@ export class UIManager {
   /**
    * Register callback for joining an existing game via invite token or code
    */
-  public onJoinGame(callback: (inviteTokenOrCode: string, name: string, serverAddress: string) => void): void {
+  public onJoinGame(callback: (inviteCode: string, name: string, serverAddress: string) => void): void {
     this.onJoinGameCallback = callback;
   }
 
@@ -250,6 +257,18 @@ export class UIManager {
     this.wireCopyButton(this.copyInviteUrlButton, inviteUrl);
   }
 
+  public hideInviteInfo(): void {
+    this.inviteInfoEl.style.display = 'none';
+    this.inviteCodeTextEl.textContent = '';
+    this.inviteUrlTextEl.textContent = '';
+    this.copyInviteCodeButton.onclick = null;
+    this.copyInviteUrlButton.onclick = null;
+  }
+
+  public setServerAddress(serverAddress: string): void {
+    this.serverAddressInput.value = serverAddress;
+  }
+
   /**
    * Wire a button to copy the given text to the clipboard, with brief "Copied!" feedback.
    */
@@ -276,8 +295,12 @@ export class UIManager {
    * name field and Join button are relevant, so hide Create Game and the
    * invite code/link input (pre-filled internally) to avoid confusing the user.
    */
-  public enterJoinOnlyMode(inviteTokenOrCode: string): void {
-    this.inviteInput.value = inviteTokenOrCode;
+  public enterJoinOnlyMode(inviteCode: string): void {
+    this.inviteInput.value = inviteCode;
+    this.joinGameButton.disabled = false;
+    this.serverAddressLabel.style.display = 'none';
+    this.serverAddressInput.disabled = true;
+    this.serverAddressToggle.disabled = true;
     this.registerButton.style.display = 'none';
     this.inviteInputLabel.style.display = 'none';
     this.joinGameButton.textContent = 'Join Game';

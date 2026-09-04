@@ -66,7 +66,8 @@ function wireGameClientEvents(client: GameClient): void {
       renderer.getCanvasWidth(),
       renderer.getGroundY(),
       renderer.getCastleTopY(),
-      battlefield.gravity
+      battlefield.gravity,
+      battlefield.wind
     );
 
     const playerId = client.getPlayerId();
@@ -129,9 +130,18 @@ function parseInviteInput(value: string): string {
   return match ? decodeURIComponent(match[1]) : trimmed;
 }
 
+function getServerFromInviteUrl(): string | null {
+  const server = new URLSearchParams(window.location.search).get('server');
+  return server ? server : null;
+}
+
 // If the page was opened via an invite link, only the name + Join controls are relevant.
 const inviteFromUrl = new URLSearchParams(window.location.search).get('invite');
 if (inviteFromUrl) {
+  const inviteServer = getServerFromInviteUrl();
+  if (inviteServer) {
+    uiManager.setServerAddress(inviteServer);
+  }
   uiManager.enterJoinOnlyMode(inviteFromUrl);
 }
 
@@ -153,12 +163,15 @@ uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
     await gameClient.connectToGame();
   } catch (error) {
     console.error('Create game failed:', error);
+    if (error instanceof Error && error.message === 'Game connection timeout') {
+      uiManager.hideInviteInfo();
+    }
     const errorMessage = error instanceof Error ? error.message : 'Game creation failed. Please try again.';
     uiManager.showRegistrationError(errorMessage);
   }
 });
 
-uiManager.onJoinGame(async (inviteTokenOrCode: string, playerName: string, serverAddress: string) => {
+uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
     gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
@@ -166,7 +179,7 @@ uiManager.onJoinGame(async (inviteTokenOrCode: string, playerName: string, serve
 
     clientName = playerName;
     uiManager.showRegistering();
-    const inviteValue = parseInviteInput(inviteTokenOrCode);
+    const inviteValue = parseInviteInput(inviteCode);
     const accepted = await gameClient.acceptInvitation(inviteValue, playerName);
 
     lobbyState.lastInviteCode = accepted.gameId;
@@ -175,6 +188,9 @@ uiManager.onJoinGame(async (inviteTokenOrCode: string, playerName: string, serve
     await gameClient.connectToGame();
   } catch (error) {
     console.error('Join game failed:', error);
+    if (error instanceof Error && error.message === 'Game connection timeout') {
+      uiManager.hideInviteInfo();
+    }
     const errorMessage = error instanceof Error ? error.message : 'Unable to join game. Please try again.';
     uiManager.showRegistrationError(errorMessage);
   }

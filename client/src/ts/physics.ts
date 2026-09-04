@@ -1,4 +1,4 @@
-// Projectile physics (gravity only for MVP)
+// Projectile physics
 import type { Projectile } from './types/game';
 
 export class Physics {
@@ -16,11 +16,11 @@ export class Physics {
   /**
    * Update projectile position based on physics
    */
-  public static updateProjectile(projectile: Projectile, dt: number, gravity: number): Projectile {
+  public static updateProjectile(projectile: Projectile, dt: number, gravity: number, wind: number): Projectile {
     return {
-      x: projectile.x + projectile.vx * dt,
+      x: projectile.x + projectile.vx * dt + 0.5 * wind * dt * dt,
       y: projectile.y + projectile.vy * dt,
-      vx: projectile.vx,
+      vx: projectile.vx + wind * dt,
       vy: projectile.vy + gravity * dt,
     };
   }

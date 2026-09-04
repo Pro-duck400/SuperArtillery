@@ -36,21 +36,6 @@ describe('TokenService', () => {
     });
   });
 
-  describe('generateInviteToken', () => {
-    it('generates a high-entropy token', () => {
-      const token = TokenService.generateInviteToken();
-      expect(token).toBeDefined();
-      expect(typeof token).toBe('string');
-      expect(token.length).toBeGreaterThanOrEqual(40);
-    });
-
-    it('generates unique tokens', () => {
-      const token1 = TokenService.generateInviteToken();
-      const token2 = TokenService.generateInviteToken();
-      expect(token1).not.toBe(token2);
-    });
-  });
-
   describe('generateInviteCode', () => {
     it('generates a 4-character alphanumeric code', () => {
       const code = TokenService.generateInviteCode();

@@ -27,6 +27,7 @@ import { HTTP_STATUS } from '../httpStatus';
 
 // Fallback used only when a request has no Origin/Referer header (e.g. direct API calls/tests)
 const DEFAULT_CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:5173';
+const DEFAULT_SERVER_ORIGIN = process.env.SERVER_URL || 'http://localhost:3000';
 
 
 /**
@@ -87,9 +88,9 @@ export class GameManager {
   /**
    * Create a new private game
    * @param playerName The initiator's display name
-   * @returns Game creation response with tokens and invite code
+  * @returns Game creation response with an invite code
    */
-  public createGame(playerName: string, clientOrigin: string = DEFAULT_CLIENT_ORIGIN): CreateGameResponse | { error: string; code: string } {
+  public createGame(playerName: string, clientOrigin: string = DEFAULT_CLIENT_ORIGIN, serverOrigin: string = DEFAULT_SERVER_ORIGIN): CreateGameResponse | { error: string; code: string } {
     const normalizedName = TokenService.normalizeName(playerName);
     if (!normalizedName) {
       return {
@@ -106,20 +107,20 @@ export class GameManager {
       };
     }
 
-    return this.invitationService.createGame(playerName, clientOrigin);
+    return this.invitationService.createGame(playerName, clientOrigin, serverOrigin);
   }
 
   /**
-   * Accept an invitation via token or code
-   * @param inviteTokenOrCode Either the full invitation token or 4-char code
+  * Accept an invitation via invite code
+  * @param inviteCode 4-char invite code
    * @param playerName The invited player's display name
    * @returns Invitation acceptance response with game ID and session token
    */
   public acceptInvitation(
-    inviteTokenOrCode: string | undefined,
+    inviteCode: string | undefined,
     playerName: string
   ): AcceptInvitationResponse | { error: string; code: string } {
-    return this.invitationService.acceptInvitation(inviteTokenOrCode, playerName);
+    return this.invitationService.acceptInvitation(inviteCode, playerName);
   }
 
   /**

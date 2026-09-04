@@ -22,6 +22,7 @@ export function calculateCastleHitTime(
     vx,
     vy,
     battlefield.gravity,
+    battlefield.wind,
     targetCastle.left_x + battlefield.castleWidth / 2,
     battlefield.castleWidth,
     battlefield.castleHeight,
@@ -33,6 +34,7 @@ export function calculateCastleHitTime(
     vx,
     vy,
     battlefield.gravity,
+    battlefield.wind,
     (x) => getTerrainY(battlefield, x),
     battlefield.canvasWidth
   );
