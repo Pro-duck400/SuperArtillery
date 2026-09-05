@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.0.2
+  version: 1.0.3
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -248,7 +248,7 @@ components:
               exclusiveMinimum: 0
             hillHeight:
               type: number
-              minimum: 0
+              description: Signed cosine terrain variation; positive values create a crest, negative values create a depression, and zero produces a slope between the side elevations
 
     # Private Games Requests/Responses
 

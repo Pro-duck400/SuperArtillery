@@ -31,6 +31,7 @@ describe('UIManager private game flow', () => {
         </div>
         <div id="gamePanel" style="display: none;">
           <div id="battlefieldFrame">
+            <div id="windLabel"></div>
             <canvas id="gameCanvas" width="280" height="160"></canvas>
             <div id="playerNameLeft"></div>
             <div id="playerNameRight"></div>

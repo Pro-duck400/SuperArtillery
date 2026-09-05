@@ -59,6 +59,7 @@ export class Renderer {
     const length = Math.min(45, Math.abs(this.battlefield.wind));
     const endX = centerX + direction * length;
 
+    this.ctx.save();
     this.ctx.strokeStyle = '#ffffff';
     this.ctx.fillStyle = '#ffffff';
     this.ctx.lineWidth = 2;
@@ -72,6 +73,7 @@ export class Renderer {
     this.ctx.lineTo(endX - direction * 6, y + 4);
     this.ctx.closePath();
     this.ctx.fill();
+    this.ctx.restore();
   }
 
   public drawCastle(leftX: number, isActive: boolean = false): void {

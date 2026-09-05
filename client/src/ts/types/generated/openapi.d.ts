@@ -333,6 +333,7 @@ export interface components {
                 rightY: number;
                 hillCenter: number;
                 hillWidth: number;
+                /** @description Signed cosine terrain variation; positive values create a crest, negative values create a depression, and zero produces a slope between the side elevations */
                 hillHeight: number;
             };
         };

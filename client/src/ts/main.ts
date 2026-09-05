@@ -62,6 +62,7 @@ let opponentName = '';
 function wireGameClientEvents(client: GameClient): void {
   client.onGameStart((_gameId: string, battlefield) => {
     renderer.applyBattlefield(battlefield);
+    uiManager.setWindLabel(battlefield.wind);
     animator.configureScene(
       renderer.getCanvasWidth(),
       renderer.getGroundY(),

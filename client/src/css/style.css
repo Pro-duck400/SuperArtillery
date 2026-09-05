@@ -49,6 +49,17 @@ canvas {
   margin: 0 auto;
 }
 
+#windLabel {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
 .player-name-overlay {
   position: absolute;
   z-index: 1;

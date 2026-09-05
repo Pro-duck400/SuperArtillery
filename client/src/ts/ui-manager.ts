@@ -7,6 +7,7 @@ export class UIManager {
   private registrationFields: HTMLDivElement;
   private registrationActions: HTMLDivElement;
   private gamePanel: HTMLDivElement;
+  private windLabel: HTMLDivElement;
   private playerNameInput: HTMLInputElement;
   private serverAddressInput: HTMLInputElement;
   private serverAddressToggle: HTMLButtonElement;
@@ -41,6 +42,7 @@ export class UIManager {
     this.registrationFields = document.getElementById('registrationFields') as HTMLDivElement;
     this.registrationActions = document.getElementById('registrationActions') as HTMLDivElement;
     this.gamePanel = document.getElementById('gamePanel') as HTMLDivElement;
+    this.windLabel = document.getElementById('windLabel') as HTMLDivElement;
     this.playerNameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     this.serverAddressToggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
@@ -354,6 +356,10 @@ export class UIManager {
    */
   public setMessage(text: string): void {
     this.messageEl.textContent = text;
+  }
+
+  public setWindLabel(wind: number): void {
+    this.windLabel.textContent = `wind: ${Math.ceil(wind)}`;
   }
 
   public renderShotHistory(history: ShotHistoryEntry[]): void {
