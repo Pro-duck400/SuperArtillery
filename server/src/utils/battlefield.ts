@@ -1,6 +1,6 @@
 import type { Battlefield } from '../types/messages';
 
-export const TERRAIN_VERSION = 1;
+export const TERRAIN_VERSION = 2;
 
 function createRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -32,10 +32,17 @@ export function getTerrainY(battlefield: Battlefield, x: number): number {
 
 export function createBattlefield(seed: number = Math.floor(Math.random() * 0x100000000)): Battlefield {
   const random = createRandom(seed);
+  const terrainVariationRoll = random();
+  const hillHeight = terrainVariationRoll < 1 / 3
+    ? 0
+    : terrainVariationRoll < 2 / 3
+      ? randomBetween(random, 1, 65)
+      : randomBetween(random, -65, -1);
   const battlefield: Battlefield = {
     canvasWidth: 280,
     canvasHeight: 160,
     gravity: 100,
+    wind: randomBetween(random, -50, 50),
     groundY: 140,
     castleWidth: 10,
     castleHeight: 10,
@@ -51,15 +58,14 @@ export function createBattlefield(seed: number = Math.floor(Math.random() * 0x10
       maxY: 140,
       hillCenter: randomBetween(random, 135, 145),
       hillWidth: randomBetween(random, 45, 65),
-      hillHeight: randomBetween(random, 35, 65),
+      hillHeight,
       leftY: 0,
       rightY: 0
     }
   };
 
-  const hillPeakY = battlefield.terrain.maxY - battlefield.terrain.hillHeight;
-  battlefield.terrain.leftY = randomBetween(random, hillPeakY, battlefield.terrain.maxY);
-  battlefield.terrain.rightY = randomBetween(random, hillPeakY, battlefield.terrain.maxY);
+  battlefield.terrain.leftY = randomBetween(random, 75, battlefield.terrain.maxY);
+  battlefield.terrain.rightY = randomBetween(random, 75, battlefield.terrain.maxY);
 
   for (const castle of battlefield.castles) {
     castle.base_y = getTerrainY(battlefield, castle.left_x + battlefield.castleWidth / 2);

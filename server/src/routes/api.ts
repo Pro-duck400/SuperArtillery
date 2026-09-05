@@ -80,10 +80,15 @@ export function createApiRouter(game: GameManager): Router {
 
   // POST /api/v1/games - Create a private game
   router.post('/v1/games', (req, res) => {
-    const { playerName } = req.body;
-    const clientOrigin = getClientBaseUrl(req);
+    const { playerName, clientUrl } = req.body;
+    const clientOrigin = typeof clientUrl === 'string' ? clientUrl : getClientBaseUrl(req);
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const protocol = typeof forwardedProto === 'string'
+      ? forwardedProto.split(',')[0].trim()
+      : req.protocol;
+    const serverOrigin = process.env.SERVER_URL || `${protocol}://${req.get('host')}`;
 
-    const result = game.createGame(playerName, clientOrigin);
+    const result = game.createGame(playerName, clientOrigin, serverOrigin);
 
     if ('error' in result) {
       const statusCode = result.code === GameManager.ERROR_CODES.MAX_GAMES_REACHED ? HTTP_STATUS.SERVICE_UNAVAILABLE : HTTP_STATUS.BAD_REQUEST;
@@ -99,12 +104,8 @@ export function createApiRouter(game: GameManager): Router {
 
   // POST /api/v1/invitations/accept - Accept an invitation
   router.post('/v1/invitations/accept', (req, res) => {
-    const { inviteToken, inviteCode, playerName } = req.body;
-
-    // Accept either token or code
-    const inviteTokenOrCode = inviteToken || inviteCode;
-
-    const result = game.acceptInvitation(inviteTokenOrCode, playerName);
+    const { inviteCode, playerName } = req.body;
+    const result = game.acceptInvitation(inviteCode, playerName);
 
     if ('error' in result) {
       const statusCode = result.code === GameManager.ERROR_CODES.INVITATION_EXPIRED ? HTTP_STATUS.GONE : HTTP_STATUS.BAD_REQUEST;
@@ -143,6 +144,36 @@ export function createApiRouter(game: GameManager): Router {
     }
 
     return res.status(HTTP_STATUS.OK).json(result);
+  });
+
+  // POST /api/v1/games/:gameId/rematch - Request another round
+  router.post('/v1/games/:gameId/rematch', (req, res) => {
+    const { gameId } = req.params;
+    const sessionToken = req.query.sessionToken as string | undefined;
+
+    if (!sessionToken) {
+      const errorResponse: ErrorResponse = {
+        code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
+        message: GameManager.ERROR_MESSAGES.MISSING_SESSION_TOKEN
+      };
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json(errorResponse);
+    }
+
+    const result = game.requestRematch(gameId, sessionToken);
+    if ('error' in result) {
+      const errorResponse: ErrorResponse = {
+        code: result.code,
+        message: result.error
+      };
+      return res.status(result.statusCode).json(errorResponse);
+    }
+
+    return res.status(HTTP_STATUS.OK).json({
+      ready: result.ready,
+      playersReady: result.playersReady,
+      requiredPlayers: 2,
+      roundStarted: result.roundStarted
+    });
   });
 
   // POST /api/v1/fire - Fire a projectile (updated for session tokens)

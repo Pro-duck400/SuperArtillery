@@ -2,6 +2,12 @@
 import { Physics } from './physics';
 import type { Renderer } from './renderer';
 import type { Projectile } from './types/game';
+import type { TrajectoryPoint } from './trajectory';
+
+export interface AnimationFrame {
+  projectile: Projectile | null;
+  trajectory: TrajectoryPoint[];
+}
 
 export class ProjectileAnimator {
   private renderer: Renderer;
@@ -10,16 +16,28 @@ export class ProjectileAnimator {
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
   private gravity = 600;
+  private wind = 0;
   private canvasWidth: number;
+  private onFrameCallback: ((frame: AnimationFrame) => void) | null = null;
+  private onCompleteCallback: (() => void) | null = null;
 
   constructor(renderer: Renderer, canvasWidth: number) {
     this.renderer = renderer;
     this.canvasWidth = canvasWidth;
   }
 
-  public configureScene(canvasWidth: number, _groundY: number, _launchY: number, gravity: number): void {
+  public configureScene(canvasWidth: number, _groundY: number, _launchY: number, gravity: number, wind: number): void {
     this.canvasWidth = canvasWidth;
     this.gravity = gravity;
+    this.wind = wind;
+  }
+
+  public onFrame(callback: (frame: AnimationFrame) => void): void {
+    this.onFrameCallback = callback;
+  }
+
+  public onComplete(callback: () => void): void {
+    this.onCompleteCallback = callback;
   }
 
   /**
@@ -55,12 +73,20 @@ export class ProjectileAnimator {
    * Stop the current animation
    */
   public stop(): void {
+    const hadActiveState = this.currentProjectile !== null
+      || this.animationFrameId !== null
+      || this.trajectory.length > 0;
+
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
     this.currentProjectile = null;
+    this.trajectory = [];
     this.lastFrameTime = 0;
+    if (hadActiveState) {
+      this.onFrameCallback?.({ projectile: null, trajectory: [] });
+    }
   }
 
   /**
@@ -69,7 +95,7 @@ export class ProjectileAnimator {
   public clear(): void {
     this.stop();
     this.trajectory = [];
-    this.renderer.render(null);
+    this.onFrameCallback?.({ projectile: null, trajectory: [] });
   }
 
   /**
@@ -83,7 +109,7 @@ export class ProjectileAnimator {
 
     if (deltaTime > 0 && deltaTime < 0.1) {
       // Update projectile physics
-      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime, this.gravity);
+      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime, this.gravity, this.wind);
       
       // Add to trajectory
       this.trajectory.push({ x: this.currentProjectile.x, y: this.currentProjectile.y });
@@ -92,17 +118,19 @@ export class ProjectileAnimator {
         if (this.currentProjectile.y >= this.renderer.getTerrainY(this.currentProjectile.x) ||
           this.currentProjectile.x < 0 || 
           this.currentProjectile.x > this.canvasWidth) {
-        // Projectile finished - render final state and stop
-        this.renderer.render(null, this.trajectory);
+        // Projectile finished; clear the active render channel explicitly.
         this.currentProjectile = null;
         this.animationFrameId = null;
+        this.trajectory = [];
         this.lastFrameTime = 0;
+        this.onFrameCallback?.({ projectile: null, trajectory: [] });
+        this.onCompleteCallback?.();
         return;
       }
     }
 
     // Render current state
-    this.renderer.render(this.currentProjectile, this.trajectory);
+    this.onFrameCallback?.({ projectile: this.currentProjectile, trajectory: this.trajectory });
 
     // Continue animation
     this.animationFrameId = requestAnimationFrame((timestamp) => this.animate(timestamp));

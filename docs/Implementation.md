@@ -1,31 +1,12 @@
 # SuperArtillery - Implementation Plan
 
----
-
-## 🎯 Part 1: Sprint 0 - MVP (Minimal Viable Product)
-
-### Goal: Ultra-Crude but Playable 2-Player Online Game
-
-**Success Criteria:**
-- ✅ Two players can connect from different browsers
-- ✅ They take turns firing projectiles
-- ✅ Projectile follows a parabolic arc
-- ✅ Hit detection works (castle or ground)
-- ✅ Winner is declared
-- ✅ Both FE and BE are deployed to production
-
----
-
 ### 🔴 Critical Simplifications for MVP
 
 #### What We're CUTTING (to be added later):
 - ✅ **Seeded terrain generation** - A server-defined hill is shared by both clients
-- ❌ **No wind** - Pure gravity physics only
 - ❌ **No animations** - Projectile disappears on hit (no explosion)
 - ❌ **No rounds/scoring** - Game ends on first hit (one-shot game)
 - ❌ **No styling/CSS** - Browser default styles only
-- ❌ **No lobby UI** - Auto-connect first 2 players
-- ❌ **No matchmaking queue** - Server handles only ONE game at a time
 - ❌ **No reconnection** - Disconnect = game over
 - ❌ **No validation** - Trust client physics calculations
 - ❌ **No persistence** - No database, all in-memory
@@ -34,7 +15,7 @@
 
 ---
 
-## 📋 Part 2: Full Feature List (Post-MVP)
+## 📋 Full Feature List (Post-MVP)
 
 Comprehensive list of all features needed to build the complete SuperArtillery game. These will be organized into sprints later.
 
@@ -43,30 +24,19 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 ### 🎨 Core Game Features (Match Original 1980 Game)
 
 #### Terrain System
-- [ ] Random terrain generation using cosine curves
-- [ ] Variable hill heights and positions
 - [ ] Ensure playable terrain (not too steep/flat)
 - [ ] Random castle placement on terrain (not in valleys)
-- [ ] Terrain collision detection (projectile hits hills)
 
 #### Physics & Ballistics
-- [ ] Wind effects on projectile trajectory
-  - Random wind speed (-50 to +50)
-  - Wind resistance affects horizontal velocity over time
-- [ ] Improved gravity simulation
 - [ ] Angle validation (0-90° for player 1, mirrored for player 2)
 - [ ] Velocity limit (>350 = cannon explodes, lose turn)
-- [ ] Projectile arc calculation and rendering
 
 #### Game Mechanics
 - [ ] Multi-round games (best of N rounds)
 - [ ] Score tracking across rounds
-- [ ] Shot history (last 4 shots: angle/velocity)
 - [ ] Game configuration (number of rounds, time limits)
 
 #### Visual Feedback
-- [ ] Wind indicator with animated arrow
-- [ ] Projectile trail/arc line
 - [ ] Explosion animation on impact
 - [ ] Castle damage visualization
 - [ ] Crater on terrain after explosion
@@ -101,7 +71,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] `GET /api/players/:id/achievements` - Achievement progress
 
 **Server Management**
-- [ ] `GET /api/health` - Health check
+- [x] `GET /api/health` - Health check
 - [ ] `GET /api/status` - Server status (player count, games)
 - [ ] `GET /api/version` - API version info
 

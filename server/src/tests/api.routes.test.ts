@@ -64,6 +64,28 @@ describe('API routes', () => {
     expect(response.body.status).toBe('pending');
     expect(response.body.playersConnected).toBe(0);
     expect(response.body.requiredPlayers).toBe(2);
+    expect(response.body.rematchReady).toBe(false);
+    expect(response.body.rematchPlayersReady).toBe(0);
+  });
+
+  it('rejects a rematch request before the game has finished', async () => {
+    const created = gameManager.createGame('Alice');
+    if ('error' in created) throw new Error('Expected created game');
+
+    const response = await request(app)
+      .post(`/api/v1/games/${created.gameId}/rematch`)
+      .query({ sessionToken: created.playerToken })
+      .expect(400);
+
+    expect(response.body.code).toBe('REMATCH_NOT_AVAILABLE');
+  });
+
+  it('requires a session token for rematch requests', async () => {
+    const response = await request(app)
+      .post('/api/v1/games/game-1/rematch')
+      .expect(401);
+
+    expect(response.body.code).toBe('MISSING_SESSION_TOKEN');
   });
 
   it('rejects fire without required payload fields', async () => {

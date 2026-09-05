@@ -54,7 +54,7 @@ export interface paths {
         put?: never;
         /**
          * Create a new private game
-         * @description Create a new private two-player game and return invitation tokens/codes
+         * @description Create a new private two-player game and return an invitation code and link
          */
         post: {
             parameters: {
@@ -227,6 +227,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{gameId}/rematch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request another round
+         * @description Mark the authenticated player as ready for another round after game over
+         */
+        post: {
+            parameters: {
+                query: {
+                    /** @description Player session token for authentication */
+                    sessionToken: string;
+                };
+                header?: never;
+                path: {
+                    gameId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Rematch request accepted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RematchResponse"];
+                    };
+                };
+                /** @description Rematch is not available for the current game state */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invalid session token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Game not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fire": {
         parameters: {
             query?: never;
@@ -317,6 +388,8 @@ export interface components {
             canvasWidth: number;
             canvasHeight: number;
             gravity: number;
+            /** @description Signed horizontal wind acceleration; negative blows left and positive blows right */
+            wind: number;
             groundY: number;
             castleWidth: number;
             castleHeight: number;
@@ -331,12 +404,18 @@ export interface components {
                 rightY: number;
                 hillCenter: number;
                 hillWidth: number;
+                /** @description Signed cosine terrain variation; positive values create a crest, negative values create a depression, and zero produces a slope between the side elevations */
                 hillHeight: number;
             };
         };
         CreateGameRequest: {
             /** @description Display name for the initiating player (15 chars max, must start with alphanumeric) */
             playerName: string;
+            /**
+             * Format: uri
+             * @description Current client URL used to preserve the deployed application path in the invite link
+             */
+            clientUrl?: string;
         };
         CreateGameResponse: {
             /** @description Opaque game ID */
@@ -345,16 +424,14 @@ export interface components {
             playerToken: string;
             /**
              * Format: uri
-             * @description Full invitation link with embedded token (shareable)
+             * @description Full invitation link with the invite code and server URL (shareable)
              */
             inviteUrl: string;
             /** @description Short 4-character alphanumeric code (easy to type) */
             inviteCode: string;
         };
         AcceptInvitationRequest: {
-            /** @description Full invitation token from link (if accepting via link) */
-            inviteToken?: string;
-            /** @description Short invite code (if accepting via code) */
+            /** @description Short invite code from the invitation link or displayed code */
             inviteCode?: string;
             /** @description Display name for the invited player */
             playerName: string;
@@ -378,6 +455,19 @@ export interface components {
              * @constant
              */
             requiredPlayers: 2;
+            /** @description Whether the authenticated player has requested another round */
+            rematchReady: boolean;
+            /** @description Number of players who have requested another round */
+            rematchPlayersReady: number;
+        };
+        RematchResponse: {
+            /** @description Whether the authenticated player is ready for another round */
+            ready: boolean;
+            playersReady: number;
+            /** @constant */
+            requiredPlayers: 2;
+            /** @description Whether both players were ready and a new round started */
+            roundStarted: boolean;
         };
         FireRequest: {
             /** @description Opaque game ID */
@@ -428,6 +518,7 @@ export interface components {
             /** @description Display name of the opponent */
             opponentName: string;
             battlefield: components["schemas"]["Battlefield"];
+            round: number;
         };
         ShotMessage: {
             /**
@@ -455,6 +546,16 @@ export interface components {
             type: "game_over";
             playerId_winner: components["schemas"]["PlayerId"];
         };
+        RematchStatusMessage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "rematch_status";
+            playersReady: number;
+            /** @constant */
+            requiredPlayers: 2;
+        };
         WebSocketErrorMessage: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -470,7 +571,7 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        GameMessage: components["schemas"]["GameStartMessage"] | components["schemas"]["ShotMessage"] | components["schemas"]["TurnChangeMessage"] | components["schemas"]["GameOverMessage"] | components["schemas"]["WebSocketErrorMessage"];
+        GameMessage: components["schemas"]["GameStartMessage"] | components["schemas"]["ShotMessage"] | components["schemas"]["TurnChangeMessage"] | components["schemas"]["GameOverMessage"] | components["schemas"]["RematchStatusMessage"] | components["schemas"]["WebSocketErrorMessage"];
     };
     responses: never;
     parameters: never;

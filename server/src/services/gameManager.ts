@@ -4,7 +4,8 @@ import type {
   TurnChangeMessage,
   GameOverMessage,
   ShotMessage,
-  GameMessage
+  GameMessage,
+  RematchStatusMessage
 } from '../types/messages';
 import type {
   PrivateGame,
@@ -27,6 +28,7 @@ import { HTTP_STATUS } from '../httpStatus';
 
 // Fallback used only when a request has no Origin/Referer header (e.g. direct API calls/tests)
 const DEFAULT_CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:5173';
+const DEFAULT_SERVER_ORIGIN = process.env.SERVER_URL || 'http://localhost:3000';
 
 
 /**
@@ -87,9 +89,9 @@ export class GameManager {
   /**
    * Create a new private game
    * @param playerName The initiator's display name
-   * @returns Game creation response with tokens and invite code
+  * @returns Game creation response with an invite code
    */
-  public createGame(playerName: string, clientOrigin: string = DEFAULT_CLIENT_ORIGIN): CreateGameResponse | { error: string; code: string } {
+  public createGame(playerName: string, clientOrigin: string = DEFAULT_CLIENT_ORIGIN, serverOrigin: string = DEFAULT_SERVER_ORIGIN): CreateGameResponse | { error: string; code: string } {
     const normalizedName = TokenService.normalizeName(playerName);
     if (!normalizedName) {
       return {
@@ -106,20 +108,20 @@ export class GameManager {
       };
     }
 
-    return this.invitationService.createGame(playerName, clientOrigin);
+    return this.invitationService.createGame(playerName, clientOrigin, serverOrigin);
   }
 
   /**
-   * Accept an invitation via token or code
-   * @param inviteTokenOrCode Either the full invitation token or 4-char code
+  * Accept an invitation via invite code
+  * @param inviteCode 4-char invite code
    * @param playerName The invited player's display name
    * @returns Invitation acceptance response with game ID and session token
    */
   public acceptInvitation(
-    inviteTokenOrCode: string | undefined,
+    inviteCode: string | undefined,
     playerName: string
   ): AcceptInvitationResponse | { error: string; code: string } {
-    return this.invitationService.acceptInvitation(inviteTokenOrCode, playerName);
+    return this.invitationService.acceptInvitation(inviteCode, playerName);
   }
 
   /**
@@ -141,7 +143,8 @@ export class GameManager {
     }
 
     // Verify session token belongs to this game
-    if (this.getPlayerIdFromToken(gameId, sessionToken) === null) {
+    const playerId = this.getPlayerIdFromToken(gameId, sessionToken);
+    if (playerId === null) {
       return {
         error: GameManager.ERROR_MESSAGES.INVALID_SESSION_TOKEN,
         code: GameManager.ERROR_CODES.INVALID_SESSION_TOKEN
@@ -155,7 +158,9 @@ export class GameManager {
     return {
       status: game.status,
       playersConnected,
-      requiredPlayers: 2
+      requiredPlayers: 2,
+      rematchReady: game.rematchReady[playerId],
+      rematchPlayersReady: game.rematchReady.filter(Boolean).length
     };
   }
 
@@ -253,6 +258,17 @@ export class GameManager {
       `🎮 Game ${game.id} started: ${game.initiator.name} vs ${game.invited.name}`
     );
 
+    this.broadcastGameStart(game, start.battlefield);
+
+    // Send initial turn change
+    const turnMessage: TurnChangeMessage = {
+      type: 'turn_change',
+      playerId_turn: 0
+    };
+    this.broadcastToGame(game, turnMessage);
+  }
+
+  private broadcastGameStart(game: PrivateGame, battlefield: NonNullable<PrivateGame['battlefield']>): void {
     // Send game_start to both players
     for (let playerId = 0; playerId < 2; playerId++) {
       const ws = playerId === 0 ? game.initiator.websocket : game.invited.websocket;
@@ -265,7 +281,8 @@ export class GameManager {
         type: 'game_start',
         gameId: game.id,
         opponentName,
-        battlefield: start.battlefield
+        battlefield,
+        round: game.round
       };
 
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -273,12 +290,65 @@ export class GameManager {
       }
     }
 
-    // Send initial turn change
-    const turnMessage: TurnChangeMessage = {
-      type: 'turn_change',
-      playerId_turn: 0
+  }
+
+  public requestRematch(
+    gameId: string,
+    sessionToken: string
+  ): {
+    success: true;
+    ready: boolean;
+    playersReady: number;
+    roundStarted: boolean;
+  } | { success: false; error: string; code: string; statusCode: number } {
+    const game = this.games.get(gameId);
+    if (!game) {
+      return {
+        success: false,
+        error: GameManager.ERROR_MESSAGES.GAME_NOT_FOUND,
+        code: GameManager.ERROR_CODES.GAME_NOT_FOUND,
+        statusCode: HTTP_STATUS.NOT_FOUND
+      };
+    }
+
+    const playerId = this.getPlayerIdFromToken(gameId, sessionToken);
+    if (playerId === null) {
+      return {
+        success: false,
+        error: GameManager.ERROR_MESSAGES.INVALID_SESSION_TOKEN,
+        code: GameManager.ERROR_CODES.INVALID_SESSION_TOKEN,
+        statusCode: HTTP_STATUS.UNAUTHORIZED
+      };
+    }
+
+    if (game.status !== 'finished') {
+      return {
+        success: false,
+        error: GameManager.ERROR_MESSAGES.REMATCH_NOT_AVAILABLE,
+        code: GameManager.ERROR_CODES.REMATCH_NOT_AVAILABLE,
+        statusCode: HTTP_STATUS.BAD_REQUEST
+      };
+    }
+
+    const transition = this.gameRules.requestRematch(game, playerId);
+    const statusMessage: RematchStatusMessage = {
+      type: 'rematch_status',
+      playersReady: transition.playersReady,
+      requiredPlayers: 2
     };
-    this.broadcastToGame(game, turnMessage);
+    this.broadcastToGame(game, statusMessage);
+
+    if (transition.kind === 'started') {
+      this.broadcastGameStart(game, transition.battlefield);
+      this.broadcastToGame(game, { type: 'turn_change', playerId_turn: 0 });
+    }
+
+    return {
+      success: true,
+      ready: transition.kind === 'waiting' ? game.rematchReady[playerId] : true,
+      playersReady: transition.playersReady,
+      roundStarted: transition.kind === 'started'
+    };
   }
 
   /**

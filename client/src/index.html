@@ -11,10 +11,10 @@
     <!-- Registration / Lobby Panel -->
     <div id="registrationPanel" style="display: block;">
       <h2>Welcome to SuperArtillery!</h2>
-      <div>
-        <label>
+      <div id="registrationFields">
+        <label id="serverAddressLabel">
           Enter your name:
-          <input type="text" id="playerNameInput" placeholder="Your name" maxlength="20" />
+          <input type="text" id="playerNameInput" placeholder="Your name" maxlength="15" />
         </label>
         <label>
           Server address:
@@ -28,13 +28,12 @@
           </span>
         </label>
       </div>
-      <div style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
-        <button id="registerButton">Create Private Game</button>
+      <div id="registrationActions" style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
         <label id="inviteInputLabel" style="display: flex; align-items: center; gap: 8px;">
-          Invite code or link:
-          <input type="text" id="inviteInput" placeholder="ABCD or invite link" />
+          Invite code:
+          <input type="text" id="inviteInput" placeholder="ABCD" maxlength="4" autocomplete="off" />
         </label>
-        <button id="joinGameButton">Join with Invite</button>
+        <button id="actionButton">Create Private Game</button>
       </div>
       <div id="registrationError" style="color: red; margin-top: 10px;"></div>
       <div id="inviteInfo" style="margin-top: 12px; display: none;">
@@ -51,11 +50,12 @@
     
     <!-- Game Panel (hidden initially) -->
     <div id="gamePanel" style="display: none;">
-      <canvas id="gameCanvas" width="280" height="160"></canvas>
-            <div id="playerNamesRow" style="display: flex; justify-content: space-between; margin: 8px 0 8px 0;">
-              <div id="playerNameLeft" class="player-name, player-name-left">...</div>
-              <div id="playerNameRight" class="player-name, player-name-right">...</div>
-            </div>
+      <div id="battlefieldFrame">
+        <div id="windLabel" aria-label="Wind strength"></div>
+        <canvas id="gameCanvas" width="280" height="160"></canvas>
+        <div id="playerNameLeft" class="player-name-overlay player-name-left">...</div>
+        <div id="playerNameRight" class="player-name-overlay player-name-right">...</div>
+      </div>
       
       <div id="controls">
         <label>
@@ -67,7 +67,15 @@
           <input type="number" id="velocityInput" min="0" max="300" value="150" />
         </label>
         <button id="fireButton" disabled>Fire!</button>
+        <button id="rematchButton" type="button" style="display: none;">Play again</button>
       </div>
+
+      <section id="shotHistory" aria-labelledby="shotHistoryTitle">
+        <h2 id="shotHistoryTitle">Your last four shots</h2>
+        <table aria-label="Your last four shots">
+          <tbody id="shotHistoryRows" aria-live="polite"></tbody>
+        </table>
+      </section>
       
       <div id="message"></div>
     </div>

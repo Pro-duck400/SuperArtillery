@@ -12,6 +12,7 @@ export const GAME_ERROR_CODES = {
   MISSING_FIELDS: 'MISSING_FIELDS',
   INVALID_FIELD_TYPES: 'INVALID_FIELD_TYPES',
   GAME_NOT_ACTIVE: 'GAME_NOT_ACTIVE',
+  REMATCH_NOT_AVAILABLE: 'REMATCH_NOT_AVAILABLE',
   NOT_YOUR_TURN: 'NOT_YOUR_TURN',
   INVALID_ANGLE: 'INVALID_ANGLE',
   INVALID_VELOCITY: 'INVALID_VELOCITY'
@@ -31,6 +32,7 @@ export const GAME_ERROR_MESSAGES = {
   MISSING_FIELDS: 'gameId, sessionToken, angle, and velocity are required',
   INVALID_FIELD_TYPES: 'gameId must be string, angle and velocity must be numbers',
   GAME_NOT_ACTIVE: 'Game has not started or has ended',
+  REMATCH_NOT_AVAILABLE: 'Rematch is only available after a game has finished',
   NOT_YOUR_TURN: 'Wait for your turn',
   INVALID_ANGLE: 'Angle must be between 0 and 360 degrees',
   INVALID_VELOCITY: 'Velocity must be positive'

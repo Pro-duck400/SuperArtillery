@@ -21,7 +21,6 @@ export interface PlayerSession {
  * Invitation record with one-time use tracking
  */
 export interface Invitation {
-  invitationTokenHash: string; // Hash of the full invitation token (from link)
   inviteCode: string; // 4-char alphanumeric code (user-typeable)
   inviteCodeHash: string; // Hash of the invite code for verification
   expiresAt: number; // Timestamp in ms when invitation expires
@@ -49,6 +48,8 @@ export interface PrivateGame {
   // Game state
   currentTurn: 0 | 1;
   gameStarted: boolean;
+  round: number;
+  rematchReady: [boolean, boolean];
   battlefield?: Battlefield;
   gameFinishedAt?: number; // Timestamp when game finished (for grace period)
 }
@@ -73,6 +74,8 @@ export interface GameStatusResponse {
   status: GameStatus;
   playersConnected: number;
   requiredPlayers: 2;
+  rematchReady: boolean;
+  rematchPlayersReady: number;
 }
 
 export interface HealthResponse {

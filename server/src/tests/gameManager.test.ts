@@ -29,7 +29,7 @@ describe('GameManager', () => {
       }
     });
 
-    it('generates unique opaque game and invitation tokens', () => {
+    it('generates unique opaque game IDs and invitation codes', () => {
       const result1 = gameManager.createGame('Alice');
       const result2 = gameManager.createGame('Bob');
 
@@ -306,6 +306,34 @@ describe('GameManager', () => {
       // Invalid velocity
       const result2 = gameManager.fire(created.gameId, created.playerToken, 45, -10);
       expect('error' in result2).toBe(true);
+    });
+  });
+
+  describe('rematch action', () => {
+    it('starts a new round after both players request it', () => {
+      const created = gameManager.createGame('Alice');
+      if ('error' in created) throw new Error('Should create game');
+      const accepted = gameManager.acceptInvitation(created.inviteCode, 'Bob');
+      if ('error' in accepted) throw new Error('Should accept invitation');
+
+      const firstSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      const secondSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      gameManager.connectPlayer(created.gameId, created.playerToken, firstSocket);
+      gameManager.connectPlayer(accepted.gameId, accepted.playerToken, secondSocket);
+
+      const game = (gameManager as any).games.get(created.gameId);
+      game.status = 'finished';
+      game.gameFinishedAt = Date.now();
+
+      const waiting = gameManager.requestRematch(created.gameId, created.playerToken);
+      expect(waiting).toMatchObject({ success: true, playersReady: 1, roundStarted: false });
+
+      const started = gameManager.requestRematch(created.gameId, accepted.playerToken);
+      expect(started).toMatchObject({ success: true, playersReady: 2, roundStarted: true });
+      expect(game.round).toBe(2);
+      expect(game.status).toBe('active');
+      expect(firstSocket.send).toHaveBeenCalledWith(expect.stringContaining('"round":2'));
+      expect(secondSocket.send).toHaveBeenCalledWith(expect.stringContaining('"round":2'));
     });
   });
 

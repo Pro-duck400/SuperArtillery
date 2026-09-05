@@ -3,6 +3,7 @@
  * @param x0, y0 - Starting position
  * @param vx, vy - Initial velocity components
  * @param gravity - Gravity constant
+ * @param wind - Horizontal wind acceleration
  * @param castleX - Castle center X position
  * @param castleWidth - Castle width
  * @param castleHeight - Castle height
@@ -12,16 +13,19 @@
 function checkCastleCollision(
   x0: number, y0: number,
   vx: number, vy: number,
-  gravity: number,
+  gravity: number, wind: number,
   castleX: number, castleWidth: number, castleHeight: number,
   groundY: number
 ): number | null {
-  
-  // Define castle bounds
-  const left = castleX - castleWidth / 2;
-  const right = castleX + castleWidth / 2;
-  const top = groundY - castleHeight;
-  const bottom = groundY;
+  const CASTLE_HIT_ZONE_RATIO = 0.8;
+  const horizontalMargin = (castleWidth * (1 - CASTLE_HIT_ZONE_RATIO)) / 2;
+  const verticalMargin = (castleHeight * (1 - CASTLE_HIT_ZONE_RATIO)) / 2;
+
+  // Require the projectile to enter the central 80% of the castle bounds.
+  const left = castleX - castleWidth / 2 + horizontalMargin;
+  const right = castleX + castleWidth / 2 - horizontalMargin;
+  const top = groundY - castleHeight + verticalMargin;
+  const bottom = groundY - verticalMargin;
   
   // Find all intersection times with each edge
   const intersections: number[] = [];
@@ -30,25 +34,29 @@ function checkCastleCollision(
   // Solve: x0 + vx*t = left
   // t = (left - x0) / vx
   if (vx !== 0) {
-    const t = (left - x0) / vx;
-    if (t >= 0) {
+      const times = solveQuadratic(0.5 * wind, vx, x0 - left);
+      for (const t of times) {
+      if (t >= 0) {
       const y = y0 + vy * t + 0.5 * gravity * t * t;
       if (y >= top && y <= bottom) {
         intersections.push(t);
       }
     }
+      }
   }
   
   // 2. RIGHT EDGE (x = right)
   // Solve: x0 + vx*t = right
   // t = (right - x0) / vx
   if (vx !== 0) {
-    const t = (right - x0) / vx;
+    const times = solveQuadratic(0.5 * wind, vx, x0 - right);
+    for (const t of times) {
     if (t >= 0) {
       const y = y0 + vy * t + 0.5 * gravity * t * t;
       if (y >= top && y <= bottom) {
         intersections.push(t);
       }
+    }
     }
   }
   
@@ -62,7 +70,7 @@ function checkCastleCollision(
   const times_top = solveQuadratic(a_top, b_top, c_top);
   for (const t of times_top) {
     if (t >= 0) {
-      const x = x0 + vx * t;
+      const x = x0 + vx * t + 0.5 * wind * t * t;
       if (x >= left && x <= right) {
         intersections.push(t);
       }
@@ -77,7 +85,7 @@ function checkCastleCollision(
   const times_bot = solveQuadratic(a_bot, b_bot, c_bot);
   for (const t of times_bot) {
     if (t >= 0) {
-      const x = x0 + vx * t;
+      const x = x0 + vx * t + 0.5 * wind * t * t;
       if (x >= left && x <= right) {
         intersections.push(t);
       }
@@ -138,13 +146,14 @@ export function checkTerrainCollision(
   vx: number,
   vy: number,
   gravity: number,
+  wind: number,
   terrainY: (x: number) => number,
   canvasWidth: number,
   maxTime: number = 10
 ): number | null {
   const step = 0.01;
   for (let time = step; time <= maxTime; time += step) {
-    const x = x0 + vx * time;
+    const x = x0 + vx * time + 0.5 * wind * time * time;
     if (x < 0 || x > canvasWidth) return null;
     const y = y0 + vy * time + 0.5 * gravity * time * time;
     if (y >= terrainY(x)) return time;

@@ -6,18 +6,21 @@ describe('UIManager private game flow', () => {
     document.body.innerHTML = `
       <div id="app">
         <div id="registrationPanel" style="display: block;">
-          <input id="playerNameInput" value="" />
-          <span class="server-address-combobox">
-            <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
-            <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
-            <span id="serverAddressOptions" role="listbox" hidden>
-              <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
-              <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
-            </span>
-          </span>
-          <button id="registerButton">Create Private Game</button>
-          <button id="joinGameButton">Join with Invite</button>
-          <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
+          <div id="registrationFields">
+            <input id="playerNameInput" value="" maxlength="15" />
+            <label id="serverAddressLabel"><span class="server-address-combobox">
+              <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
+              <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
+              <span id="serverAddressOptions" role="listbox" hidden>
+                <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
+                <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
+              </span>
+            </span></label>
+          </div>
+          <div id="registrationActions">
+            <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
+            <button id="actionButton">Create Private Game</button>
+          </div>
           <div id="registrationError"></div>
           <div id="inviteInfo">
             <span id="inviteCodeText"></span>
@@ -27,8 +30,9 @@ describe('UIManager private game flow', () => {
           </div>
         </div>
         <div id="gamePanel" style="display: none;">
-          <canvas id="gameCanvas" width="280" height="160"></canvas>
-          <div id="playerNamesRow">
+          <div id="battlefieldFrame">
+            <div id="windLabel"></div>
+            <canvas id="gameCanvas" width="280" height="160"></canvas>
             <div id="playerNameLeft"></div>
             <div id="playerNameRight"></div>
           </div>
@@ -37,7 +41,12 @@ describe('UIManager private game flow', () => {
             <input id="velocityInput" value="150" />
             <button id="fireButton" disabled>Fire!</button>
           </div>
+          <section id="shotHistory">
+            <h2 id="shotHistoryTitle">Your last four shots</h2>
+            <table><tbody id="shotHistoryRows"></tbody></table>
+          </section>
           <div id="message"></div>
+          <button id="rematchButton" type="button" style="display: none;">Play again</button>
         </div>
       </div>
     `;
@@ -68,7 +77,7 @@ describe('UIManager private game flow', () => {
 
     const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
-    const button = document.getElementById('registerButton') as HTMLButtonElement;
+    const button = document.getElementById('actionButton') as HTMLButtonElement;
 
     nameInput.value = 'Alice';
     serverInput.value = 'http://localhost:3000';
@@ -77,22 +86,84 @@ describe('UIManager private game flow', () => {
     expect(createSpy).toHaveBeenCalledWith('Alice', 'http://localhost:3000');
   });
 
-  it('requires an invite code before joining a game', () => {
+  it('blocks names longer than 15 characters and enforces the HTML max length', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const createSpy = vi.fn();
+    ui.onCreateGame(createSpy);
+
+    const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
+    const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
+    const button = document.getElementById('actionButton') as HTMLButtonElement;
+    const error = document.getElementById('registrationError') as HTMLDivElement;
+
+    expect(nameInput.maxLength).toBe(15);
+
+    nameInput.value = '1234567890123456';
+    serverInput.value = 'http://localhost:3000';
+    button.click();
+
+    expect(error.textContent).toBe('Name must be 15 characters or less');
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('fires when Enter is pressed in the velocity input', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const fireSpy = vi.fn();
+    ui.onFire(fireSpy);
+
+    const angleInput = document.getElementById('angleInput') as HTMLInputElement;
+    const velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
+    angleInput.value = '45';
+    velocityInput.value = '150';
+    ui.updateTurnUI(0, true);
+
+    velocityInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+
+    expect(fireSpy).toHaveBeenCalledWith(45, 150);
+  });
+
+  it('changes to join mode when an invite code is entered', () => {
     const ui = new UIManager('http://localhost:3000');
     const joinSpy = vi.fn();
     ui.onJoinGame(joinSpy);
 
     const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
-    const joinButton = document.getElementById('joinGameButton') as HTMLButtonElement;
+    const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
+    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
     const error = document.getElementById('registrationError') as HTMLDivElement;
 
     nameInput.value = 'Bob';
     serverInput.value = 'http://localhost:3000';
-    joinButton.click();
+    expect(actionButton.textContent).toBe('Create Private Game');
 
-    expect(joinSpy).not.toHaveBeenCalled();
-    expect(error.textContent).toContain('Enter an invite code');
+    inviteInput.value = 'ABCD';
+    inviteInput.dispatchEvent(new Event('input'));
+    expect(actionButton.textContent).toBe('Join with Invite');
+
+    inviteInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+    expect(joinSpy).toHaveBeenCalledWith('ABCD', 'Bob', 'http://localhost:3000');
+    expect(error.textContent).toBe('');
+  });
+
+  it('enables joining only for populated invite-code input and hides server selection for invite links', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
+    const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
+    const serverLabel = document.getElementById('serverAddressLabel') as HTMLLabelElement;
+
+    expect(actionButton.textContent).toBe('Create Private Game');
+    inviteInput.value = 'https://example.com/?invite=ABCD';
+    inviteInput.dispatchEvent(new Event('input'));
+    expect(actionButton.textContent).toBe('Join with Invite');
+    inviteInput.value = 'ABCD';
+    inviteInput.dispatchEvent(new Event('input'));
+    expect(actionButton.textContent).toBe('Join with Invite');
+
+    ui.setServerAddress('https://api.example.com');
+    ui.enterJoinOnlyMode('ABCD');
+    expect(serverLabel.style.display).toBe('none');
+    expect((document.getElementById('serverAddressInput') as HTMLInputElement).disabled).toBe(true);
   });
 
   it('shows invite details after creation', () => {
@@ -104,6 +175,27 @@ describe('UIManager private game flow', () => {
     expect(inviteInfo.style.display).toBe('block');
     expect(inviteInfo.textContent).toContain('ABCD');
     expect(inviteInfo.textContent).toContain('https://example.com/?invite=token');
+  });
+
+  it('hides lobby inputs while creating and restores them after an error', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const fields = document.getElementById('registrationFields') as HTMLDivElement;
+    const inviteLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
+    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
+
+    ui.showRegistering();
+
+    expect(fields.style.display).toBe('none');
+    expect(inviteLabel.style.display).toBe('none');
+    expect(actionButton.disabled).toBe(true);
+    expect(actionButton.textContent).toBe('Creating...');
+
+    ui.showRegistrationError('Server unavailable');
+
+    expect(fields.style.display).toBe('');
+    expect(inviteLabel.style.display).toBe('');
+    expect(actionButton.disabled).toBe(false);
+    expect(actionButton.textContent).toBe('Create Private Game');
   });
 
   it('copies the invite URL to the clipboard when the copy button is clicked', async () => {
@@ -118,6 +210,20 @@ describe('UIManager private game flow', () => {
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith('https://example.com/?invite=token');
+  });
+
+  it('hides invite details after a connection timeout', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const inviteInfo = document.getElementById('inviteInfo') as HTMLDivElement;
+    const codeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
+    const urlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
+
+    ui.showInviteInfo('ABCD', 'https://example.com/?invite=ABCD');
+    ui.hideInviteInfo();
+
+    expect(inviteInfo.style.display).toBe('none');
+    expect(codeButton.onclick).toBeNull();
+    expect(urlButton.onclick).toBeNull();
   });
 
   it('updates player names and turn state correctly', () => {
@@ -136,6 +242,22 @@ describe('UIManager private game flow', () => {
     expect(right.classList.contains('player-name-active-turn')).toBe(true);
   });
 
+  it('positions player names at their castle labels when coordinates are provided', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const left = document.getElementById('playerNameLeft') as HTMLDivElement;
+    const right = document.getElementById('playerNameRight') as HTMLDivElement;
+
+    ui.setPlayerNames(0, 'Alice', 'Bob', {
+      left: { x: 25, y: 146 },
+      right: { x: 255, y: 142 }
+    });
+
+    expect(left.style.left).toBe('25px');
+    expect(left.style.top).toBe('146px');
+    expect(right.style.left).toBe('255px');
+    expect(right.style.top).toBe('142px');
+  });
+
   it('shows both player names in the game over message', () => {
     const ui = new UIManager('http://localhost:3000');
     const message = document.getElementById('message') as HTMLDivElement;
@@ -147,5 +269,44 @@ describe('UIManager private game flow', () => {
 
     ui.showGameOver(true, 'Alex', 'Bob');
     expect(message.textContent).toBe('🎉 Alex won! Bob lost.');
+  });
+
+  it('offers a rematch after game over and shows waiting state after selection', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const rematchButton = document.getElementById('rematchButton') as HTMLButtonElement;
+    const rematchSpy = vi.fn();
+
+    ui.onRematch(rematchSpy);
+    ui.showGameOver(true, 'Alex', 'Bob');
+
+    expect(rematchButton.style.display).toBe('inline-block');
+    expect(rematchButton.disabled).toBe(false);
+    rematchButton.click();
+    expect(rematchSpy).toHaveBeenCalledOnce();
+
+    ui.setRematchWaiting(1);
+    expect(rematchButton.disabled).toBe(true);
+    expect(rematchButton.textContent).toBe('Waiting (1/2)');
+
+    ui.prepareForNewRound();
+    expect(rematchButton.style.display).toBe('none');
+  });
+
+  it('renders angle and velocity as rows with newest-first history columns', () => {
+    const ui = new UIManager('http://localhost:3000');
+
+    ui.renderShotHistory([
+      { angle: 45, velocity: 150 },
+      { angle: 30, velocity: 120 }
+    ]);
+
+    const rows = document.querySelectorAll('#shotHistoryRows tr');
+    expect(rows).toHaveLength(2);
+    expect(Array.from(rows[0].querySelectorAll('th, td')).map((cell) => cell.textContent)).toEqual([
+      'Angle', '45°', '30°', '—', '—'
+    ]);
+    expect(Array.from(rows[1].querySelectorAll('th, td')).map((cell) => cell.textContent)).toEqual([
+      'Velocity', '150', '120', '—', '—'
+    ]);
   });
 });

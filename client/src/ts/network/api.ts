@@ -16,6 +16,15 @@ export interface GameStatusResponse {
   status: 'pending' | 'active' | 'finished' | 'expired';
   playersConnected: number;
   requiredPlayers: 2;
+  rematchReady: boolean;
+  rematchPlayersReady: number;
+}
+
+export interface RematchResponse {
+  ready: boolean;
+  playersReady: number;
+  requiredPlayers: 2;
+  roundStarted: boolean;
 }
 
 export interface HealthResponse {
@@ -89,13 +98,13 @@ export class ApiClient {
   /**
    * Create a new private game
    */
-  public async createGame(playerName: string): Promise<CreateGameResponse> {
+  public async createGame(playerName: string, clientUrl: string): Promise<CreateGameResponse> {
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/games`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ playerName })
+      body: JSON.stringify({ playerName, clientUrl })
     });
 
     if (!response.ok) {
@@ -111,14 +120,10 @@ export class ApiClient {
    * Accept an invitation
    */
   public async acceptInvitation(
-    inviteTokenOrCode: string,
+    inviteCode: string,
     playerName: string
   ): Promise<AcceptInvitationResponse> {
-    // Determine if it's a token or code based on length
-    const isCode = inviteTokenOrCode.length === 6;
-    const body = isCode
-      ? { inviteCode: inviteTokenOrCode, playerName }
-      : { inviteToken: inviteTokenOrCode, playerName };
+    const body = { inviteCode, playerName };
 
     const response = await this.fetchWithTimeout(
       `${this.baseUrl}/api/v1/invitations/accept`,
@@ -188,6 +193,19 @@ export class ApiClient {
     if (!response.ok) {
       throw new Error(await this.extractErrorMessage(response, 'Fire action failed'));
     }
+  }
+
+  public async requestRematch(gameId: string, sessionToken: string): Promise<RematchResponse> {
+    const response = await this.fetchWithTimeout(
+      `${this.baseUrl}/api/v1/games/${gameId}/rematch?sessionToken=${encodeURIComponent(sessionToken)}`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error(await this.extractErrorMessage(response, 'Rematch request failed'));
+    }
+
+    return response.json();
   }
 
   /**

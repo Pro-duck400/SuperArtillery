@@ -30,22 +30,13 @@ export class TokenService {
   }
 
   /**
-   * Generate a high-entropy invitation token for the link
-   * Should be cryptographically random and difficult to guess
-   * @returns Base64-encoded random bytes (32 bytes = 256 bits)
-   */
-  static generateInviteToken(): string {
-    return randomBytes(32).toString('base64');
-  }
-
-  /**
    * Generate a short, user-typeable 4-character alphanumeric code
    * Characters: A-Z, 0-9 (no lowercase to reduce confusion)
    * Entropy: ~20.7 bits (36^4 possibilities)
    * @returns 4-character uppercase alphanumeric string
    */
   static generateInviteCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'; // don't use zero to avoid confusion with 'O'
     const codeLength = TokenService.INVITE_CODE_LENGTH;
     const charBytes = randomBytes(codeLength);
 

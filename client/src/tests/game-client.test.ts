@@ -31,7 +31,7 @@ describe('GameClient private-game flow', () => {
     await client.createGame('Alice');
 
     expect(healthSpy).toHaveBeenCalled();
-    expect(apiSpy).toHaveBeenCalledWith('Alice');
+    expect(apiSpy).toHaveBeenCalledWith('Alice', window.location.href);
     expect(client.getGameSession()?.gameId).toBe('game-123');
     expect(client.hasActiveSession()).toBe(true);
   });
@@ -59,5 +59,31 @@ describe('GameClient private-game flow', () => {
 
     game.setPlayer(0, 'Alice');
     expect(client.getPlayerId()).toBe(0);
+  });
+
+  it('records only local player shots received from the server', () => {
+    const game = new Game();
+    game.setPlayer(0, 'Alice');
+    const client = new GameClient('http://localhost:3000', 'ws://localhost:3000', game);
+
+    (client as any).handleMessage({ type: 'shot', playerId: 1, angle: 20, velocity: 100 });
+    (client as any).handleMessage({ type: 'shot', playerId: 0, angle: 45, velocity: 150 });
+
+    expect(game.getShotHistory()).toEqual([{ angle: 45, velocity: 150 }]);
+  });
+
+  it('dispatches rematch readiness updates from the server', () => {
+    const game = new Game();
+    const client = new GameClient('http://localhost:3000', 'ws://localhost:3000', game);
+    const statusSpy = vi.fn();
+
+    client.onRematchStatus(statusSpy);
+    (client as any).handleMessage({
+      type: 'rematch_status',
+      playersReady: 1,
+      requiredPlayers: 2
+    });
+
+    expect(statusSpy).toHaveBeenCalledWith(1);
   });
 });

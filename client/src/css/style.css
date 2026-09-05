@@ -25,6 +25,12 @@ body {
   font-size: 11px;
 }
 
+#gamePanel {
+  width: 284px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
 canvas {
   border: 2px solid #333;
   background-color: #87CEEB;
@@ -33,12 +39,39 @@ canvas {
   image-rendering: pixelated;
 }
 
-.player-name-left {
-  text-align: left; 
+#battlefieldFrame {
+  position: relative;
+  width: 100%;
+  margin: 20px auto;
 }
 
-.player-name-right {
-  text-align: right; 
+#battlefieldFrame canvas {
+  margin: 0 auto;
+}
+
+#windLabel {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.player-name-overlay {
+  position: absolute;
+  z-index: 1;
+  transform: translateX(-50%);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+  pointer-events: none;
+  text-align: center;
 }
 
 .player-name-connected {
@@ -64,6 +97,15 @@ canvas {
   justify-content: center;
   align-items: flex-end;
   flex-wrap: wrap;
+}
+
+#registrationActions.registration-actions-pending {
+  justify-content: center;
+}
+
+#inviteInfo {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 label {
@@ -93,10 +135,15 @@ input[type="number"] {
   font-size: 16px;
 }
 
+#serverAddressInput {
+  width: 480px;
+  max-width: 100%;
+}
+
 .server-address-combobox {
   position: relative;
   display: flex;
-  width: 220px;
+  width: min(480px, 100%);
 }
 
 .server-address-combobox > input {
@@ -182,6 +229,50 @@ button:not(:disabled):hover {
   min-height: 30px;
 }
 
+#rematchButton {
+  margin-top: 0;
+}
+
+#shotHistory {
+  margin: 16px auto 0;
+  width: 100%;
+  text-align: left;
+}
+
+#shotHistory h2 {
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #aaa;
+  font-weight: normal;
+}
+
+#shotHistory table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background-color: #262626;
+}
+
+#shotHistory th,
+#shotHistory td {
+  height: 26px;
+  padding: 4px 8px;
+  border: 1px solid #444;
+  font-size: 13px;
+  text-align: center;
+}
+
+#shotHistory th {
+  width: 82px;
+  color: #ddd;
+  text-align: left;
+  font-weight: bold;
+}
+
+#shotHistory td {
+  color: #ddd;
+}
+
 @media (max-width: 600px) {
   #registrationPanel input[type="text"] {
     width: 100%;
@@ -189,8 +280,7 @@ button:not(:disabled):hover {
   }
 
   .server-address-combobox {
-    width: 100%;
-    min-width: 220px;
+    width: min(480px, 100%);
   }
 
   #controls {
