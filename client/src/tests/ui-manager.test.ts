@@ -46,6 +46,7 @@ describe('UIManager private game flow', () => {
             <table><tbody id="shotHistoryRows"></tbody></table>
           </section>
           <div id="message"></div>
+          <button id="rematchButton" type="button" style="display: none;">Play again</button>
         </div>
       </div>
     `;
@@ -83,6 +84,22 @@ describe('UIManager private game flow', () => {
     button.click();
 
     expect(createSpy).toHaveBeenCalledWith('Alice', 'http://localhost:3000');
+  });
+
+  it('fires when Enter is pressed in the velocity input', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const fireSpy = vi.fn();
+    ui.onFire(fireSpy);
+
+    const angleInput = document.getElementById('angleInput') as HTMLInputElement;
+    const velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
+    angleInput.value = '45';
+    velocityInput.value = '150';
+    ui.updateTurnUI(0, true);
+
+    velocityInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+
+    expect(fireSpy).toHaveBeenCalledWith(45, 150);
   });
 
   it('changes to join mode when an invite code is entered', () => {
@@ -232,6 +249,27 @@ describe('UIManager private game flow', () => {
 
     ui.showGameOver(true, 'Alex', 'Bob');
     expect(message.textContent).toBe('🎉 Alex won! Bob lost.');
+  });
+
+  it('offers a rematch after game over and shows waiting state after selection', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const rematchButton = document.getElementById('rematchButton') as HTMLButtonElement;
+    const rematchSpy = vi.fn();
+
+    ui.onRematch(rematchSpy);
+    ui.showGameOver(true, 'Alex', 'Bob');
+
+    expect(rematchButton.style.display).toBe('inline-block');
+    expect(rematchButton.disabled).toBe(false);
+    rematchButton.click();
+    expect(rematchSpy).toHaveBeenCalledOnce();
+
+    ui.setRematchWaiting(1);
+    expect(rematchButton.disabled).toBe(true);
+    expect(rematchButton.textContent).toBe('Waiting (1/2)');
+
+    ui.prepareForNewRound();
+    expect(rematchButton.style.display).toBe('none');
   });
 
   it('renders angle and velocity as rows with newest-first history columns', () => {

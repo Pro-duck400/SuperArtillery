@@ -27,6 +27,7 @@ export class UIManager {
   private angleInput: HTMLInputElement;
   private velocityInput: HTMLInputElement;
   private fireButton: HTMLButtonElement;
+  private rematchButton: HTMLButtonElement;
   private defaultServerAddress: string;
   private creatingGame = false;
 
@@ -34,6 +35,7 @@ export class UIManager {
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onJoinGameCallback: ((inviteCode: string, name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
+  private onRematchCallback: (() => void) | null = null;
 
   constructor(defaultServerAddress: string) {
     this.defaultServerAddress = defaultServerAddress;
@@ -62,6 +64,7 @@ export class UIManager {
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
+    this.rematchButton = document.getElementById('rematchButton') as HTMLButtonElement;
     this.serverAddressInput.value = defaultServerAddress;
     this.updateActionButton();
 
@@ -181,6 +184,16 @@ export class UIManager {
         this.onFireCallback(angle, velocity);
       }
     });
+
+    this.rematchButton.addEventListener('click', () => {
+      this.onRematchCallback?.();
+    });
+
+    this.velocityInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.fireButton.click();
+      }
+    });
   }
 
   // changed playerId parameter from 0 | 1 to string as it causes an error in main when called
@@ -245,6 +258,10 @@ export class UIManager {
    */
   public onFire(callback: (angle: number, velocity: number) => void): void {
     this.onFireCallback = callback;
+  }
+
+  public onRematch(callback: () => void): void {
+    this.onRematchCallback = callback;
   }
 
   /**
@@ -440,5 +457,25 @@ export class UIManager {
       ? `🎉 ${playerName} won! ${opponentName} lost.`
       : `😔 ${playerName} lost. ${opponentName} won!`;
     this.fireButton.disabled = true;
+    this.rematchButton.style.display = 'inline-block';
+    this.rematchButton.disabled = false;
+    this.rematchButton.textContent = 'Play again';
+  }
+
+  public setRematchWaiting(playersReady: number): void {
+    this.rematchButton.style.display = 'inline-block';
+    this.rematchButton.disabled = true;
+    this.rematchButton.textContent = `Waiting (${playersReady}/2)`;
+  }
+
+  public showRematchAvailable(): void {
+    this.rematchButton.style.display = 'inline-block';
+    this.rematchButton.disabled = false;
+    this.rematchButton.textContent = 'Play again';
+  }
+
+  public prepareForNewRound(): void {
+    this.rematchButton.style.display = 'none';
+    this.rematchButton.disabled = true;
   }
 }

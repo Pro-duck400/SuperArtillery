@@ -2,7 +2,11 @@
 import { Game } from './game';
 import { WebSocketClient } from './network/websocket';
 import { ApiClient, type CreateGameResponse, type AcceptInvitationResponse } from './network/api';
-import type { BattlefieldConfig, GameMessage, GameStartMessage } from './types/messages';
+import type {
+  BattlefieldConfig,
+  GameMessage,
+  GameStartMessage
+} from './types/messages';
 import { CONTRACT_VERSION } from './contract-version';
 
 export interface ShotEventData {
@@ -32,6 +36,7 @@ export class GameClient {
   private onTurnChangeCallback: ((playerId: number, isMyTurn: boolean) => void) | null = null;
   private onGameStartCallback: ((gameId: string, battlefield: BattlefieldConfig) => void) | null = null;
   private onGameOverCallback: ((winnerId: number, didIWin: boolean) => void) | null = null;
+  private onRematchStatusCallback: ((playersReady: number) => void) | null = null;
 
   constructor(apiBaseUrl: string, wsBaseUrl: string, game: Game) {
     this.game = game;
@@ -230,6 +235,17 @@ export class GameClient {
     // Server will send WebSocket messages (shot + turn_change) to update state
   }
 
+  public async requestRematch(): Promise<void> {
+    if (!this.gameSession) {
+      throw new Error('No active game session');
+    }
+
+    await this.apiClient.requestRematch(
+      this.gameSession.gameId,
+      this.gameSession.sessionToken
+    );
+  }
+
   /**
    * Handle incoming WebSocket messages
    */
@@ -278,6 +294,12 @@ export class GameClient {
           this.onGameOverCallback(message.playerId_winner, didIWin);
         }
         break;
+
+      case 'rematch_status':
+        if (this.onRematchStatusCallback) {
+          this.onRematchStatusCallback(message.playersReady);
+        }
+        break;
     }
   }
 
@@ -300,6 +322,10 @@ export class GameClient {
 
   public onGameOver(callback: (winnerId: number, didIWin: boolean) => void): void {
     this.onGameOverCallback = callback;
+  }
+
+  public onRematchStatus(callback: (playersReady: number) => void): void {
+    this.onRematchStatusCallback = callback;
   }
 
   /**

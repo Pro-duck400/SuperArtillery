@@ -2,6 +2,15 @@
 import type { Projectile } from './types/game';
 import type { BattlefieldConfig } from './types/messages';
 import { Terrain } from './terrain';
+import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
+
+export interface RenderState {
+  projectile: Projectile | null;
+  activeTrajectory: TrajectoryPoint[];
+  historicalTrajectories: HistoricalTrajectory[];
+}
+
+const ACTIVE_TRAJECTORY_COLOR = '#FFA500';
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -98,7 +107,7 @@ export class Renderer {
       this.castleLeftByPlayerId[castle.playerId] = castle.left_x;
     });
 
-    this.render(null);
+    this.render({ projectile: null, activeTrajectory: [], historicalTrajectories: [] });
   }
 
   public getGroundY(): number {
@@ -156,10 +165,11 @@ export class Renderer {
     this.ctx.fill();
   }
 
-  public drawTrajectory(trajectory: Array<{ x: number; y: number }>): void {
+  public drawActiveTrajectory(trajectory: TrajectoryPoint[]): void {
     if (trajectory.length < 2) return;
 
-    this.ctx.strokeStyle = '#FFA500';
+    this.ctx.save();
+    this.ctx.strokeStyle = ACTIVE_TRAJECTORY_COLOR;
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([2, 2]); // Dashed line
     this.ctx.beginPath();
@@ -170,23 +180,42 @@ export class Renderer {
     }
     
     this.ctx.stroke();
-    this.ctx.setLineDash([]); // Reset to solid line
+    this.ctx.restore();
   }
 
-  public render(projectile: Projectile | null, trajectory: Array<{ x: number; y: number }> = []): void {
+  private drawHistoricalTrajectories(trajectories: HistoricalTrajectory[]): void {
+    for (const trajectory of trajectories) {
+      if (trajectory.points.length < 2) continue;
+
+      this.ctx.save();
+      this.ctx.strokeStyle = `rgba(255, 165, 0, ${trajectory.opacity})`;
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([2, 3]);
+      this.ctx.beginPath();
+      this.ctx.moveTo(trajectory.points[0].x, trajectory.points[0].y);
+      for (let index = 1; index < trajectory.points.length; index += 1) {
+        this.ctx.lineTo(trajectory.points[index].x, trajectory.points[index].y);
+      }
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+  }
+
+  public render(state: RenderState): void {
     this.clear();
     this.drawWind();
     this.drawGround();
     this.drawCastle(this.castleLeftByPlayerId[0], this.activeCastlePlayerId === 0);
     this.drawCastle(this.castleLeftByPlayerId[1], this.activeCastlePlayerId === 1);
+    this.drawHistoricalTrajectories(state.historicalTrajectories);
 
     // Draw trajectory first (so it appears behind the projectile)
-    if (trajectory.length > 0) {
-      this.drawTrajectory(trajectory);
+    if (state.activeTrajectory.length > 0) {
+      this.drawActiveTrajectory(state.activeTrajectory);
     }
 
-    if (projectile) {
-      this.drawProjectile(projectile);
+    if (state.projectile) {
+      this.drawProjectile(state.projectile);
     }
   }
 }

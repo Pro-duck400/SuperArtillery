@@ -36,7 +36,7 @@ export class TokenService {
    * @returns 4-character uppercase alphanumeric string
    */
   static generateInviteCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'; // don't use zero to avoid confusion with 'O'
     const codeLength = TokenService.INVITE_CODE_LENGTH;
     const charBytes = randomBytes(codeLength);
 

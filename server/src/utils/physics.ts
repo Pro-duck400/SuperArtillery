@@ -17,12 +17,15 @@ function checkCastleCollision(
   castleX: number, castleWidth: number, castleHeight: number,
   groundY: number
 ): number | null {
-  
-  // Define castle bounds
-  const left = castleX - castleWidth / 2;
-  const right = castleX + castleWidth / 2;
-  const top = groundY - castleHeight;
-  const bottom = groundY;
+  const CASTLE_HIT_ZONE_RATIO = 0.8;
+  const horizontalMargin = (castleWidth * (1 - CASTLE_HIT_ZONE_RATIO)) / 2;
+  const verticalMargin = (castleHeight * (1 - CASTLE_HIT_ZONE_RATIO)) / 2;
+
+  // Require the projectile to enter the central 80% of the castle bounds.
+  const left = castleX - castleWidth / 2 + horizontalMargin;
+  const right = castleX + castleWidth / 2 - horizontalMargin;
+  const top = groundY - castleHeight + verticalMargin;
+  const bottom = groundY - verticalMargin;
   
   // Find all intersection times with each edge
   const intersections: number[] = [];

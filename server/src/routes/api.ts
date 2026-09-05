@@ -146,6 +146,36 @@ export function createApiRouter(game: GameManager): Router {
     return res.status(HTTP_STATUS.OK).json(result);
   });
 
+  // POST /api/v1/games/:gameId/rematch - Request another round
+  router.post('/v1/games/:gameId/rematch', (req, res) => {
+    const { gameId } = req.params;
+    const sessionToken = req.query.sessionToken as string | undefined;
+
+    if (!sessionToken) {
+      const errorResponse: ErrorResponse = {
+        code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
+        message: GameManager.ERROR_MESSAGES.MISSING_SESSION_TOKEN
+      };
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json(errorResponse);
+    }
+
+    const result = game.requestRematch(gameId, sessionToken);
+    if ('error' in result) {
+      const errorResponse: ErrorResponse = {
+        code: result.code,
+        message: result.error
+      };
+      return res.status(result.statusCode).json(errorResponse);
+    }
+
+    return res.status(HTTP_STATUS.OK).json({
+      ready: result.ready,
+      playersReady: result.playersReady,
+      requiredPlayers: 2,
+      roundStarted: result.roundStarted
+    });
+  });
+
   // POST /api/v1/fire - Fire a projectile (updated for session tokens)
   router.post('/v1/fire', (req, res) => {
     const { gameId, angle, velocity } = req.body;

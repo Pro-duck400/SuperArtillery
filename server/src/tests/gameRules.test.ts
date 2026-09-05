@@ -38,7 +38,9 @@ function createGame(): PrivateGame {
       websocket: null
     },
     currentTurn: 0,
-    gameStarted: false
+    gameStarted: false,
+    round: 1,
+    rematchReady: [false, false]
   };
 }
 
@@ -105,5 +107,46 @@ describe('GameRules', () => {
     expect(game.status).toBe('finished');
     expect(game.gameFinishedAt).toBe(600);
     expect(game.currentTurn).toBe(0);
+  });
+
+  it('waits for both players before starting a rematch', () => {
+    const game = createGame();
+    game.status = 'finished';
+    game.gameStarted = true;
+    game.round = 2;
+    game.gameFinishedAt = 700;
+    game.battlefield = createFlatBattlefield();
+
+    const rules = new GameRules();
+    const waiting = rules.requestRematch(game, 0, 800);
+
+    expect(waiting).toEqual({ kind: 'waiting', playersReady: 1 });
+    expect(game.rematchReady).toEqual([true, false]);
+    expect(game.status).toBe('finished');
+
+    const socket = { readyState: WebSocket.OPEN } as WebSocket;
+    game.initiator.websocket = socket;
+    game.invited.websocket = socket;
+    const started = rules.requestRematch(game, 1, 900);
+
+    expect(started.kind).toBe('started');
+    expect(game.status).toBe('active');
+    expect(game.round).toBe(3);
+    expect(game.currentTurn).toBe(0);
+    expect(game.gameFinishedAt).toBeUndefined();
+    expect(game.rematchReady).toEqual([false, false]);
+    expect(game.battlefield).toEqual(started.kind === 'started' ? started.battlefield : null);
+  });
+
+  it('clears rematch readiness when a finished player disconnects', () => {
+    const game = createGame();
+    game.status = 'finished';
+    game.gameStarted = true;
+    game.rematchReady = [true, true];
+
+    new GameRules().disconnect(game, 0, 500);
+
+    expect(game.rematchReady).toEqual([false, true]);
+    expect(game.status).toBe('finished');
   });
 });

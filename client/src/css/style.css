@@ -229,6 +229,10 @@ button:not(:disabled):hover {
   min-height: 30px;
 }
 
+#rematchButton {
+  margin-top: 8px;
+}
+
 #shotHistory {
   margin: 16px auto 0;
   width: 100%;

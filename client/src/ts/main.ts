@@ -7,6 +7,8 @@ import { UIManager } from './ui-manager';
 import { GameClient } from './game-client';
 import { CONTRACT_VERSION } from './contract-version';
 import clientPackage from '../../package.json';
+import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
+import { createHistoricalTrajectories } from './trajectory';
 
 console.log('SuperArtillery initializing...');
 
@@ -48,7 +50,7 @@ if (!canvas) {
 }
 
 const renderer = new Renderer(canvas);
-renderer.render(null);
+renderer.render({ projectile: null, activeTrajectory: [], historicalTrajectories: [] });
 console.log('Renderer initialized');
 
 // Create core components
@@ -58,10 +60,68 @@ const uiManager = new UIManager(getDefaultServerAddress());
 let gameClient: GameClient | null = null;
 let clientName = '';
 let opponentName = '';
+let historicalTrajectories: HistoricalTrajectory[] = [];
+let activeTrajectory: TrajectoryPoint[] = [];
+let activeShotIsLocal = false;
+let animationActive = false;
+let pendingVisualTurn: { playerId: 0 | 1; isMyTurn: boolean } | null = null;
+let pendingGameOver: { didIWin: boolean } | null = null;
+let rematchRequested = false;
+
+function applyPendingPresentation(): void {
+  if (animationActive) return;
+
+  if (pendingGameOver) {
+    const result = pendingGameOver;
+    pendingGameOver = null;
+    pendingVisualTurn = null;
+    uiManager.showGameOver(result.didIWin, clientName, opponentName);
+    return;
+  }
+
+  if (pendingVisualTurn) {
+    const turn = pendingVisualTurn;
+    pendingVisualTurn = null;
+    renderer.setActiveTurn(turn.playerId);
+    renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
+    const turnPlayerName = turn.isMyTurn ? clientName : opponentName;
+    uiManager.setMessage(`${turnPlayerName} turn`);
+  }
+}
+
+animator.onFrame(({ projectile, trajectory }) => {
+  activeTrajectory = trajectory;
+  renderer.render({ projectile, activeTrajectory, historicalTrajectories });
+});
+
+animator.onComplete(() => {
+  const localPlayerId = gameClient?.getPlayerId();
+  const battlefield = game.getBattlefield();
+  if (activeShotIsLocal && localPlayerId !== null && localPlayerId !== undefined && battlefield) {
+    historicalTrajectories = createHistoricalTrajectories(
+      battlefield,
+      game.getShotHistory(),
+      localPlayerId as 0 | 1
+    );
+  }
+  activeShotIsLocal = false;
+  activeTrajectory = [];
+  animationActive = false;
+  renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
+  applyPendingPresentation();
+});
 
 function wireGameClientEvents(client: GameClient): void {
   client.onGameStart((_gameId: string, battlefield) => {
+    rematchRequested = false;
+    uiManager.prepareForNewRound();
     renderer.applyBattlefield(battlefield);
+    historicalTrajectories = [];
+    activeTrajectory = [];
+    activeShotIsLocal = false;
+    animationActive = false;
+    pendingVisualTurn = null;
+    pendingGameOver = null;
     uiManager.setWindLabel(battlefield.wind);
     animator.configureScene(
       renderer.getCanvasWidth(),
@@ -89,20 +149,28 @@ function wireGameClientEvents(client: GameClient): void {
     }
 
     uiManager.renderShotHistory(game.getShotHistory());
+    renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
     uiManager.setMessage('Game starting! Waiting for first turn...');
   });
 
   client.onShot((data) => {
+    animationActive = true;
     const playerId = client.getPlayerId();
     const isMyShot = playerId !== null && data.playerId === playerId;
     if (isMyShot) {
+      activeShotIsLocal = true;
       uiManager.renderShotHistory(game.getShotHistory());
+      const battlefield = game.getBattlefield();
+      if (battlefield) {
+        historicalTrajectories = createHistoricalTrajectories(
+          battlefield,
+          game.getShotHistory().slice(1),
+          playerId as 0 | 1
+        );
+      }
+    } else {
+      activeShotIsLocal = false;
     }
-    uiManager.setMessage(
-      isMyShot
-        ? `You fired: angle=${data.angle}°, velocity=${data.velocity}`
-        : `Opponent fired: angle=${data.angle}°, velocity=${data.velocity}`
-    );
 
     const shooterId = data.playerId === 0 ? 0 : 1;
     const startX = renderer.getCastleMuzzleX(shooterId);
@@ -111,14 +179,33 @@ function wireGameClientEvents(client: GameClient): void {
 
   client.onTurnChange((playerId: number, isMyTurn: boolean) => {
     uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
-    renderer.setActiveTurn(playerId as 0 | 1);
-    renderer.render(null);
-    const turnPlayerName = isMyTurn ? clientName : opponentName;
-    uiManager.setMessage(`${turnPlayerName} turn`);
+    pendingVisualTurn = { playerId: playerId as 0 | 1, isMyTurn };
+    const localPlayerId = client.getPlayerId();
+    const battlefield = game.getBattlefield();
+    if (isMyTurn && localPlayerId !== null && battlefield && !activeShotIsLocal) {
+      historicalTrajectories = createHistoricalTrajectories(
+        battlefield,
+        game.getShotHistory(),
+        localPlayerId as 0 | 1
+      );
+    }
+    applyPendingPresentation();
   });
 
   client.onGameOver((_winnerId: number, didIWin: boolean) => {
-    uiManager.showGameOver(didIWin, clientName, opponentName);
+    uiManager.disableFireButton();
+    pendingGameOver = { didIWin };
+    applyPendingPresentation();
+  });
+
+  client.onRematchStatus((playersReady) => {
+    if (rematchRequested) {
+      uiManager.setRematchWaiting(playersReady);
+      uiManager.setMessage(`Waiting for opponent (${playersReady}/2)`);
+    } else {
+      uiManager.showRematchAvailable();
+      uiManager.setMessage('Opponent wants to play again');
+    }
   });
 }
 
@@ -219,6 +306,23 @@ uiManager.onFire(async (angle: number, velocity: number) => {
     const errorMessage = error instanceof Error ? error.message : 'Fire action failed';
     uiManager.setMessage(errorMessage);
     uiManager.updateTurnUI(game.getState().currentTurn, game.getState().isMyTurn);
+  }
+});
+
+uiManager.onRematch(async () => {
+  try {
+    if (!gameClient) {
+      throw new Error('Not connected yet');
+    }
+
+    rematchRequested = true;
+    uiManager.setRematchWaiting(1);
+    await gameClient.requestRematch();
+  } catch (error) {
+    rematchRequested = false;
+    uiManager.showRematchAvailable();
+    const errorMessage = error instanceof Error ? error.message : 'Rematch request failed';
+    uiManager.setMessage(errorMessage);
   }
 });
 

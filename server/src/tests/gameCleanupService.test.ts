@@ -20,6 +20,8 @@ function createGame(overrides: Partial<PrivateGame> = {}): PrivateGame {
     invited: { name: 'Bob', sessionTokenHash: 'bob-hash', websocket: null },
     currentTurn: 0,
     gameStarted: false,
+    round: 1,
+    rematchReady: [false, false],
     ...overrides
   };
 }
