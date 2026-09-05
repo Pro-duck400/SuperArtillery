@@ -230,7 +230,7 @@ button:not(:disabled):hover {
 }
 
 #rematchButton {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 #shotHistory {

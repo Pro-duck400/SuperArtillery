@@ -14,7 +14,7 @@
       <div id="registrationFields">
         <label id="serverAddressLabel">
           Enter your name:
-          <input type="text" id="playerNameInput" placeholder="Your name" maxlength="20" />
+          <input type="text" id="playerNameInput" placeholder="Your name" maxlength="15" />
         </label>
         <label>
           Server address:
@@ -67,6 +67,7 @@
           <input type="number" id="velocityInput" min="0" max="300" value="150" />
         </label>
         <button id="fireButton" disabled>Fire!</button>
+        <button id="rematchButton" type="button" style="display: none;">Play again</button>
       </div>
 
       <section id="shotHistory" aria-labelledby="shotHistoryTitle">
@@ -77,7 +78,6 @@
       </section>
       
       <div id="message"></div>
-      <button id="rematchButton" type="button" style="display: none;">Play again</button>
     </div>
     <div id="clientVersion" aria-label="Client version"></div>
   </div>

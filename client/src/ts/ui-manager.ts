@@ -68,6 +68,13 @@ export class UIManager {
     this.serverAddressInput.value = defaultServerAddress;
     this.updateActionButton();
 
+    this.playerNameInput.maxLength = 15;
+    this.playerNameInput.addEventListener('input', () => {
+      if (this.playerNameInput.value.length > 15) {
+        this.playerNameInput.value = this.playerNameInput.value.slice(0, 15);
+      }
+    });
+
     this.setupEventListeners();
     this.playerNameInput.focus();
   }
@@ -104,6 +111,11 @@ export class UIManager {
 
       if (playerName.length < 2) {
         this.registrationError.textContent = 'Name must be at least 2 characters';
+        return null;
+      }
+
+      if (playerName.length > 15) {
+        this.registrationError.textContent = 'Name must be 15 characters or less';
         return null;
       }
 
@@ -449,6 +461,23 @@ export class UIManager {
     this.fireButton.disabled = true;
   }
 
+  private setGameOverControlsVisible(visible: boolean): void {
+    const controls = document.getElementById('controls') as HTMLDivElement | null;
+    if (!controls) return;
+
+    const angleField = this.angleInput.closest('label');
+    const velocityField = this.velocityInput.closest('label');
+
+    if (angleField) angleField.style.display = visible ? 'none' : '';
+    if (velocityField) velocityField.style.display = visible ? 'none' : '';
+    this.fireButton.style.display = visible ? 'none' : '';
+    this.rematchButton.style.display = visible ? 'inline-block' : 'none';
+    this.rematchButton.disabled = !visible;
+    if (visible) {
+      this.rematchButton.textContent = 'Play again';
+    }
+  }
+
   /**
    * Show game over message
    */
@@ -457,7 +486,7 @@ export class UIManager {
       ? `🎉 ${playerName} won! ${opponentName} lost.`
       : `😔 ${playerName} lost. ${opponentName} won!`;
     this.fireButton.disabled = true;
-    this.rematchButton.style.display = 'inline-block';
+    this.setGameOverControlsVisible(true);
     this.rematchButton.disabled = false;
     this.rematchButton.textContent = 'Play again';
   }
@@ -475,6 +504,7 @@ export class UIManager {
   }
 
   public prepareForNewRound(): void {
+    this.setGameOverControlsVisible(false);
     this.rematchButton.style.display = 'none';
     this.rematchButton.disabled = true;
   }

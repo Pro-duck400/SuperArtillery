@@ -26,25 +26,17 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 #### Terrain System
 - [ ] Ensure playable terrain (not too steep/flat)
 - [ ] Random castle placement on terrain (not in valleys)
-- [x] Terrain collision detection (projectile hits hills)
 
 #### Physics & Ballistics
-- [x] Wind effects on projectile trajectory
-  - Random wind speed (-50 to +50)
-  - Wind resistance affects horizontal velocity over time
-- [x] Improved gravity simulation
 - [ ] Angle validation (0-90° for player 1, mirrored for player 2)
 - [ ] Velocity limit (>350 = cannon explodes, lose turn)
 
 #### Game Mechanics
 - [ ] Multi-round games (best of N rounds)
 - [ ] Score tracking across rounds
-- [x] Shot history (last 4 shots: angle/velocity)
 - [ ] Game configuration (number of rounds, time limits)
 
 #### Visual Feedback
-- [ ] Wind indicator with animated arrow
-- [ ] Projectile trail/arc line
 - [ ] Explosion animation on impact
 - [ ] Castle damage visualization
 - [ ] Crater on terrain after explosion

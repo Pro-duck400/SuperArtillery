@@ -7,7 +7,7 @@ describe('UIManager private game flow', () => {
       <div id="app">
         <div id="registrationPanel" style="display: block;">
           <div id="registrationFields">
-            <input id="playerNameInput" value="" />
+            <input id="playerNameInput" value="" maxlength="15" />
             <label id="serverAddressLabel"><span class="server-address-combobox">
               <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
               <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
@@ -84,6 +84,26 @@ describe('UIManager private game flow', () => {
     button.click();
 
     expect(createSpy).toHaveBeenCalledWith('Alice', 'http://localhost:3000');
+  });
+
+  it('blocks names longer than 15 characters and enforces the HTML max length', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const createSpy = vi.fn();
+    ui.onCreateGame(createSpy);
+
+    const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
+    const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
+    const button = document.getElementById('actionButton') as HTMLButtonElement;
+    const error = document.getElementById('registrationError') as HTMLDivElement;
+
+    expect(nameInput.maxLength).toBe(15);
+
+    nameInput.value = '1234567890123456';
+    serverInput.value = 'http://localhost:3000';
+    button.click();
+
+    expect(error.textContent).toBe('Name must be 15 characters or less');
+    expect(createSpy).not.toHaveBeenCalled();
   });
 
   it('fires when Enter is pressed in the velocity input', () => {

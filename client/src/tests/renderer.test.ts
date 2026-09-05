@@ -134,4 +134,42 @@ describe('Renderer trajectory styles', () => {
 
     expect(context.strokeStyles).toContain('rgba(255, 165, 0, 0.8)');
   });
+
+  it('draws castle emojis 2px further left and on the ground line', () => {
+    const canvas = document.createElement('canvas');
+    const renderer = new Renderer(canvas);
+    renderer.applyBattlefield(battlefield);
+    const fillTextSpy = vi.spyOn(context, 'fillText');
+
+    renderer.render({
+      projectile: null,
+      historicalTrajectories: [],
+      activeTrajectory: []
+    });
+
+    const glyphs = renderer['castleGlyphs'];
+    expect(fillTextSpy).toHaveBeenCalledWith(glyphs[0], 14, 142);
+    expect(fillTextSpy).toHaveBeenCalledWith(glyphs[1], 244, 142);
+    expect(context.font).toMatch(/\d+px/);
+  });
+
+  it('chooses two different random castle emoji for each player from the approved set', () => {
+    const canvas = document.createElement('canvas');
+    const renderer = new Renderer(canvas);
+    const randomSpy = vi.spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
+      .mockReturnValueOnce(0.7)
+      .mockReturnValueOnce(0.2);
+
+    renderer.applyBattlefield(battlefield);
+
+    const glyphs = renderer['castleGlyphs'];
+    expect(Object.values(glyphs)).toHaveLength(2);
+    expect(new Set(Object.values(glyphs)).size).toBe(2);
+    expect(['🏰', '🏯', '🏟️', '🏛️', '🛖', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '💒', '🗼', '⛪', '🗽', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛺', '🎪']).toContain(glyphs[0]);
+    expect(['🏰', '🏯', '🏟️', '🏛️', '🛖', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '💒', '🗼', '⛪', '🗽', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛺', '🎪']).toContain(glyphs[1]);
+
+    randomSpy.mockRestore();
+  });
 });
