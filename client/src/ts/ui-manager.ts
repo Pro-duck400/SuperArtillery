@@ -1,15 +1,19 @@
 // Manages all DOM interactions and UI state
+import type { ShotHistoryEntry } from './game';
+
 export class UIManager {
   // DOM elements
   private registrationPanel: HTMLDivElement;
+  private registrationFields: HTMLDivElement;
+  private registrationActions: HTMLDivElement;
   private gamePanel: HTMLDivElement;
+  private windLabel: HTMLDivElement;
   private playerNameInput: HTMLInputElement;
   private serverAddressInput: HTMLInputElement;
   private serverAddressToggle: HTMLButtonElement;
   private serverAddressOptions: HTMLSpanElement;
   private serverAddressLabel: HTMLLabelElement;
-  private registerButton: HTMLButtonElement;
-  private joinGameButton: HTMLButtonElement;
+  private actionButton: HTMLButtonElement;
   private inviteInput: HTMLInputElement;
   private inviteInputLabel: HTMLLabelElement;
   private registrationError: HTMLDivElement;
@@ -19,28 +23,34 @@ export class UIManager {
   private copyInviteCodeButton: HTMLButtonElement;
   private copyInviteUrlButton: HTMLButtonElement;
   private messageEl: HTMLDivElement;
+  private shotHistoryRowsEl: HTMLTableSectionElement;
   private angleInput: HTMLInputElement;
   private velocityInput: HTMLInputElement;
   private fireButton: HTMLButtonElement;
+  private rematchButton: HTMLButtonElement;
   private defaultServerAddress: string;
+  private creatingGame = false;
 
   // Event callbacks
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onJoinGameCallback: ((inviteCode: string, name: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
+  private onRematchCallback: (() => void) | null = null;
 
   constructor(defaultServerAddress: string) {
     this.defaultServerAddress = defaultServerAddress;
     // Get DOM elements
     this.registrationPanel = document.getElementById('registrationPanel') as HTMLDivElement;
+    this.registrationFields = document.getElementById('registrationFields') as HTMLDivElement;
+    this.registrationActions = document.getElementById('registrationActions') as HTMLDivElement;
     this.gamePanel = document.getElementById('gamePanel') as HTMLDivElement;
+    this.windLabel = document.getElementById('windLabel') as HTMLDivElement;
     this.playerNameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     this.serverAddressToggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
     this.serverAddressOptions = document.getElementById('serverAddressOptions') as HTMLSpanElement;
     this.serverAddressLabel = this.serverAddressInput.closest('label') as HTMLLabelElement;
-    this.registerButton = document.getElementById('registerButton') as HTMLButtonElement;
-    this.joinGameButton = document.getElementById('joinGameButton') as HTMLButtonElement;
+    this.actionButton = document.getElementById('actionButton') as HTMLButtonElement;
     this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
     this.inviteInputLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
     this.registrationError = document.getElementById('registrationError') as HTMLDivElement;
@@ -50,11 +60,20 @@ export class UIManager {
     this.copyInviteCodeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
     this.copyInviteUrlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
     this.messageEl = document.getElementById('message') as HTMLDivElement;
+    this.shotHistoryRowsEl = document.getElementById('shotHistoryRows') as HTMLTableSectionElement;
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
+    this.rematchButton = document.getElementById('rematchButton') as HTMLButtonElement;
     this.serverAddressInput.value = defaultServerAddress;
-    this.joinGameButton.disabled = !/^[A-Za-z0-9]{4}$/.test(this.inviteInput.value.trim());
+    this.updateActionButton();
+
+    this.playerNameInput.maxLength = 15;
+    this.playerNameInput.addEventListener('input', () => {
+      if (this.playerNameInput.value.length > 15) {
+        this.playerNameInput.value = this.playerNameInput.value.slice(0, 15);
+      }
+    });
 
     this.setupEventListeners();
     this.playerNameInput.focus();
@@ -95,6 +114,11 @@ export class UIManager {
         return null;
       }
 
+      if (playerName.length > 15) {
+        this.registrationError.textContent = 'Name must be 15 characters or less';
+        return null;
+      }
+
       try {
         const parsedUrl = new URL(serverAddress);
         if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
@@ -110,48 +134,41 @@ export class UIManager {
       return { playerName, serverAddress };
     };
 
-    this.registerButton.addEventListener('click', () => {
+    this.actionButton.addEventListener('click', () => {
       const valid = validateInputs();
       if (!valid) {
         return;
       }
 
-      if (this.onCreateGameCallback) {
+      const inviteCode = this.inviteInput.value.trim();
+      if (inviteCode) {
+        if (!/^[A-Za-z0-9]{4}$/.test(inviteCode)) {
+          this.registrationError.textContent = 'Enter a 4-character invite code';
+          return;
+        }
+
+        if (this.onJoinGameCallback) {
+          this.registrationError.textContent = '';
+          this.onJoinGameCallback(inviteCode, valid.playerName, valid.serverAddress);
+        }
+      } else if (this.onCreateGameCallback) {
         this.onCreateGameCallback(valid.playerName, valid.serverAddress);
       }
     });
 
-    this.joinGameButton.addEventListener('click', () => {
-      const valid = validateInputs();
-      const inviteCode = this.inviteInput.value.trim();
-
-      if (!valid) {
-        return;
-      }
-
-      if (!/^[A-Za-z0-9]{4}$/.test(inviteCode)) {
-        this.registrationError.textContent = 'Enter a 4-character invite code';
-        return;
-      }
-
-      if (this.onJoinGameCallback) {
-        this.registrationError.textContent = '';
-        this.onJoinGameCallback(inviteCode, valid.playerName, valid.serverAddress);
-      }
-    });
-
     this.inviteInput.addEventListener('input', () => {
-      this.joinGameButton.disabled = !/^[A-Za-z0-9]{4}$/.test(this.inviteInput.value.trim());
+      this.updateActionButton();
     });
 
     this.playerNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
-        // Trigger whichever action is actually available (Create is hidden in join-only mode).
-        if (this.registerButton.style.display !== 'none') {
-          this.registerButton.click();
-        } else {
-          this.joinGameButton.click();
-        }
+        this.actionButton.click();
+      }
+    });
+
+    this.inviteInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.actionButton.click();
       }
     });
 
@@ -179,12 +196,32 @@ export class UIManager {
         this.onFireCallback(angle, velocity);
       }
     });
+
+    this.rematchButton.addEventListener('click', () => {
+      this.onRematchCallback?.();
+    });
+
+    this.velocityInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.fireButton.click();
+      }
+    });
   }
 
   // changed playerId parameter from 0 | 1 to string as it causes an error in main when called
-  public setPlayerNames(playerId: number, playerName: string, opponentName: string): void {
+  public setPlayerNames(
+    playerId: number,
+    playerName: string,
+    opponentName: string,
+    positions?: { left: { x: number; y: number }; right: { x: number; y: number } }
+  ): void {
     const leftNameEl = document.getElementById('playerNameLeft');
     const rightNameEl = document.getElementById('playerNameRight');
+
+    if (positions) {
+      this.positionPlayerName(leftNameEl, positions.left);
+      this.positionPlayerName(rightNameEl, positions.right);
+    }
 
     if (playerId === 0) {
         if (leftNameEl) {
@@ -205,6 +242,12 @@ export class UIManager {
             rightNameEl.classList.add('player-name-connected');
         }
     }
+  }
+
+  private positionPlayerName(element: HTMLElement | null, position: { x: number; y: number }): void {
+    if (!element) return;
+    element.style.left = `${position.x}px`;
+    element.style.top = `${position.y}px`;
   }
 
 
@@ -229,13 +272,22 @@ export class UIManager {
     this.onFireCallback = callback;
   }
 
+  public onRematch(callback: () => void): void {
+    this.onRematchCallback = callback;
+  }
+
   /**
    * Show registration in progress
    */
   public showRegistering(): void {
-    this.registerButton.disabled = true;
-    this.joinGameButton.disabled = true;
-    this.registerButton.textContent = 'Creating...';
+    this.creatingGame = !this.hasInviteCode();
+    if (this.creatingGame) {
+      this.registrationFields.style.display = 'none';
+      this.inviteInputLabel.style.display = 'none';
+      this.registrationActions.classList.add('registration-actions-pending');
+    }
+    this.actionButton.disabled = true;
+    this.actionButton.textContent = this.hasInviteCode() ? 'Joining...' : 'Creating...';
   }
 
   /**
@@ -243,9 +295,14 @@ export class UIManager {
    */
   public showRegistrationError(error: string): void {
     this.registrationError.textContent = error;
-    this.registerButton.disabled = false;
-    this.joinGameButton.disabled = false;
-    this.registerButton.textContent = 'Create Private Game';
+    if (this.creatingGame) {
+      this.registrationFields.style.display = '';
+      this.inviteInputLabel.style.display = '';
+      this.registrationActions.classList.remove('registration-actions-pending');
+    }
+    this.creatingGame = false;
+    this.actionButton.disabled = false;
+    this.updateActionButton();
   }
 
   public showInviteInfo(code: string, inviteUrl: string): void {
@@ -297,14 +354,22 @@ export class UIManager {
    */
   public enterJoinOnlyMode(inviteCode: string): void {
     this.inviteInput.value = inviteCode;
-    this.joinGameButton.disabled = false;
     this.serverAddressLabel.style.display = 'none';
     this.serverAddressInput.disabled = true;
     this.serverAddressToggle.disabled = true;
-    this.registerButton.style.display = 'none';
     this.inviteInputLabel.style.display = 'none';
-    this.joinGameButton.textContent = 'Join Game';
+    this.updateActionButton();
     this.playerNameInput.focus();
+  }
+
+  private hasInviteCode(): boolean {
+    return this.inviteInput.value.trim().length > 0;
+  }
+
+  private updateActionButton(): void {
+    this.actionButton.textContent = this.hasInviteCode()
+      ? 'Join with Invite'
+      : 'Create Private Game';
   }
 
   /**
@@ -320,6 +385,43 @@ export class UIManager {
    */
   public setMessage(text: string): void {
     this.messageEl.textContent = text;
+  }
+
+  public setWindLabel(wind: number): void {
+    this.windLabel.textContent = `wind: ${Math.ceil(wind)}`;
+  }
+
+  public renderShotHistory(history: ShotHistoryEntry[]): void {
+    this.shotHistoryRowsEl.replaceChildren();
+
+    const angleRow = document.createElement('tr');
+    const velocityRow = document.createElement('tr');
+    const angleLabel = document.createElement('th');
+    const velocityLabel = document.createElement('th');
+
+    angleLabel.scope = 'row';
+    angleLabel.textContent = 'Angle';
+    velocityLabel.scope = 'row';
+    velocityLabel.textContent = 'Velocity';
+    angleRow.appendChild(angleLabel);
+    velocityRow.appendChild(velocityLabel);
+
+    for (let index = 0; index < 4; index += 1) {
+      const shot = history[index];
+      const angleCell = document.createElement('td');
+      const velocityCell = document.createElement('td');
+      const angleText = shot ? `${shot.angle}°` : '—';
+      const velocityText = shot ? String(shot.velocity) : '—';
+
+      angleCell.textContent = angleText;
+      velocityCell.textContent = velocityText;
+      angleCell.setAttribute('aria-label', `Angle ${angleText}`);
+      velocityCell.setAttribute('aria-label', `Velocity ${velocityText}`);
+      angleRow.appendChild(angleCell);
+      velocityRow.appendChild(velocityCell);
+    }
+
+    this.shotHistoryRowsEl.append(angleRow, velocityRow);
   }
 
   /**
@@ -359,6 +461,23 @@ export class UIManager {
     this.fireButton.disabled = true;
   }
 
+  private setGameOverControlsVisible(visible: boolean): void {
+    const controls = document.getElementById('controls') as HTMLDivElement | null;
+    if (!controls) return;
+
+    const angleField = this.angleInput.closest('label');
+    const velocityField = this.velocityInput.closest('label');
+
+    if (angleField) angleField.style.display = visible ? 'none' : '';
+    if (velocityField) velocityField.style.display = visible ? 'none' : '';
+    this.fireButton.style.display = visible ? 'none' : '';
+    this.rematchButton.style.display = visible ? 'inline-block' : 'none';
+    this.rematchButton.disabled = !visible;
+    if (visible) {
+      this.rematchButton.textContent = 'Play again';
+    }
+  }
+
   /**
    * Show game over message
    */
@@ -367,5 +486,26 @@ export class UIManager {
       ? `🎉 ${playerName} won! ${opponentName} lost.`
       : `😔 ${playerName} lost. ${opponentName} won!`;
     this.fireButton.disabled = true;
+    this.setGameOverControlsVisible(true);
+    this.rematchButton.disabled = false;
+    this.rematchButton.textContent = 'Play again';
+  }
+
+  public setRematchWaiting(playersReady: number): void {
+    this.rematchButton.style.display = 'inline-block';
+    this.rematchButton.disabled = true;
+    this.rematchButton.textContent = `Waiting (${playersReady}/2)`;
+  }
+
+  public showRematchAvailable(): void {
+    this.rematchButton.style.display = 'inline-block';
+    this.rematchButton.disabled = false;
+    this.rematchButton.textContent = 'Play again';
+  }
+
+  public prepareForNewRound(): void {
+    this.setGameOverControlsVisible(false);
+    this.rematchButton.style.display = 'none';
+    this.rematchButton.disabled = true;
   }
 }

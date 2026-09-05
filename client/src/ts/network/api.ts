@@ -16,6 +16,15 @@ export interface GameStatusResponse {
   status: 'pending' | 'active' | 'finished' | 'expired';
   playersConnected: number;
   requiredPlayers: 2;
+  rematchReady: boolean;
+  rematchPlayersReady: number;
+}
+
+export interface RematchResponse {
+  ready: boolean;
+  playersReady: number;
+  requiredPlayers: 2;
+  roundStarted: boolean;
 }
 
 export interface HealthResponse {
@@ -184,6 +193,19 @@ export class ApiClient {
     if (!response.ok) {
       throw new Error(await this.extractErrorMessage(response, 'Fire action failed'));
     }
+  }
+
+  public async requestRematch(gameId: string, sessionToken: string): Promise<RematchResponse> {
+    const response = await this.fetchWithTimeout(
+      `${this.baseUrl}/api/v1/games/${gameId}/rematch?sessionToken=${encodeURIComponent(sessionToken)}`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error(await this.extractErrorMessage(response, 'Rematch request failed'));
+    }
+
+    return response.json();
   }
 
   /**

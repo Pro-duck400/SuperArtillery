@@ -8,6 +8,10 @@ export type FireTransition =
   | { kind: 'hit'; hitTime: number }
   | { kind: 'miss'; nextPlayerId: 0 | 1 };
 
+export type RematchTransition =
+  | { kind: 'waiting'; playersReady: number }
+  | { kind: 'started'; playersReady: number; battlefield: Battlefield; round: number };
+
 export class GameRules {
   public startIfReady(game: PrivateGame, now: number = Date.now()): { battlefield: Battlefield } | null {
     if (
@@ -40,6 +44,12 @@ export class GameRules {
       game.invited.websocket = null;
     }
 
+    game.rematchReady[playerId] = false;
+
+    if (game.status === 'finished') {
+      return { statusChanged: false, status: game.status };
+    }
+
     if (game.gameStarted) {
       game.status = 'finished';
       game.gameFinishedAt = now;
@@ -52,6 +62,38 @@ export class GameRules {
     }
 
     return { statusChanged: false, status: game.status };
+  }
+
+  public requestRematch(
+    game: PrivateGame,
+    playerId: 0 | 1,
+    now: number = Date.now()
+  ): RematchTransition {
+    game.rematchReady[playerId] = true;
+    game.lastActivityAt = now;
+
+    const playersReady = game.rematchReady.filter(Boolean).length;
+    const bothPlayersConnected =
+      game.initiator.websocket?.readyState === WebSocket.OPEN &&
+      game.invited.websocket?.readyState === WebSocket.OPEN;
+    if (playersReady < 2 || !bothPlayersConnected) {
+      return { kind: 'waiting', playersReady };
+    }
+
+    game.rematchReady = [false, false];
+    game.round += 1;
+    game.status = 'active';
+    game.gameStarted = true;
+    game.currentTurn = 0;
+    game.gameFinishedAt = undefined;
+    game.battlefield = createBattlefield();
+
+    return {
+      kind: 'started',
+      playersReady,
+      battlefield: game.battlefield,
+      round: game.round
+    };
   }
 
   public fire(

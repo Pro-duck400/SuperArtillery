@@ -48,6 +48,8 @@ export interface PrivateGame {
   // Game state
   currentTurn: 0 | 1;
   gameStarted: boolean;
+  round: number;
+  rematchReady: [boolean, boolean];
   battlefield?: Battlefield;
   gameFinishedAt?: number; // Timestamp when game finished (for grace period)
 }
@@ -72,6 +74,8 @@ export interface GameStatusResponse {
   status: GameStatus;
   playersConnected: number;
   requiredPlayers: 2;
+  rematchReady: boolean;
+  rematchPlayersReady: number;
 }
 
 export interface HealthResponse {

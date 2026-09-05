@@ -55,7 +55,9 @@ export class InvitationService {
         websocket: null
       },
       currentTurn: 0,
-      gameStarted: false
+      gameStarted: false,
+      round: 1,
+      rematchReady: [false, false]
     };
 
     this.games.set(game);

@@ -2,6 +2,11 @@
 import type { GameState } from './types/game';
 import type { BattlefieldConfig } from './types/messages';
 
+export interface ShotHistoryEntry {
+  angle: number;
+  velocity: number;
+}
+
 export class Game {
   private state: GameState = {
     playerId: null,
@@ -12,6 +17,7 @@ export class Game {
   private battlefield: BattlefieldConfig | null = null;
   private playerName: string | null = null;
   private opponentName: string | null = null;
+  private shotHistory: ShotHistoryEntry[] = [];
 
   public getState(): GameState {
     return { ...this.state };
@@ -62,6 +68,18 @@ export class Game {
 
   public getOpponentName(): string | null {
     return this.opponentName;
+  }
+
+  public addShotToHistory(angle: number, velocity: number): void {
+    this.shotHistory = [{ angle, velocity }, ...this.shotHistory].slice(0, 4);
+  }
+
+  public getShotHistory(): ShotHistoryEntry[] {
+    return this.shotHistory.map((shot) => ({ ...shot }));
+  }
+
+  public resetShotHistory(): void {
+    this.shotHistory = [];
   }
 }
 

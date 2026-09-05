@@ -2,6 +2,18 @@
 import type { Projectile } from './types/game';
 import type { BattlefieldConfig } from './types/messages';
 import { Terrain } from './terrain';
+import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
+
+export interface RenderState {
+  projectile: Projectile | null;
+  activeTrajectory: TrajectoryPoint[];
+  historicalTrajectories: HistoricalTrajectory[];
+}
+
+const ACTIVE_TRAJECTORY_COLOR = '#FFA500';
+const CASTLE_EMOJIS = [
+  '🏰', '🏯', '🏟️', '🏛️', '🛖', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '💒', '🗼', '⛪', '🗽', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛺', '🎪'
+] as const;
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -11,6 +23,7 @@ export class Renderer {
   private castleHeight = 10;
   private battlefield: BattlefieldConfig | null = null;
   private castleLeftByPlayerId: Record<0 | 1, number> = { 0: 20, 1: 260 };
+  private castleGlyphs: Record<0 | 1, string> = { 0: '🏰', 1: '🏯' };
   private activeCastlePlayerId: 0 | 1 | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -59,6 +72,7 @@ export class Renderer {
     const length = Math.min(45, Math.abs(this.battlefield.wind));
     const endX = centerX + direction * length;
 
+    this.ctx.save();
     this.ctx.strokeStyle = '#ffffff';
     this.ctx.fillStyle = '#ffffff';
     this.ctx.lineWidth = 2;
@@ -72,16 +86,44 @@ export class Renderer {
     this.ctx.lineTo(endX - direction * 6, y + 4);
     this.ctx.closePath();
     this.ctx.fill();
+    this.ctx.restore();
   }
 
-  public drawCastle(leftX: number, isActive: boolean = false): void {
-    this.ctx.fillStyle = isActive ? '#ffd700' : '#808080';
-    this.ctx.fillRect(
-      leftX,
-      this.getCastleBaseY(leftX) - this.castleHeight,
-      this.castleWidth,
-      this.castleHeight
-    );
+  private randomizeCastleGlyphs(): void {
+    const pool = [...CASTLE_EMOJIS];
+    const leftIndex = Math.floor(Math.random() * pool.length);
+    let rightIndex = Math.floor(Math.random() * pool.length);
+
+    while (rightIndex === leftIndex) {
+      rightIndex = Math.floor(Math.random() * pool.length);
+    }
+
+    this.castleGlyphs = {
+      0: pool[leftIndex],
+      1: pool[rightIndex]
+    };
+  }
+
+  public drawCastle(playerId: 0 | 1, leftX: number, isActive: boolean = false): void {
+    const baseY = this.getCastleBaseY(leftX);
+    const glyph = this.castleGlyphs[playerId] ?? (playerId === 0 ? '🏰' : '🏯');
+    const fontSize = Math.max(10, Math.round(this.castleHeight * 1.7));
+
+    this.ctx.save();
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'bottom';
+    this.ctx.font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+    this.ctx.fillStyle = isActive ? '#ffd700' : '#ffffff';
+    this.ctx.fillText(glyph, leftX - 6, baseY + 2);
+
+    // DEBUG: Uncomment to show the calculated castle box against the emoji.
+    // const topY = baseY - this.castleHeight;
+    // this.ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+    // this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';
+    // this.ctx.lineWidth = 1;
+    // this.ctx.fillRect(leftX - 1, topY - 1, this.castleWidth + 2, this.castleHeight + 2);
+    // this.ctx.strokeRect(leftX - 1, topY - 1, this.castleWidth + 2, this.castleHeight + 2);
+    this.ctx.restore();
   }
 
   public applyBattlefield(battlefield: BattlefieldConfig): void {
@@ -91,12 +133,13 @@ export class Renderer {
     this.groundY = battlefield.groundY;
     this.castleWidth = battlefield.castleWidth;
     this.castleHeight = battlefield.castleHeight;
+    this.randomizeCastleGlyphs();
 
     battlefield.castles.forEach((castle) => {
       this.castleLeftByPlayerId[castle.playerId] = castle.left_x;
     });
 
-    this.render(null);
+    this.render({ projectile: null, activeTrajectory: [], historicalTrajectories: [] });
   }
 
   public getGroundY(): number {
@@ -128,6 +171,18 @@ export class Renderer {
     return this.castleLeftByPlayerId[playerId] + this.castleWidth / 2;
   }
 
+  public getCastleLabelPosition(playerId: 0 | 1): { x: number; y: number } {
+    const castle = this.battlefield?.castles.find((item) => item.playerId === playerId);
+    if (!castle) {
+      return { x: this.getCastleMuzzleX(playerId), y: this.groundY };
+    }
+
+    return {
+      x: castle.left_x + this.castleWidth / 2,
+      y: castle.base_y + 4
+    };
+  }
+
   /**
    * Highlight the castle of the player whose turn it is (null clears the highlight)
    */
@@ -142,10 +197,11 @@ export class Renderer {
     this.ctx.fill();
   }
 
-  public drawTrajectory(trajectory: Array<{ x: number; y: number }>): void {
+  public drawActiveTrajectory(trajectory: TrajectoryPoint[]): void {
     if (trajectory.length < 2) return;
 
-    this.ctx.strokeStyle = '#FFA500';
+    this.ctx.save();
+    this.ctx.strokeStyle = ACTIVE_TRAJECTORY_COLOR;
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([2, 2]); // Dashed line
     this.ctx.beginPath();
@@ -156,23 +212,42 @@ export class Renderer {
     }
     
     this.ctx.stroke();
-    this.ctx.setLineDash([]); // Reset to solid line
+    this.ctx.restore();
   }
 
-  public render(projectile: Projectile | null, trajectory: Array<{ x: number; y: number }> = []): void {
+  private drawHistoricalTrajectories(trajectories: HistoricalTrajectory[]): void {
+    for (const trajectory of trajectories) {
+      if (trajectory.points.length < 2) continue;
+
+      this.ctx.save();
+      this.ctx.strokeStyle = `rgba(255, 165, 0, ${trajectory.opacity})`;
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([2, 3]);
+      this.ctx.beginPath();
+      this.ctx.moveTo(trajectory.points[0].x, trajectory.points[0].y);
+      for (let index = 1; index < trajectory.points.length; index += 1) {
+        this.ctx.lineTo(trajectory.points[index].x, trajectory.points[index].y);
+      }
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+  }
+
+  public render(state: RenderState): void {
     this.clear();
     this.drawWind();
     this.drawGround();
-    this.drawCastle(this.castleLeftByPlayerId[0], this.activeCastlePlayerId === 0);
-    this.drawCastle(this.castleLeftByPlayerId[1], this.activeCastlePlayerId === 1);
+    this.drawCastle(0, this.castleLeftByPlayerId[0], this.activeCastlePlayerId === 0);
+    this.drawCastle(1, this.castleLeftByPlayerId[1], this.activeCastlePlayerId === 1);
+    this.drawHistoricalTrajectories(state.historicalTrajectories);
 
     // Draw trajectory first (so it appears behind the projectile)
-    if (trajectory.length > 0) {
-      this.drawTrajectory(trajectory);
+    if (state.activeTrajectory.length > 0) {
+      this.drawActiveTrajectory(state.activeTrajectory);
     }
 
-    if (projectile) {
-      this.drawProjectile(projectile);
+    if (state.projectile) {
+      this.drawProjectile(state.projectile);
     }
   }
 }
