@@ -173,6 +173,75 @@ Sent when a shot hits the opponent's castle.
 { "type": "game_over", "playerId_winner": 0 }
 ```
 
+#### Rematch Status
+Broadcast to both players whenever one of them requests another round.
+```json
+{
+  "type": "rematch_status",
+  "playersReady": 1,
+  "requiredPlayers": 2
+}
+```
+
+### Request a Rematch
+
+After `game_over`, either player can request another round. The request is authenticated with the player's session token:
+
+**POST** `/api/v1/games/{gameId}/rematch?sessionToken=...`
+
+**Response `200`:**
+```json
+{
+  "ready": true,
+  "playersReady": 1,
+  "requiredPlayers": 2,
+  "roundStarted": false
+}
+```
+
+The first request waits for the other player. When both players have requested a rematch, the second response has `roundStarted: true`; the server resets readiness, creates a new battlefield, increments the round, and sends `game_start` followed by `turn_change` to both WebSocket clients.
+
+**Errors:**
+- `400 REMATCH_NOT_AVAILABLE` - the game has not finished yet.
+- `401 INVALID_SESSION_TOKEN` - the session token is missing or does not belong to the game.
+- `404 GAME_NOT_FOUND` - the game does not exist.
+
+### Rematch Example: Step by Step
+
+This example assumes Alice (`playerId: 0`) won round 1 and both players keep their existing WebSocket connections open.
+
+```mermaid
+sequenceDiagram
+    participant Alice
+    participant Server
+    participant Bob
+
+    Note over Alice,Bob: Round 1 ends
+    Server->>Alice: WS game_over {playerId_winner: 0}
+    Server->>Bob: WS game_over {playerId_winner: 0}
+
+    Note over Alice,Server: Step 1 - Alice asks to play again
+    Alice->>Server: POST /api/v1/games/game-123/rematch?sessionToken=alice-token
+    Server->>Alice: WS rematch_status {playersReady: 1, requiredPlayers: 2}
+    Server->>Bob: WS rematch_status {playersReady: 1, requiredPlayers: 2}
+    Server-->>Alice: 200 {ready: true, playersReady: 1, roundStarted: false}
+    Note over Server,Bob: Game remains finished while Bob decides
+
+    Note over Bob,Server: Step 2 - Bob asks to play again
+    Bob->>Server: POST /api/v1/games/game-123/rematch?sessionToken=bob-token
+    Server->>Alice: WS rematch_status {playersReady: 2, requiredPlayers: 2}
+    Server->>Bob: WS rematch_status {playersReady: 2, requiredPlayers: 2}
+    Server->>Alice: WS game_start {round: 2, battlefield: new}
+    Server->>Bob: WS game_start {round: 2, battlefield: new}
+    Server->>Alice: WS turn_change {playerId_turn: 0}
+    Server->>Bob: WS turn_change {playerId_turn: 0}
+    Server-->>Bob: 200 {ready: true, playersReady: 2, roundStarted: true}
+
+    Note over Alice,Bob: Round 2 is active. Alice starts.
+```
+
+After the second request starts the new round, `GET /api/v1/games/{gameId}/status` reports `status: "active"`, `rematchPlayersReady: 0`, and each player's `rematchReady: false`.
+
 ---
 
 ## Sample Game Flow Diagram
