@@ -39,12 +39,28 @@ canvas {
   image-rendering: pixelated;
 }
 
-.player-name-left {
-  text-align: left; 
+#battlefieldFrame {
+  position: relative;
+  width: 100%;
+  margin: 20px auto;
 }
 
-.player-name-right {
-  text-align: right; 
+#battlefieldFrame canvas {
+  margin: 0 auto;
+}
+
+.player-name-overlay {
+  position: absolute;
+  z-index: 1;
+  transform: translateX(-50%);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+  pointer-events: none;
+  text-align: center;
 }
 
 .player-name-connected {

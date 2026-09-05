@@ -30,8 +30,8 @@ describe('UIManager private game flow', () => {
           </div>
         </div>
         <div id="gamePanel" style="display: none;">
-          <canvas id="gameCanvas" width="280" height="160"></canvas>
-          <div id="playerNamesRow">
+          <div id="battlefieldFrame">
+            <canvas id="gameCanvas" width="280" height="160"></canvas>
             <div id="playerNameLeft"></div>
             <div id="playerNameRight"></div>
           </div>
@@ -202,6 +202,22 @@ describe('UIManager private game flow', () => {
 
     ui.updateTurnUI(1, false);
     expect(right.classList.contains('player-name-active-turn')).toBe(true);
+  });
+
+  it('positions player names at their castle labels when coordinates are provided', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const left = document.getElementById('playerNameLeft') as HTMLDivElement;
+    const right = document.getElementById('playerNameRight') as HTMLDivElement;
+
+    ui.setPlayerNames(0, 'Alice', 'Bob', {
+      left: { x: 25, y: 146 },
+      right: { x: 255, y: 142 }
+    });
+
+    expect(left.style.left).toBe('25px');
+    expect(left.style.top).toBe('146px');
+    expect(right.style.left).toBe('255px');
+    expect(right.style.top).toBe('142px');
   });
 
   it('shows both player names in the game over message', () => {

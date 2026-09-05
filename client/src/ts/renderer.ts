@@ -128,6 +128,18 @@ export class Renderer {
     return this.castleLeftByPlayerId[playerId] + this.castleWidth / 2;
   }
 
+  public getCastleLabelPosition(playerId: 0 | 1): { x: number; y: number } {
+    const castle = this.battlefield?.castles.find((item) => item.playerId === playerId);
+    if (!castle) {
+      return { x: this.getCastleMuzzleX(playerId), y: this.groundY };
+    }
+
+    return {
+      x: castle.left_x + this.castleWidth / 2,
+      y: castle.base_y + 4
+    };
+  }
+
   /**
    * Highlight the castle of the player whose turn it is (null clears the highlight)
    */

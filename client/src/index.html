@@ -50,11 +50,11 @@
     
     <!-- Game Panel (hidden initially) -->
     <div id="gamePanel" style="display: none;">
-      <canvas id="gameCanvas" width="280" height="160"></canvas>
-            <div id="playerNamesRow" style="display: flex; justify-content: space-between; margin: 8px 0 8px 0;">
-              <div id="playerNameLeft" class="player-name, player-name-left">...</div>
-              <div id="playerNameRight" class="player-name, player-name-right">...</div>
-            </div>
+      <div id="battlefieldFrame">
+        <canvas id="gameCanvas" width="280" height="160"></canvas>
+        <div id="playerNameLeft" class="player-name-overlay player-name-left">...</div>
+        <div id="playerNameRight" class="player-name-overlay player-name-right">...</div>
+      </div>
       
       <div id="controls">
         <label>

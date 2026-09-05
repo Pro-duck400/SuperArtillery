@@ -81,7 +81,10 @@ function wireGameClientEvents(client: GameClient): void {
     // Switch from the registration/lobby panel (invite info) to the battlefield now that the opponent has joined.
     if (playerId !== null) {
       uiManager.showGamePanel();
-      uiManager.setPlayerNames(playerId, clientName, opponentName);
+      uiManager.setPlayerNames(playerId, clientName, opponentName, {
+        left: renderer.getCastleLabelPosition(0),
+        right: renderer.getCastleLabelPosition(1)
+      });
     }
 
     uiManager.renderShotHistory(game.getShotHistory());

@@ -182,9 +182,19 @@ export class UIManager {
   }
 
   // changed playerId parameter from 0 | 1 to string as it causes an error in main when called
-  public setPlayerNames(playerId: number, playerName: string, opponentName: string): void {
+  public setPlayerNames(
+    playerId: number,
+    playerName: string,
+    opponentName: string,
+    positions?: { left: { x: number; y: number }; right: { x: number; y: number } }
+  ): void {
     const leftNameEl = document.getElementById('playerNameLeft');
     const rightNameEl = document.getElementById('playerNameRight');
+
+    if (positions) {
+      this.positionPlayerName(leftNameEl, positions.left);
+      this.positionPlayerName(rightNameEl, positions.right);
+    }
 
     if (playerId === 0) {
         if (leftNameEl) {
@@ -205,6 +215,12 @@ export class UIManager {
             rightNameEl.classList.add('player-name-connected');
         }
     }
+  }
+
+  private positionPlayerName(element: HTMLElement | null, position: { x: number; y: number }): void {
+    if (!element) return;
+    element.style.left = `${position.x}px`;
+    element.style.top = `${position.y}px`;
   }
 
 
