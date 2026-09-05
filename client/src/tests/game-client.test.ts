@@ -60,4 +60,15 @@ describe('GameClient private-game flow', () => {
     game.setPlayer(0, 'Alice');
     expect(client.getPlayerId()).toBe(0);
   });
+
+  it('records only local player shots received from the server', () => {
+    const game = new Game();
+    game.setPlayer(0, 'Alice');
+    const client = new GameClient('http://localhost:3000', 'ws://localhost:3000', game);
+
+    (client as any).handleMessage({ type: 'shot', playerId: 1, angle: 20, velocity: 100 });
+    (client as any).handleMessage({ type: 'shot', playerId: 0, angle: 45, velocity: 150 });
+
+    expect(game.getShotHistory()).toEqual([{ angle: 45, velocity: 150 }]);
+  });
 });

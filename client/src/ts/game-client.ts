@@ -236,6 +236,7 @@ export class GameClient {
   private handleMessage(message: GameMessage): void {
     switch (message.type) {
       case 'game_start':
+        this.game.resetShotHistory();
         this.game.setOpponentName(message.opponentName);
         const gameId = message.gameId;
         this.game.setGameId(gameId);
@@ -247,6 +248,9 @@ export class GameClient {
         break;
 
       case 'shot':
+        if (message.playerId === this.game.getPlayerId()) {
+          this.game.addShotToHistory(message.angle, message.velocity);
+        }
         if (this.onShotCallback) {
           this.onShotCallback({
             playerId: message.playerId,

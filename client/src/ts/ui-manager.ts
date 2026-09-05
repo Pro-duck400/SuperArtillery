@@ -1,4 +1,6 @@
 // Manages all DOM interactions and UI state
+import type { ShotHistoryEntry } from './game';
+
 export class UIManager {
   // DOM elements
   private registrationPanel: HTMLDivElement;
@@ -19,6 +21,7 @@ export class UIManager {
   private copyInviteCodeButton: HTMLButtonElement;
   private copyInviteUrlButton: HTMLButtonElement;
   private messageEl: HTMLDivElement;
+  private shotHistoryRowsEl: HTMLTableSectionElement;
   private angleInput: HTMLInputElement;
   private velocityInput: HTMLInputElement;
   private fireButton: HTMLButtonElement;
@@ -50,6 +53,7 @@ export class UIManager {
     this.copyInviteCodeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
     this.copyInviteUrlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
     this.messageEl = document.getElementById('message') as HTMLDivElement;
+    this.shotHistoryRowsEl = document.getElementById('shotHistoryRows') as HTMLTableSectionElement;
     this.angleInput = document.getElementById('angleInput') as HTMLInputElement;
     this.velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
@@ -320,6 +324,39 @@ export class UIManager {
    */
   public setMessage(text: string): void {
     this.messageEl.textContent = text;
+  }
+
+  public renderShotHistory(history: ShotHistoryEntry[]): void {
+    this.shotHistoryRowsEl.replaceChildren();
+
+    const angleRow = document.createElement('tr');
+    const velocityRow = document.createElement('tr');
+    const angleLabel = document.createElement('th');
+    const velocityLabel = document.createElement('th');
+
+    angleLabel.scope = 'row';
+    angleLabel.textContent = 'Angle';
+    velocityLabel.scope = 'row';
+    velocityLabel.textContent = 'Velocity';
+    angleRow.appendChild(angleLabel);
+    velocityRow.appendChild(velocityLabel);
+
+    for (let index = 0; index < 4; index += 1) {
+      const shot = history[index];
+      const angleCell = document.createElement('td');
+      const velocityCell = document.createElement('td');
+      const angleText = shot ? `${shot.angle}°` : '—';
+      const velocityText = shot ? String(shot.velocity) : '—';
+
+      angleCell.textContent = angleText;
+      velocityCell.textContent = velocityText;
+      angleCell.setAttribute('aria-label', `Angle ${angleText}`);
+      velocityCell.setAttribute('aria-label', `Velocity ${velocityText}`);
+      angleRow.appendChild(angleCell);
+      velocityRow.appendChild(velocityCell);
+    }
+
+    this.shotHistoryRowsEl.append(angleRow, velocityRow);
   }
 
   /**

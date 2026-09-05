@@ -6,13 +6,13 @@ import { ProjectileAnimator } from './projectile-animator';
 import { UIManager } from './ui-manager';
 import { GameClient } from './game-client';
 import { CONTRACT_VERSION } from './contract-version';
-import { CLIENT_VERSION } from './client-version';
+import clientPackage from '../../package.json';
 
 console.log('SuperArtillery initializing...');
 
 const clientVersion = document.getElementById('clientVersion');
 if (clientVersion) {
-  clientVersion.textContent = `Client v${CLIENT_VERSION} | Contract v${CONTRACT_VERSION}`;
+  clientVersion.textContent = `Client v${clientPackage.version} | Contract v${CONTRACT_VERSION}`;
 }
 
 const BUILT_IN_DEFAULT = 'http://localhost:3000';
@@ -84,12 +84,16 @@ function wireGameClientEvents(client: GameClient): void {
       uiManager.setPlayerNames(playerId, clientName, opponentName);
     }
 
+    uiManager.renderShotHistory(game.getShotHistory());
     uiManager.setMessage('Game starting! Waiting for first turn...');
   });
 
   client.onShot((data) => {
     const playerId = client.getPlayerId();
     const isMyShot = playerId !== null && data.playerId === playerId;
+    if (isMyShot) {
+      uiManager.renderShotHistory(game.getShotHistory());
+    }
     uiManager.setMessage(
       isMyShot
         ? `You fired: angle=${data.angle}°, velocity=${data.velocity}`

@@ -37,6 +37,10 @@ describe('UIManager private game flow', () => {
             <input id="velocityInput" value="150" />
             <button id="fireButton" disabled>Fire!</button>
           </div>
+          <section id="shotHistory">
+            <h2 id="shotHistoryTitle">Your last four shots</h2>
+            <table><tbody id="shotHistoryRows"></tbody></table>
+          </section>
           <div id="message"></div>
         </div>
       </div>
@@ -181,5 +185,23 @@ describe('UIManager private game flow', () => {
 
     ui.showGameOver(true, 'Alex', 'Bob');
     expect(message.textContent).toBe('🎉 Alex won! Bob lost.');
+  });
+
+  it('renders angle and velocity as rows with newest-first history columns', () => {
+    const ui = new UIManager('http://localhost:3000');
+
+    ui.renderShotHistory([
+      { angle: 45, velocity: 150 },
+      { angle: 30, velocity: 120 }
+    ]);
+
+    const rows = document.querySelectorAll('#shotHistoryRows tr');
+    expect(rows).toHaveLength(2);
+    expect(Array.from(rows[0].querySelectorAll('th, td')).map((cell) => cell.textContent)).toEqual([
+      'Angle', '45°', '30°', '—', '—'
+    ]);
+    expect(Array.from(rows[1].querySelectorAll('th, td')).map((cell) => cell.textContent)).toEqual([
+      'Velocity', '150', '120', '—', '—'
+    ]);
   });
 });
