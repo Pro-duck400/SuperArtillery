@@ -108,7 +108,6 @@ export class Renderer {
     const baseY = this.getCastleBaseY(leftX);
     const glyph = this.castleGlyphs[playerId] ?? (playerId === 0 ? '🏰' : '🏯');
     const fontSize = Math.max(10, Math.round(this.castleHeight * 1.7));
-    const topY = baseY - this.castleHeight;
 
     this.ctx.save();
     this.ctx.textAlign = 'left';
@@ -118,6 +117,7 @@ export class Renderer {
     this.ctx.fillText(glyph, leftX - 6, baseY + 2);
 
     // DEBUG: Uncomment to show the calculated castle box against the emoji.
+    // const topY = baseY - this.castleHeight;
     // this.ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
     // this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';
     // this.ctx.lineWidth = 1;
