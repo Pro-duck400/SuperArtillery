@@ -11,7 +11,7 @@
     <!-- Registration / Lobby Panel -->
     <div id="registrationPanel" style="display: block;">
       <h2>Welcome to SuperArtillery!</h2>
-      <div>
+      <div id="registrationFields">
         <label id="serverAddressLabel">
           Enter your name:
           <input type="text" id="playerNameInput" placeholder="Your name" maxlength="20" />
@@ -28,13 +28,12 @@
           </span>
         </label>
       </div>
-      <div style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
-        <button id="registerButton">Create Private Game</button>
+      <div id="registrationActions" style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
         <label id="inviteInputLabel" style="display: flex; align-items: center; gap: 8px;">
           Invite code:
           <input type="text" id="inviteInput" placeholder="ABCD" maxlength="4" autocomplete="off" />
         </label>
-        <button id="joinGameButton" disabled>Join with Invite</button>
+        <button id="actionButton">Create Private Game</button>
       </div>
       <div id="registrationError" style="color: red; margin-top: 10px;"></div>
       <div id="inviteInfo" style="margin-top: 12px; display: none;">

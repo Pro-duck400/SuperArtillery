@@ -6,18 +6,21 @@ describe('UIManager private game flow', () => {
     document.body.innerHTML = `
       <div id="app">
         <div id="registrationPanel" style="display: block;">
-          <input id="playerNameInput" value="" />
-          <label id="serverAddressLabel"><span class="server-address-combobox">
-            <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
-            <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
-            <span id="serverAddressOptions" role="listbox" hidden>
-              <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
-              <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
-            </span>
-          </span></label>
-          <button id="registerButton">Create Private Game</button>
-          <button id="joinGameButton" disabled>Join with Invite</button>
-          <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
+          <div id="registrationFields">
+            <input id="playerNameInput" value="" />
+            <label id="serverAddressLabel"><span class="server-address-combobox">
+              <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
+              <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
+              <span id="serverAddressOptions" role="listbox" hidden>
+                <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
+                <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
+              </span>
+            </span></label>
+          </div>
+          <div id="registrationActions">
+            <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
+            <button id="actionButton">Create Private Game</button>
+          </div>
           <div id="registrationError"></div>
           <div id="inviteInfo">
             <span id="inviteCodeText"></span>
@@ -72,7 +75,7 @@ describe('UIManager private game flow', () => {
 
     const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
-    const button = document.getElementById('registerButton') as HTMLButtonElement;
+    const button = document.getElementById('actionButton') as HTMLButtonElement;
 
     nameInput.value = 'Alice';
     serverInput.value = 'http://localhost:3000';
@@ -81,37 +84,43 @@ describe('UIManager private game flow', () => {
     expect(createSpy).toHaveBeenCalledWith('Alice', 'http://localhost:3000');
   });
 
-  it('requires an invite code before joining a game', () => {
+  it('changes to join mode when an invite code is entered', () => {
     const ui = new UIManager('http://localhost:3000');
     const joinSpy = vi.fn();
     ui.onJoinGame(joinSpy);
 
     const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
-    const joinButton = document.getElementById('joinGameButton') as HTMLButtonElement;
+    const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
+    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
     const error = document.getElementById('registrationError') as HTMLDivElement;
 
     nameInput.value = 'Bob';
     serverInput.value = 'http://localhost:3000';
-    expect(joinButton.disabled).toBe(true);
+    expect(actionButton.textContent).toBe('Create Private Game');
 
-    expect(joinSpy).not.toHaveBeenCalled();
+    inviteInput.value = 'ABCD';
+    inviteInput.dispatchEvent(new Event('input'));
+    expect(actionButton.textContent).toBe('Join with Invite');
+
+    inviteInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+    expect(joinSpy).toHaveBeenCalledWith('ABCD', 'Bob', 'http://localhost:3000');
     expect(error.textContent).toBe('');
   });
 
   it('enables joining only for populated invite-code input and hides server selection for invite links', () => {
     const ui = new UIManager('http://localhost:3000');
-    const joinButton = document.getElementById('joinGameButton') as HTMLButtonElement;
+    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
     const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
     const serverLabel = document.getElementById('serverAddressLabel') as HTMLLabelElement;
 
-    expect(joinButton.disabled).toBe(true);
+    expect(actionButton.textContent).toBe('Create Private Game');
     inviteInput.value = 'https://example.com/?invite=ABCD';
     inviteInput.dispatchEvent(new Event('input'));
-    expect(joinButton.disabled).toBe(true);
+    expect(actionButton.textContent).toBe('Join with Invite');
     inviteInput.value = 'ABCD';
     inviteInput.dispatchEvent(new Event('input'));
-    expect(joinButton.disabled).toBe(false);
+    expect(actionButton.textContent).toBe('Join with Invite');
 
     ui.setServerAddress('https://api.example.com');
     ui.enterJoinOnlyMode('ABCD');
@@ -128,6 +137,27 @@ describe('UIManager private game flow', () => {
     expect(inviteInfo.style.display).toBe('block');
     expect(inviteInfo.textContent).toContain('ABCD');
     expect(inviteInfo.textContent).toContain('https://example.com/?invite=token');
+  });
+
+  it('hides lobby inputs while creating and restores them after an error', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const fields = document.getElementById('registrationFields') as HTMLDivElement;
+    const inviteLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
+    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
+
+    ui.showRegistering();
+
+    expect(fields.style.display).toBe('none');
+    expect(inviteLabel.style.display).toBe('none');
+    expect(actionButton.disabled).toBe(true);
+    expect(actionButton.textContent).toBe('Creating...');
+
+    ui.showRegistrationError('Server unavailable');
+
+    expect(fields.style.display).toBe('');
+    expect(inviteLabel.style.display).toBe('');
+    expect(actionButton.disabled).toBe(false);
+    expect(actionButton.textContent).toBe('Create Private Game');
   });
 
   it('copies the invite URL to the clipboard when the copy button is clicked', async () => {

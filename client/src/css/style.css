@@ -72,6 +72,15 @@ canvas {
   flex-wrap: wrap;
 }
 
+#registrationActions.registration-actions-pending {
+  justify-content: center;
+}
+
+#inviteInfo {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -99,10 +108,15 @@ input[type="number"] {
   font-size: 16px;
 }
 
+#serverAddressInput {
+  width: 480px;
+  max-width: 100%;
+}
+
 .server-address-combobox {
   position: relative;
   display: flex;
-  width: 220px;
+  width: min(480px, 100%);
 }
 
 .server-address-combobox > input {
@@ -235,8 +249,7 @@ button:not(:disabled):hover {
   }
 
   .server-address-combobox {
-    width: 100%;
-    min-width: 220px;
+    width: min(480px, 100%);
   }
 
   #controls {
