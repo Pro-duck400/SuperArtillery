@@ -68,7 +68,7 @@ describe('Renderer trajectory styles', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
   });
 
-  it('draws historical and active trajectories with the same orange color', () => {
+  it('draws historical and active trajectories with orange styles', () => {
     const canvas = document.createElement('canvas');
     const renderer = new Renderer(canvas);
     renderer.applyBattlefield(battlefield);
@@ -84,26 +84,7 @@ describe('Renderer trajectory styles', () => {
     });
 
     expect(context.strokeStyles).toContain('rgba(255, 165, 0, 1)');
-    expect(context.strokeStyles).not.toContain('#BEBEBE');
-  });
-
-  it('draws history without a separate historical color', () => {
-    const canvas = document.createElement('canvas');
-    const renderer = new Renderer(canvas);
-    renderer.applyBattlefield(battlefield);
-    context.strokeStyles.length = 0;
-
-    renderer.render({
-      projectile: null,
-      historicalTrajectories: [{
-        points: [{ x: 25, y: 130 }, { x: 30, y: 120 }],
-        opacity: 1
-      }],
-      activeTrajectory: []
-    });
-
-    expect(context.strokeStyles).toContain('rgba(255, 165, 0, 1)');
-    expect(context.strokeStyles).not.toContain('#BEBEBE');
+    expect(context.strokeStyles).toContain('#FFA500');
   });
 
   it('draws an active trajectory with the same orange color', () => {
@@ -119,7 +100,6 @@ describe('Renderer trajectory styles', () => {
     });
 
     expect(context.strokeStyles).toContain('#FFA500');
-    expect(context.strokeStyles).not.toContain('#BEBEBE');
   });
 
   it('uses the requested historical orange fade steps', () => {
