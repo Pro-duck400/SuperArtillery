@@ -165,6 +165,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hot-seat/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a hot-seat game */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateHotSeatRequest"];
+                };
+            };
+            responses: {
+                /** @description Hot-seat game created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreateHotSeatResponse"];
+                    };
+                };
+                /** @description Invalid player names */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games/{gameId}/status": {
         parameters: {
             query?: never;
@@ -429,6 +478,19 @@ export interface components {
             inviteUrl: string;
             /** @description Short 4-character alphanumeric code (easy to type) */
             inviteCode: string;
+        };
+        CreateHotSeatRequest: {
+            firstPlayerName: string;
+            secondPlayerName: string;
+        };
+        HotSeatPlayer: {
+            playerId: components["schemas"]["PlayerId"];
+            playerName: string;
+            playerToken: string;
+        };
+        CreateHotSeatResponse: {
+            gameId: string;
+            players: components["schemas"]["HotSeatPlayer"][];
         };
         AcceptInvitationRequest: {
             /** @description Short invite code from the invitation link or displayed code */

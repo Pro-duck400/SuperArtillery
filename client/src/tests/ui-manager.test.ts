@@ -6,21 +6,19 @@ describe('UIManager private game flow', () => {
     document.body.innerHTML = `
       <div id="app">
         <div id="registrationPanel" style="display: block;">
-          <div id="registrationFields">
-            <input id="playerNameInput" value="" maxlength="15" />
-            <label id="serverAddressLabel"><span class="server-address-combobox">
-              <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
-              <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
-              <span id="serverAddressOptions" role="listbox" hidden>
-                <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
-                <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
-              </span>
-            </span></label>
-          </div>
-          <div id="registrationActions">
-            <label id="inviteInputLabel"><input id="inviteInput" value="" /></label>
-            <button id="actionButton">Create Private Game</button>
-          </div>
+          <div id="serverRow"><label id="serverAddressLabel"><span class="server-address-combobox">
+            <input id="serverAddressInput" value="" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
+            <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
+            <span id="serverAddressOptions" role="listbox" hidden>
+              <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
+              <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
+            </span>
+          </span><div id="serverHealthStatus" role="status"><span id="serverHealthMessage"></span><a href="#" id="serverHealthButton" role="button">🔄</a></div></label></div>
+          <div id="lobbyModeRow"><span class="lobby-select"><button id="lobbyModeToggle">Create</button><span id="lobbyModeOptions" role="listbox" hidden><button role="option" data-mode="create"></button><button role="option" data-mode="join"></button></span></span></div>
+          <div id="joinGameRow" hidden><label><input id="joinPlayerNameInput" /></label><label id="inviteInputLabel"><input id="inviteInput" value="" /></label><button id="joinGameButton">Join the game</button></div>
+          <div id="createGameRow"><div><button id="createModeToggle">over Internet</button><span id="createModeOptions" role="listbox" hidden><button role="option" data-mode="internet"></button><button role="option" data-mode="device"></button></span></div></div>
+          <div id="internetGameRow"><input id="playerNameInput" value="" maxlength="15" /><button id="actionButton">Create Game</button></div>
+          <div id="hotSeatPanel" hidden><input id="hotSeatPlayerOneInput" /><input id="hotSeatPlayerTwoInput" /><button id="startHotSeatButton">Start Hot Seat</button></div>
           <div id="registrationError"></div>
           <div id="inviteInfo">
             <span id="inviteCodeText"></span>
@@ -56,7 +54,7 @@ describe('UIManager private game flow', () => {
     new UIManager('https://superartillery-server-production.up.railway.app');
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     const toggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
-    const options = document.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    const options = document.querySelectorAll<HTMLButtonElement>('#serverAddressOptions [role="option"]');
 
     expect(serverInput.value).toBe('https://superartillery-server-production.up.railway.app');
     toggle.click();
@@ -68,6 +66,75 @@ describe('UIManager private game flow', () => {
 
     options[1].click();
     expect(serverInput.value).toBe('http://localhost:3000');
+  });
+
+  it('shows server health details after selecting a server', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: '1.2.0', contractVersion: '1.2.0' })
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    new UIManager('http://localhost:3000');
+
+    const option = document.querySelector<HTMLButtonElement>('#serverAddressOptions [role="option"]') as HTMLButtonElement;
+    option.click();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('https://superartillery-server-production.up.railway.app/api/v1/health'));
+    await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toMatch(
+      /^Server v1\.2\.0 \| Contract v1\.2\.0 \| Response time: \d+ms$/
+    ));
+    vi.unstubAllGlobals();
+  });
+
+  it('checks the preselected server automatically', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: '1.2.0', contractVersion: '1.2.0' })
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    new UIManager('http://localhost:3000');
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3000/api/v1/health'));
+    await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toMatch(
+      /^Server v1\.2\.0 \| Contract v1\.2\.0 \| Response time: \d+ms$/
+    ));
+    vi.unstubAllGlobals();
+  });
+
+  it('checks the current server when the refresh button is pressed', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: '1.2.0', contractVersion: '1.2.0' })
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    new UIManager('http://localhost:3000');
+
+    const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
+    serverInput.value = 'https://custom.example.com';
+    (document.getElementById('serverHealthButton') as HTMLAnchorElement).click();
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('https://custom.example.com/api/v1/health'));
+    vi.unstubAllGlobals();
+  });
+
+  it('shows a red error when the selected server health check fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Failed to fetch')));
+    new UIManager('http://localhost:3000');
+
+    const option = document.querySelector<HTMLButtonElement>('#serverAddressOptions [role="option"]') as HTMLButtonElement;
+    option.click();
+    await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toBe('Failed to fetch'));
+
+    expect(document.getElementById('serverHealthStatus')?.classList.contains('error')).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it('shows Create and over Internet as the collapsed default selections', () => {
+    new UIManager('http://localhost:3000');
+
+    expect(document.getElementById('lobbyModeToggle')?.textContent).toBe('Create');
+    expect(document.getElementById('createModeToggle')?.textContent).toBe('over Internet');
+    expect(document.getElementById('lobbyModeOptions')?.hidden).toBe(true);
+    expect(document.getElementById('createModeOptions')?.hidden).toBe(true);
   });
 
   it('allows creating a private game from the lobby', () => {
@@ -84,6 +151,42 @@ describe('UIManager private game flow', () => {
     button.click();
 
     expect(createSpy).toHaveBeenCalledWith('Alice', 'http://localhost:3000');
+  });
+
+  it('creates a game after explicitly selecting Create', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const createSpy = vi.fn();
+    ui.onCreateGame(createSpy);
+
+    const createOption = document.querySelector<HTMLButtonElement>('#lobbyModeOptions [role="option"]') as HTMLButtonElement;
+    const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
+    nameInput.value = 'Alice';
+    createOption.click();
+    (document.getElementById('actionButton') as HTMLButtonElement).click();
+
+    expect(createSpy).toHaveBeenCalledWith('Alice', 'http://localhost:3000');
+  });
+
+  it('switches between create modes and starts hot seat on this device', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const hotSeatSpy = vi.fn();
+    ui.onHotSeat(hotSeatSpy);
+
+    const deviceOption = document.querySelector<HTMLButtonElement>('[data-mode="device"]') as HTMLButtonElement;
+    deviceOption.click();
+
+    expect((document.getElementById('internetGameRow') as HTMLDivElement).hidden).toBe(true);
+    expect((document.getElementById('hotSeatPanel') as HTMLDivElement).hidden).toBe(false);
+    expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(true);
+
+    (document.querySelector<HTMLButtonElement>('[data-mode="internet"]') as HTMLButtonElement).click();
+    expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(false);
+
+    (document.getElementById('hotSeatPlayerOneInput') as HTMLInputElement).value = 'Alice';
+    (document.getElementById('hotSeatPlayerTwoInput') as HTMLInputElement).value = 'Bob';
+    (document.getElementById('startHotSeatButton') as HTMLButtonElement).click();
+
+    expect(hotSeatSpy).toHaveBeenCalledWith('Alice', 'Bob', 'http://localhost:3000');
   });
 
   it('blocks names longer than 15 characters and enforces the HTML max length', () => {
@@ -122,6 +225,23 @@ describe('UIManager private game flow', () => {
     expect(fireSpy).toHaveBeenCalledWith(45, 150);
   });
 
+    it('restores shot inputs and focuses angle on the active turn', () => {
+      const ui = new UIManager('http://localhost:3000');
+      const angleInput = document.getElementById('angleInput') as HTMLInputElement;
+      const velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
+
+      ui.setShotInputs({ angle: 62, velocity: 240 });
+      ui.updateTurnUI(1, true);
+
+      expect(angleInput.value).toBe('62');
+      expect(velocityInput.value).toBe('240');
+      expect(document.activeElement).toBe(angleInput);
+
+      ui.setShotInputs(undefined);
+      expect(angleInput.value).toBe('45');
+      expect(velocityInput.value).toBe('150');
+    });
+
   it('enforces angle and velocity limits', () => {
     const ui = new UIManager('http://localhost:3000');
     const fireSpy = vi.fn();
@@ -150,24 +270,24 @@ describe('UIManager private game flow', () => {
     expect(fireSpy).toHaveBeenCalledWith(99, 999);
   });
 
-  it('changes to join mode when an invite code is entered', () => {
+  it('changes to join mode when Join is selected', () => {
     const ui = new UIManager('http://localhost:3000');
     const joinSpy = vi.fn();
     ui.onJoinGame(joinSpy);
 
-    const nameInput = document.getElementById('playerNameInput') as HTMLInputElement;
+    const nameInput = document.getElementById('joinPlayerNameInput') as HTMLInputElement;
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
-    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
+    const joinOption = document.querySelector<HTMLButtonElement>('[data-mode="join"]') as HTMLButtonElement;
+    const actionButton = document.getElementById('joinGameButton') as HTMLButtonElement;
     const error = document.getElementById('registrationError') as HTMLDivElement;
 
     nameInput.value = 'Bob';
     serverInput.value = 'http://localhost:3000';
-    expect(actionButton.textContent).toBe('Create Private Game');
+    expect(actionButton.textContent).toBe('Join the game');
 
     inviteInput.value = 'ABCD';
-    inviteInput.dispatchEvent(new Event('input'));
-    expect(actionButton.textContent).toBe('Join with Invite');
+    joinOption.click();
 
     inviteInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
     expect(joinSpy).toHaveBeenCalledWith('ABCD', 'Bob', 'http://localhost:3000');
@@ -176,21 +296,16 @@ describe('UIManager private game flow', () => {
 
   it('enables joining only for populated invite-code input and hides server selection for invite links', () => {
     const ui = new UIManager('http://localhost:3000');
-    const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
     const inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
     const serverLabel = document.getElementById('serverAddressLabel') as HTMLLabelElement;
 
-    expect(actionButton.textContent).toBe('Create Private Game');
+    expect((document.getElementById('joinGameRow') as HTMLDivElement).hidden).toBe(true);
     inviteInput.value = 'https://example.com/?invite=ABCD';
-    inviteInput.dispatchEvent(new Event('input'));
-    expect(actionButton.textContent).toBe('Join with Invite');
-    inviteInput.value = 'ABCD';
-    inviteInput.dispatchEvent(new Event('input'));
-    expect(actionButton.textContent).toBe('Join with Invite');
 
     ui.setServerAddress('https://api.example.com');
     ui.enterJoinOnlyMode('ABCD');
-    expect(serverLabel.style.display).toBe('none');
+    expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(true);
+    expect(serverLabel.style.display).not.toBe('none');
     expect((document.getElementById('serverAddressInput') as HTMLInputElement).disabled).toBe(true);
   });
 
@@ -207,23 +322,19 @@ describe('UIManager private game flow', () => {
 
   it('hides lobby inputs while creating and restores them after an error', () => {
     const ui = new UIManager('http://localhost:3000');
-    const fields = document.getElementById('registrationFields') as HTMLDivElement;
     const inviteLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
     const actionButton = document.getElementById('actionButton') as HTMLButtonElement;
 
     ui.showRegistering();
 
-    expect(fields.style.display).toBe('none');
-    expect(inviteLabel.style.display).toBe('none');
     expect(actionButton.disabled).toBe(true);
     expect(actionButton.textContent).toBe('Creating...');
 
     ui.showRegistrationError('Server unavailable');
 
-    expect(fields.style.display).toBe('');
-    expect(inviteLabel.style.display).toBe('');
     expect(actionButton.disabled).toBe(false);
-    expect(actionButton.textContent).toBe('Create Private Game');
+    expect(inviteLabel.style.display).not.toBe('none');
+    expect(actionButton.textContent).toBe('Create Game');
   });
 
   it('copies the invite URL to the clipboard when the copy button is clicked', async () => {

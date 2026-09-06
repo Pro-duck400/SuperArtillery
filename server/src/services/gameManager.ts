@@ -11,6 +11,7 @@ import type {
   PrivateGame,
   CreateGameResponse,
   AcceptInvitationResponse,
+  CreateHotSeatResponse,
   GameStatusResponse
 } from '../types/private-game';
 import { TokenService } from './tokenService';
@@ -124,6 +125,69 @@ export class GameManager {
     return this.invitationService.acceptInvitation(inviteCode, playerName);
   }
 
+  public createHotSeatGame(
+    firstPlayerName: string,
+    secondPlayerName: string
+  ): CreateHotSeatResponse | { error: string; code: string } {
+    const firstName = TokenService.normalizeName(firstPlayerName);
+    const secondName = TokenService.normalizeName(secondPlayerName);
+    if (!firstName || !secondName) {
+      return {
+        error: GameManager.ERROR_MESSAGES.INVALID_PLAYER_NAME,
+        code: GameManager.ERROR_CODES.INVALID_PLAYER_NAME
+      };
+    }
+
+    if (this.games.size >= GAME_CONFIG.maxActiveGames) {
+      return {
+        error: GameManager.ERROR_MESSAGES.MAX_GAMES_REACHED,
+        code: GameManager.ERROR_CODES.MAX_GAMES_REACHED
+      };
+    }
+
+    const gameId = TokenService.generateGameId();
+    const firstToken = TokenService.generateSessionToken();
+    const secondToken = TokenService.generateSessionToken();
+    const now = Date.now();
+    const game: PrivateGame = {
+      id: gameId,
+      status: 'pending',
+      createdAt: now,
+      expiresAt: now + GAME_CONFIG.invitationTtlMs,
+      lastActivityAt: now,
+      hotSeat: true,
+      invitation: {
+        inviteCode: '',
+        inviteCodeHash: '',
+        expiresAt: now,
+        accepted: true
+      },
+      initiator: {
+        name: firstName,
+        sessionTokenHash: TokenService.hashToken(firstToken),
+        websocket: null
+      },
+      invited: {
+        name: secondName,
+        sessionTokenHash: TokenService.hashToken(secondToken),
+        websocket: null
+      },
+      currentTurn: 0,
+      gameStarted: false,
+      round: 1,
+      rematchReady: [false, false]
+    };
+    this.games.set(game);
+
+    return {
+      gameId,
+      players: [
+        { playerId: 0, playerName: firstName, playerToken: firstToken },
+        { playerId: 1, playerName: secondName, playerToken: secondToken }
+      ]
+    };
+  }
+
   /**
    * Get non-sensitive game status (for polling before WebSocket connection)
    * @param gameId The game ID
@@ -151,9 +215,11 @@ export class GameManager {
       };
     }
 
-    const playersConnected = [game.initiator.websocket, game.invited.websocket].filter(
-      ws => ws !== null && ws.readyState === WebSocket.OPEN
-    ).length;
+    const playersConnected = game.hotSeat
+      ? (game.initiator.websocket?.readyState === WebSocket.OPEN ? 2 : 0)
+      : [game.initiator.websocket, game.invited.websocket].filter(
+        ws => ws !== null && ws.readyState === WebSocket.OPEN
+      ).length;
 
     return {
       status: game.status,
@@ -201,6 +267,11 @@ export class GameManager {
       game.invited.websocket = ws;
     }
 
+    if (game.hotSeat) {
+      game.initiator.websocket = ws;
+      game.invited.websocket = ws;
+    }
+
     console.log(`✅ Player ${playerId} (${playerId == 0 ? game.initiator.name : game.invited.name}) connected to game ${gameId}`);
 
     // Try to start game if both players are connected
@@ -242,6 +313,13 @@ export class GameManager {
       : game.invited.websocket;
     if (currentSocket !== ws) return;
 
+    if (game.hotSeat) {
+      game.initiator.websocket = null;
+      game.invited.websocket = null;
+      this.gameRules.disconnect(game, playerId);
+      return;
+    }
+
     this.gameRules.disconnect(game, playerId);
   }
 
@@ -269,6 +347,21 @@ export class GameManager {
   }
 
   private broadcastGameStart(game: PrivateGame, battlefield: NonNullable<PrivateGame['battlefield']>): void {
+    if (game.hotSeat) {
+      const ws = game.initiator.websocket;
+      const startMessage: GameStartMessage = {
+        type: 'game_start',
+        gameId: game.id,
+        opponentName: game.invited.name ?? 'Player 2',
+        battlefield,
+        round: game.round
+      };
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(startMessage));
+      }
+      return;
+    }
+
     // Send game_start to both players
     for (let playerId = 0; playerId < 2; playerId++) {
       const ws = playerId === 0 ? game.initiator.websocket : game.invited.websocket;
@@ -461,11 +554,13 @@ export class GameManager {
   private broadcastToGame(game: PrivateGame, message: GameMessage): void {
     const messageStr = JSON.stringify(message);
 
+    const sockets = new Set<WebSocket>();
     [game.initiator, game.invited].forEach((player) => {
       if (player.websocket && player.websocket.readyState === WebSocket.OPEN) {
-        player.websocket.send(messageStr);
+        sockets.add(player.websocket);
       }
     });
+    sockets.forEach((socket) => socket.send(messageStr));
   }
 
   /**

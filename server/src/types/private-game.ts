@@ -40,6 +40,7 @@ export interface PrivateGame {
   
   // Invitation details
   invitation: Invitation;
+  hotSeat?: boolean;
   
   // Player sessions
   initiator: PlayerSession;
@@ -68,6 +69,14 @@ export interface CreateGameResponse {
 export interface AcceptInvitationResponse {
   gameId: string;
   playerToken: string; // Only sent to invited player
+}
+
+export interface CreateHotSeatResponse {
+  gameId: string;
+  players: [
+    { playerId: 0; playerName: string; playerToken: string },
+    { playerId: 1; playerName: string; playerToken: string }
+  ];
 }
 
 export interface GameStatusResponse {

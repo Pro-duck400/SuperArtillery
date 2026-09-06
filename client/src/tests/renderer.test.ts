@@ -68,7 +68,7 @@ describe('Renderer trajectory styles', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
   });
 
-  it('draws historical and active trajectories with orange styles', () => {
+  it('draws historical and active trajectories with dark gray styles', () => {
     const canvas = document.createElement('canvas');
     const renderer = new Renderer(canvas);
     renderer.applyBattlefield(battlefield);
@@ -83,11 +83,11 @@ describe('Renderer trajectory styles', () => {
       activeTrajectory: [{ x: 25, y: 130 }, { x: 35, y: 115 }]
     });
 
-    expect(context.strokeStyles).toContain('rgba(255, 165, 0, 1)');
-    expect(context.strokeStyles).toContain('#FFA500');
+    expect(context.strokeStyles).toContain('rgba(85, 85, 85, 1)');
+    expect(context.strokeStyles).toContain('#555555');
   });
 
-  it('draws an active trajectory with the same orange color', () => {
+  it('draws an active trajectory with the same dark gray color', () => {
     const canvas = document.createElement('canvas');
     const renderer = new Renderer(canvas);
     renderer.applyBattlefield(battlefield);
@@ -99,10 +99,10 @@ describe('Renderer trajectory styles', () => {
       activeTrajectory: [{ x: 25, y: 130 }, { x: 35, y: 115 }]
     });
 
-    expect(context.strokeStyles).toContain('#FFA500');
+    expect(context.strokeStyles).toContain('#555555');
   });
 
-  it('uses the requested historical orange fade steps', () => {
+  it('uses the requested historical dark gray fade steps', () => {
     const history = createHistoricalTrajectories(
       battlefield,
       [
@@ -117,7 +117,7 @@ describe('Renderer trajectory styles', () => {
     expect(history.map((trajectory) => trajectory.opacity)).toEqual([0.4, 0.35, 0.3, 0.25]);
   });
 
-  it('applies historical opacity directly to the orange stroke', () => {
+  it('applies historical opacity directly to the dark gray stroke', () => {
     const canvas = document.createElement('canvas');
     const renderer = new Renderer(canvas);
     renderer.applyBattlefield(battlefield);
@@ -132,7 +132,7 @@ describe('Renderer trajectory styles', () => {
       activeTrajectory: []
     });
 
-    expect(context.strokeStyles).toContain('rgba(255, 165, 0, 0.8)');
+    expect(context.strokeStyles).toContain('rgba(85, 85, 85, 0.8)');
   });
 
   it('draws castle emojis 2px further left and on the ground line', () => {
@@ -151,6 +151,18 @@ describe('Renderer trajectory styles', () => {
     expect(fillTextSpy).toHaveBeenCalledWith(glyphs[0], 14, 142);
     expect(fillTextSpy).toHaveBeenCalledWith(glyphs[1], 244, 142);
     expect(context.font).toMatch(/\d+px/);
+  });
+
+  it('replaces the defeated castle emoji with an explosion', () => {
+    const canvas = document.createElement('canvas');
+    const renderer = new Renderer(canvas);
+    renderer.applyBattlefield(battlefield);
+    renderer.setDefeatedPlayer(1);
+    const fillTextSpy = vi.spyOn(context, 'fillText');
+
+    renderer.render({ projectile: null, historicalTrajectories: [], activeTrajectory: [] });
+
+    expect(fillTextSpy).toHaveBeenCalledWith('💥', 244, 142);
   });
 
   it('chooses two different random castle emoji for each player from the approved set', () => {

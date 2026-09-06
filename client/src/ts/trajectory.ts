@@ -61,7 +61,7 @@ export function createHistoricalTrajectories(
   playerId: 0 | 1
 ): HistoricalTrajectory[] {
   return history.map((shot, index) => ({
-    points: calculateShotTrajectory(battlefield, shot, playerId),
+    points: calculateShotTrajectory(battlefield, shot, shot.playerId ?? playerId),
     opacity: HISTORICAL_OPACITIES[Math.min(index, HISTORICAL_OPACITIES.length - 1)]
   }));
 }

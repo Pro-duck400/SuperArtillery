@@ -264,6 +264,21 @@ describe('GameManager', () => {
   });
 
   describe('fire action', () => {
+    it('starts a hot-seat game from one connected socket', () => {
+      const created = gameManager.createHotSeatGame('Alice', 'Bob');
+      if ('error' in created) throw new Error('Should create hot-seat game');
+
+      const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      const connection = gameManager.connectPlayer(created.gameId, created.players[0].playerToken, socket);
+      expect(connection).toEqual({ playerId: 0 });
+
+      const game = (gameManager as any).games.get(created.gameId);
+      expect(game.gameStarted).toBe(true);
+      expect(game.initiator.websocket).toBe(socket);
+      expect(game.invited.websocket).toBe(socket);
+      expect(socket.send).toHaveBeenCalledTimes(2);
+    });
+
     it('accepts fire with valid session token', () => {
       const created = gameManager.createGame('Alice');
       if ('error' in created) throw new Error('Should create game');
