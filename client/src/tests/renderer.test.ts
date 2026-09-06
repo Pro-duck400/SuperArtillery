@@ -35,8 +35,8 @@ function createContext(): CanvasRenderingContext2D & { strokeStyles: string[] } 
 }
 
 const battlefield = {
-  canvasWidth: 280,
-  canvasHeight: 160,
+  canvasWidth: 420,
+  canvasHeight: 240,
   gravity: 100,
   wind: 0,
   groundY: 140,

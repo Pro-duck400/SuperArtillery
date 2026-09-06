@@ -75,6 +75,14 @@ export class UIManager {
       }
     });
 
+    this.angleInput.addEventListener('input', () => {
+      this.angleInput.value = this.angleInput.value.slice(0, 2);
+    });
+
+    this.velocityInput.addEventListener('input', () => {
+      this.velocityInput.value = this.velocityInput.value.slice(0, 3);
+    });
+
     this.setupEventListeners();
     this.playerNameInput.focus();
   }
@@ -174,21 +182,21 @@ export class UIManager {
 
     // Fire button
     this.fireButton.addEventListener('click', () => {
-      const angle = parseInt(this.angleInput.value, 10);
-      const velocity = parseInt(this.velocityInput.value, 10);
+      const angle = Number(this.angleInput.value);
+      const velocity = Number(this.velocityInput.value);
 
-      if (isNaN(angle) || isNaN(velocity)) {
+      if (!Number.isInteger(angle) || !Number.isInteger(velocity)) {
         this.messageEl.textContent = 'Invalid input';
         return;
       }
 
-      if (angle < 0 || angle > 360) {
-        this.messageEl.textContent = 'Angle must be between 0 and 360';
+      if (angle < 0 || angle > 99) {
+        this.messageEl.textContent = 'Angle must be between 0 and 99';
         return;
       }
 
-      if (velocity <= 0) {
-        this.messageEl.textContent = 'Velocity must be positive';
+      if (velocity < 30 || velocity > 999) {
+        this.messageEl.textContent = 'Velocity must be between 30 and 999';
         return;
       }
 

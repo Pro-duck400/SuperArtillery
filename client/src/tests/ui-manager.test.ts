@@ -32,7 +32,7 @@ describe('UIManager private game flow', () => {
         <div id="gamePanel" style="display: none;">
           <div id="battlefieldFrame">
             <div id="windLabel"></div>
-            <canvas id="gameCanvas" width="280" height="160"></canvas>
+            <canvas id="gameCanvas" width="420" height="240"></canvas>
             <div id="playerNameLeft"></div>
             <div id="playerNameRight"></div>
           </div>
@@ -120,6 +120,34 @@ describe('UIManager private game flow', () => {
     velocityInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
 
     expect(fireSpy).toHaveBeenCalledWith(45, 150);
+  });
+
+  it('enforces angle and velocity limits', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const fireSpy = vi.fn();
+    ui.onFire(fireSpy);
+    ui.updateTurnUI(0, true);
+
+    const angleInput = document.getElementById('angleInput') as HTMLInputElement;
+    const velocityInput = document.getElementById('velocityInput') as HTMLInputElement;
+    const fireButton = document.getElementById('fireButton') as HTMLButtonElement;
+    const message = document.getElementById('message') as HTMLDivElement;
+
+    angleInput.value = '100';
+    velocityInput.value = '30';
+    fireButton.click();
+    expect(message.textContent).toBe('Angle must be between 0 and 99');
+    expect(fireSpy).not.toHaveBeenCalled();
+
+    angleInput.value = '99';
+    velocityInput.value = '29';
+    fireButton.click();
+    expect(message.textContent).toBe('Velocity must be between 30 and 999');
+    expect(fireSpy).not.toHaveBeenCalled();
+
+    velocityInput.value = '999';
+    fireButton.click();
+    expect(fireSpy).toHaveBeenCalledWith(99, 999);
   });
 
   it('changes to join mode when an invite code is entered', () => {

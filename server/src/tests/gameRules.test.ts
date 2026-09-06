@@ -101,7 +101,7 @@ describe('GameRules', () => {
     game.gameStarted = true;
     game.battlefield = createFlatBattlefield();
 
-    const result = new GameRules().fire(game, 0, 0, 550, 600);
+    const result = new GameRules().fire(game, 0, 0, 900, 600);
 
     expect(result.kind).toBe('hit');
     expect(game.status).toBe('finished');

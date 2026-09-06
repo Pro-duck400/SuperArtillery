@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.1.0
+  version: 1.1.1
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -414,14 +414,15 @@ components:
           type: string
           description: Opaque game ID
         angle:
-          type: number
+          type: integer
           minimum: 0
-          maximum: 360
+          maximum: 99
           description: Projectile angle in degrees
         velocity:
-          type: number
-          exclusiveMinimum: 0
-          description: Projectile velocity (must be positive)
+          type: integer
+          minimum: 30
+          maximum: 999
+          description: Projectile velocity
 
     ErrorResponse:
       type: object

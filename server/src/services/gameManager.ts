@@ -405,7 +405,7 @@ export class GameManager {
     }
 
     // Validate angle
-    if (typeof angle !== 'number' || !Number.isFinite(angle) || angle < 0 || angle > 360) {
+    if (typeof angle !== 'number' || !Number.isInteger(angle) || angle < 0 || angle > 99) {
       return {
         success: false,
         error: GameManager.ERROR_MESSAGES.INVALID_ANGLE,
@@ -415,7 +415,7 @@ export class GameManager {
     }
 
     // Validate velocity
-    if (typeof velocity !== 'number' || !Number.isFinite(velocity) || velocity <= 0) {
+    if (typeof velocity !== 'number' || !Number.isInteger(velocity) || velocity < 30 || velocity > 999) {
       return {
         success: false,
         error: GameManager.ERROR_MESSAGES.INVALID_VELOCITY,

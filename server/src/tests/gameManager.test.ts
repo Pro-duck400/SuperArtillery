@@ -299,13 +299,21 @@ describe('GameManager', () => {
       const created = gameManager.createGame('Alice');
       if ('error' in created) throw new Error('Should create game');
 
+      const accepted = gameManager.acceptInvitation(created.inviteCode, 'Bob');
+      if ('error' in accepted) throw new Error('Should accept invitation');
+      const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      gameManager.connectPlayer(created.gameId, created.playerToken, socket);
+      gameManager.connectPlayer(accepted.gameId, accepted.playerToken, socket);
+
       // Invalid angle
-      const result1 = gameManager.fire(created.gameId, created.playerToken, -10, 50);
-      expect('error' in result1).toBe(true);
+      const result1 = gameManager.fire(created.gameId, created.playerToken, 100, 30);
+      expect('error' in result1 && result1.code).toBe('INVALID_ANGLE');
 
       // Invalid velocity
-      const result2 = gameManager.fire(created.gameId, created.playerToken, 45, -10);
-      expect('error' in result2).toBe(true);
+      const result2 = gameManager.fire(created.gameId, created.playerToken, 45, 29);
+      expect('error' in result2 && result2.code).toBe('INVALID_VELOCITY');
+
+      expect('error' in gameManager.fire(created.gameId, created.playerToken, 99, 30)).toBe(false);
     });
   });
 

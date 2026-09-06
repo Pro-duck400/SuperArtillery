@@ -474,7 +474,7 @@ export interface components {
             gameId: string;
             /** @description Projectile angle in degrees */
             angle: number;
-            /** @description Projectile velocity (must be positive) */
+            /** @description Projectile velocity */
             velocity: number;
         };
         ErrorResponse: {

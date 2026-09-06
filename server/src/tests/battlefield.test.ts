@@ -10,9 +10,9 @@ describe('battlefield generation', () => {
     const battlefield = createBattlefield(12345);
 
     expect(battlefield.castles[0].left_x).toBeGreaterThanOrEqual(15);
-    expect(battlefield.castles[0].left_x).toBeLessThanOrEqual(70);
-    expect(battlefield.castles[1].left_x).toBeGreaterThanOrEqual(210);
-    expect(battlefield.castles[1].left_x).toBeLessThanOrEqual(265);
+    expect(battlefield.castles[0].left_x).toBeLessThanOrEqual(80);
+    expect(battlefield.castles[1].left_x).toBeGreaterThanOrEqual(340);
+    expect(battlefield.castles[1].left_x).toBeLessThanOrEqual(405);
 
     for (const castle of battlefield.castles) {
       expect(castle.base_y).toBe(
