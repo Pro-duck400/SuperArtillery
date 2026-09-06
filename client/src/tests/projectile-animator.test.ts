@@ -15,7 +15,7 @@ describe('ProjectileAnimator active trajectory lifecycle', () => {
 
   it('emits an active frame and clears it when stopped', () => {
     const renderer = createRendererMock();
-    const animator = new ProjectileAnimator(renderer as any, 280);
+    const animator = new ProjectileAnimator(renderer as any, 420);
     const frames: Array<{ projectile: unknown; trajectory: Array<{ x: number; y: number }> }> = [];
     const requestFrame = vi.fn().mockReturnValue(1);
     vi.stubGlobal('requestAnimationFrame', requestFrame);
@@ -32,7 +32,7 @@ describe('ProjectileAnimator active trajectory lifecycle', () => {
   it('clears the active channel when a projectile reaches the terrain', () => {
     const renderer = createRendererMock();
     renderer.getTerrainY.mockReturnValue(100);
-    const animator = new ProjectileAnimator(renderer as any, 280);
+    const animator = new ProjectileAnimator(renderer as any, 420);
     const frames: Array<{ projectile: unknown; trajectory: Array<{ x: number; y: number }> }> = [];
     const callbacks: Array<(timestamp: number) => void> = [];
     vi.stubGlobal('requestAnimationFrame', (callback: (timestamp: number) => void) => {
@@ -52,7 +52,7 @@ describe('ProjectileAnimator active trajectory lifecycle', () => {
   it('notifies completion separately from the active-frame clear', () => {
     const renderer = createRendererMock();
     renderer.getTerrainY.mockReturnValue(100);
-    const animator = new ProjectileAnimator(renderer as any, 280);
+    const animator = new ProjectileAnimator(renderer as any, 420);
     const callbacks: Array<(timestamp: number) => void> = [];
     const complete = vi.fn();
     vi.stubGlobal('requestAnimationFrame', (callback: (timestamp: number) => void) => {

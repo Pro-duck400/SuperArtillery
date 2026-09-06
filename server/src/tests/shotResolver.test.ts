@@ -17,7 +17,7 @@ describe('calculateCastleHitTime', () => {
   it('resolves a hit using the canonical battlefield', () => {
     const battlefield = createFlatBattlefield();
 
-    const hitTime = calculateCastleHitTime(battlefield, 0, 0, 550);
+    const hitTime = calculateCastleHitTime(battlefield, 0, 0, 900);
 
     expect(hitTime).not.toBeNull();
     expect(hitTime).toBeGreaterThan(0);
@@ -26,7 +26,7 @@ describe('calculateCastleHitTime', () => {
   it('keeps player one firing toward the left castle', () => {
     const battlefield = createFlatBattlefield();
 
-    const hitTime = calculateCastleHitTime(battlefield, 1, 0, 550);
+    const hitTime = calculateCastleHitTime(battlefield, 1, 0, 900);
 
     expect(hitTime).not.toBeNull();
     expect(hitTime).toBeGreaterThan(0);

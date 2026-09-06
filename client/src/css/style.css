@@ -10,13 +10,13 @@ body {
   color: #ffffff;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
 }
 
 #app {
   text-align: center;
-  padding: 20px;
+  padding: 40px 20px 20px;
 }
 
 #clientVersion {
@@ -25,8 +25,12 @@ body {
   font-size: 11px;
 }
 
+#registrationPanel h2 {
+  margin-bottom: 16px;
+}
+
 #gamePanel {
-  width: 284px;
+  width: 424px;
   max-width: 100%;
   margin: 0 auto;
 }
@@ -91,16 +95,78 @@ canvas {
   flex-wrap: wrap;
 }
 
-#registrationPanel > div:first-of-type {
+.lobby-row {
   display: flex;
   gap: 12px;
   justify-content: center;
   align-items: flex-end;
+  margin-top: 12px;
   flex-wrap: wrap;
 }
 
-#registrationActions.registration-actions-pending {
-  justify-content: center;
+.lobby-row[hidden] {
+  display: none;
+}
+
+.lobby-row:first-of-type {
+  margin-top: 0;
+}
+
+.lobby-sentence {
+  align-items: center;
+  min-height: 34px;
+}
+
+.lobby-select {
+  position: relative;
+  display: inline-flex;
+}
+
+.lobby-select > button {
+  min-width: 130px;
+  padding: 7px 28px 7px 10px;
+  position: relative;
+}
+
+.lobby-select > button::after {
+  content: '\25BE';
+  position: absolute;
+  right: 9px;
+}
+
+.lobby-options {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 100%;
+  padding: 4px;
+  border: 1px solid #444;
+  background: #333;
+}
+
+.lobby-options[hidden] {
+  display: none;
+}
+
+.lobby-options button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+.lobby-options button:hover,
+.lobby-options button:focus {
+  background: #4CAF50;
+}
+
+#hotSeatPanel {
+  margin-top: 12px;
 }
 
 #inviteInfo {
@@ -117,12 +183,16 @@ label {
 
 input[type="number"] {
   padding: 8px;
-  width: 100px;
+  width: 64px;
   border: 1px solid #444;
   background-color: #333;
   color: #fff;
   border-radius: 4px;
   font-size: 16px;
+}
+
+#velocityInput {
+  width: 76px;
 }
 
 #registrationPanel input[type="text"] {
@@ -133,6 +203,19 @@ input[type="number"] {
   color: #fff;
   border-radius: 4px;
   font-size: 16px;
+}
+
+#joinPlayerNameInput,
+#playerNameInput {
+  width: 160px;
+}
+
+#hotSeatPanel input[type="text"] {
+  width: 140px;
+}
+
+#inviteInput {
+  width: 76px;
 }
 
 #serverAddressInput {
@@ -167,6 +250,27 @@ input[type="number"] {
   background: #444;
 }
 
+#serverHealthButton {
+  display: inline-block;
+  margin-left: 6px;
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#serverHealthButton:hover,
+#serverHealthButton:focus {
+  color: #fff;
+  text-decoration: underline;
+}
+
+#serverHealthButton:focus-visible {
+  outline: 1px solid #aaa;
+  outline-offset: 2px;
+}
+
 #serverAddressOptions {
   position: absolute;
   z-index: 1;
@@ -194,6 +298,18 @@ input[type="number"] {
   background: #4CAF50;
 }
 
+#serverHealthStatus {
+  min-height: 14px;
+  margin-top: 3px;
+  color: #aaa;
+  font-size: 11px;
+  text-align: left;
+}
+
+#serverHealthStatus.error {
+  color: #ff6b6b;
+}
+
 input[type="number"]:disabled {
   background-color: #222;
   color: #666;
@@ -219,6 +335,25 @@ button:disabled {
 
 button:not(:disabled):hover {
   background-color: #45a049;
+}
+
+#lobbyModeRow button,
+#createGameRow button {
+  background-color: #333;
+  color: #fff;
+}
+
+#lobbyModeRow button:not(:disabled):hover,
+#lobbyModeRow button:focus,
+#createGameRow button:not(:disabled):hover,
+#createGameRow button:focus {
+  background-color: #444;
+}
+
+#joinGameButton,
+#actionButton,
+#startHotSeatButton {
+  background-color: #4CAF50;
 }
 
 #message {

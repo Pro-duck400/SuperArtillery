@@ -12,6 +12,14 @@ export interface AcceptInvitationResponse {
   playerToken: string;
 }
 
+export interface CreateHotSeatResponse {
+  gameId: string;
+  players: [
+    { playerId: 0; playerName: string; playerToken: string },
+    { playerId: 1; playerName: string; playerToken: string }
+  ];
+}
+
 export interface GameStatusResponse {
   status: 'pending' | 'active' | 'finished' | 'expired';
   playersConnected: number;
@@ -111,6 +119,23 @@ export class ApiClient {
       throw new Error(
         await this.extractErrorMessage(response, 'Failed to create game')
       );
+    }
+
+    return response.json();
+  }
+
+  public async createHotSeatGame(
+    firstPlayerName: string,
+    secondPlayerName: string
+  ): Promise<CreateHotSeatResponse> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/hot-seat/games`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstPlayerName, secondPlayerName })
+    });
+
+    if (!response.ok) {
+      throw new Error(await this.extractErrorMessage(response, 'Failed to create hot-seat game'));
     }
 
     return response.json();

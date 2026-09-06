@@ -1,70 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SuperArtillery</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
   <div id="app">
     <!-- Registration / Lobby Panel -->
     <div id="registrationPanel" style="display: block;">
       <h2>Welcome to SuperArtillery!</h2>
-      <div id="registrationFields">
-        <label id="serverAddressLabel">
-          Enter your name:
-          <input type="text" id="playerNameInput" placeholder="Your name" maxlength="15" />
-        </label>
-        <label>
-          Server address:
-          <span class="server-address-combobox">
-            <input type="text" id="serverAddressInput" role="combobox" aria-controls="serverAddressOptions" aria-expanded="false" />
-            <button type="button" id="serverAddressToggle" aria-label="Show server address options" aria-expanded="false">&#9662;</button>
-            <span id="serverAddressOptions" role="listbox" hidden>
-              <button type="button" role="option" data-server-address="https://superartillery-server-production.up.railway.app">https://superartillery-server-production.up.railway.app</button>
-              <button type="button" role="option" data-server-address="http://localhost:3000">http://localhost:3000</button>
+      <div id="lobbyModeRow" class="lobby-row lobby-sentence">
+        <span class="lobby-select">
+          <button id="lobbyModeToggle" type="button" aria-haspopup="listbox" aria-expanded="false">Create</button>
+          <span id="lobbyModeOptions" class="lobby-options" role="listbox" hidden>
+            <button type="button" role="option" data-mode="create" aria-selected="true">Create</button>
+            <button type="button" role="option" data-mode="join" aria-selected="false">Join</button>
+          </span>
+        </span>
+        <span>a game</span>
+      </div>
+
+      <div id="createGameRow" class="lobby-row">
+        <div class="lobby-sentence">
+          <span>Play</span>
+          <span class="lobby-select">
+            <button id="createModeToggle" type="button" aria-haspopup="listbox" aria-expanded="false">over
+              Internet</button>
+            <span id="createModeOptions" class="lobby-options" role="listbox" hidden>
+              <button type="button" role="option" data-mode="internet" aria-selected="true">over Internet 🌏</button>
+              <button type="button" role="option" data-mode="device" aria-selected="false">on this device 💻</button>
             </span>
           </span>
+        </div>
+      </div>
+      <div id="serverRow" class="lobby-row">
+        <label>
+          <span>Use server:</span>
+
+          <span class="server-address-combobox">
+            <input type="text" id="serverAddressInput" role="combobox" aria-controls="serverAddressOptions"
+              aria-expanded="false" />
+            <button type="button" id="serverAddressToggle" aria-label="Show server address options"
+              aria-expanded="false">&#9662;</button>
+            <span id="serverAddressOptions" role="listbox" hidden>
+              <button type="button" role="option"
+                data-server-address="https://superartillery-server-production.up.railway.app">🌐
+                https://superartillery-server-production.up.railway.app</button>
+              <button type="button" role="option" data-server-address="http://localhost:3000">🖥️
+                http://localhost:3000</button>
+            </span>
+          </span>
+
+          <div id="serverHealthStatus" role="status" aria-live="polite">
+            <span id="serverHealthMessage"></span>
+            <a href="#" id="serverHealthButton" role="button" aria-label="Check server health"
+              title="Check server health">🔄</a>
+          </div>
+
         </label>
       </div>
-      <div id="registrationActions" style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
-        <label id="inviteInputLabel" style="display: flex; align-items: center; gap: 8px;">
+      <div id="internetGameRow" class="lobby-row">
+        <input type="text" id="playerNameInput" placeholder="Player name" maxlength="15" />
+        <button id="actionButton" type="button">Create Game</button>
+      </div>
+
+      <div id="joinGameRow" class="lobby-row" hidden>
+        <label>
+          Your name:
+          <input type="text" id="joinPlayerNameInput" placeholder="Your name" maxlength="15" />
+        </label>
+        <label id="inviteInputLabel">
           Invite code:
           <input type="text" id="inviteInput" placeholder="ABCD" maxlength="4" autocomplete="off" />
         </label>
-        <button id="actionButton">Create Private Game</button>
+        <button id="joinGameButton" type="button">Join Game</button>
       </div>
+
+      <div id="hotSeatPanel" class="lobby-row" hidden>
+        <input type="text" id="hotSeatPlayerOneInput" placeholder="Player 1 name" maxlength="15" />
+        <input type="text" id="hotSeatPlayerTwoInput" placeholder="Player 2 name" maxlength="15" />
+        <button id="startHotSeatButton" type="button">Start Hot Seat</button>
+      </div>
+
       <div id="registrationError" style="color: red; margin-top: 10px;"></div>
       <div id="inviteInfo" style="margin-top: 12px; display: none;">
         <div style="display: flex; align-items: center; gap: 6px;">
           Invite code: <span id="inviteCodeText"></span>
-          <button id="copyInviteCodeButton" title="Copy invite code" style="font-size: 12px; padding: 2px 6px;">📋 Copy</button>
+          <button id="copyInviteCodeButton" title="Copy invite code" style="font-size: 12px; padding: 2px 6px;">📋
+            Copy</button>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           Invite URL: <span id="inviteUrlText"></span>
-          <button id="copyInviteUrlButton" title="Copy invite URL" style="font-size: 12px; padding: 2px 6px;">📋 Copy</button>
+          <button id="copyInviteUrlButton" title="Copy invite URL" style="font-size: 12px; padding: 2px 6px;">📋
+            Copy</button>
         </div>
       </div>
     </div>
-    
+
     <!-- Game Panel (hidden initially) -->
     <div id="gamePanel" style="display: none;">
       <div id="battlefieldFrame">
         <div id="windLabel" aria-label="Wind strength"></div>
-        <canvas id="gameCanvas" width="280" height="160"></canvas>
+        <canvas id="gameCanvas" width="420" height="240"></canvas>
         <div id="playerNameLeft" class="player-name-overlay player-name-left">...</div>
         <div id="playerNameRight" class="player-name-overlay player-name-right">...</div>
       </div>
-      
       <div id="controls">
-        <label>
-          Angle (0-90):
-          <input type="number" id="angleInput" min="0" max="90" value="45" />
+        <label hotkey="A">
+          <span><u>A</u>ngle:</span>
+          <input type="number" id="angleInput" min="0" max="99" maxlength="2" value="45" accesskey="a" />
         </label>
-        <label>
-          Velocity (0-350):
-          <input type="number" id="velocityInput" min="0" max="300" value="150" />
+        <label hotkey="V">
+          <span><u>V</u>elocity:</span>
+          <input type="number" id="velocityInput" min="30" max="999" maxlength="3" value="150" accesskey="v" />
         </label>
         <button id="fireButton" disabled>Fire!</button>
         <button id="rematchButton" type="button" style="display: none;">Play again</button>
@@ -76,12 +128,13 @@
           <tbody id="shotHistoryRows" aria-live="polite"></tbody>
         </table>
       </section>
-      
+
       <div id="message"></div>
     </div>
     <div id="clientVersion" aria-label="Client version"></div>
   </div>
-  
+
   <script type="module" src="/ts/main.ts"></script>
 </body>
+
 </html>

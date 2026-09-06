@@ -4,16 +4,31 @@ import type { ShotHistoryEntry } from './game';
 export class UIManager {
   // DOM elements
   private registrationPanel: HTMLDivElement;
-  private registrationFields: HTMLDivElement;
-  private registrationActions: HTMLDivElement;
+  private serverRow: HTMLDivElement;
+  private lobbyModeRow: HTMLDivElement;
+  private joinGameRow: HTMLDivElement;
+  private createGameRow: HTMLDivElement;
+  private internetGameRow: HTMLDivElement;
+  private lobbyModeToggle: HTMLButtonElement;
+  private createModeToggle: HTMLButtonElement;
+  private lobbyModeOptions: HTMLSpanElement;
+  private createModeOptions: HTMLSpanElement;
+  private joinPlayerNameInput: HTMLInputElement;
+  private joinGameButton: HTMLButtonElement;
   private gamePanel: HTMLDivElement;
   private windLabel: HTMLDivElement;
   private playerNameInput: HTMLInputElement;
   private serverAddressInput: HTMLInputElement;
   private serverAddressToggle: HTMLButtonElement;
   private serverAddressOptions: HTMLSpanElement;
-  private serverAddressLabel: HTMLLabelElement;
+  private serverHealthButton: HTMLAnchorElement;
+  private serverHealthStatus: HTMLDivElement;
+  private serverHealthMessage: HTMLSpanElement;
   private actionButton: HTMLButtonElement;
+  private hotSeatPanel: HTMLDivElement | null;
+  private startHotSeatButton: HTMLButtonElement | null;
+  private hotSeatPlayerOneInput: HTMLInputElement | null;
+  private hotSeatPlayerTwoInput: HTMLInputElement | null;
   private inviteInput: HTMLInputElement;
   private inviteInputLabel: HTMLLabelElement;
   private registrationError: HTMLDivElement;
@@ -30,10 +45,15 @@ export class UIManager {
   private rematchButton: HTMLButtonElement;
   private defaultServerAddress: string;
   private creatingGame = false;
+  private lobbyMode: 'create' | 'join' = 'create';
+  private createMode: 'internet' | 'device' = 'internet';
+  private joinOnlyMode = false;
+  private serverHealthCheckId = 0;
 
   // Event callbacks
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onJoinGameCallback: ((inviteCode: string, name: string, serverAddress: string) => void) | null = null;
+  private onHotSeatCallback: ((firstName: string, secondName: string, serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number) => void) | null = null;
   private onRematchCallback: (() => void) | null = null;
 
@@ -41,16 +61,31 @@ export class UIManager {
     this.defaultServerAddress = defaultServerAddress;
     // Get DOM elements
     this.registrationPanel = document.getElementById('registrationPanel') as HTMLDivElement;
-    this.registrationFields = document.getElementById('registrationFields') as HTMLDivElement;
-    this.registrationActions = document.getElementById('registrationActions') as HTMLDivElement;
+    this.serverRow = document.getElementById('serverRow') as HTMLDivElement;
+    this.lobbyModeRow = document.getElementById('lobbyModeRow') as HTMLDivElement;
+    this.joinGameRow = document.getElementById('joinGameRow') as HTMLDivElement;
+    this.createGameRow = document.getElementById('createGameRow') as HTMLDivElement;
+    this.internetGameRow = document.getElementById('internetGameRow') as HTMLDivElement;
+    this.lobbyModeToggle = document.getElementById('lobbyModeToggle') as HTMLButtonElement;
+    this.createModeToggle = document.getElementById('createModeToggle') as HTMLButtonElement;
+    this.lobbyModeOptions = document.getElementById('lobbyModeOptions') as HTMLSpanElement;
+    this.createModeOptions = document.getElementById('createModeOptions') as HTMLSpanElement;
+    this.joinPlayerNameInput = document.getElementById('joinPlayerNameInput') as HTMLInputElement;
+    this.joinGameButton = document.getElementById('joinGameButton') as HTMLButtonElement;
     this.gamePanel = document.getElementById('gamePanel') as HTMLDivElement;
     this.windLabel = document.getElementById('windLabel') as HTMLDivElement;
     this.playerNameInput = document.getElementById('playerNameInput') as HTMLInputElement;
     this.serverAddressInput = document.getElementById('serverAddressInput') as HTMLInputElement;
     this.serverAddressToggle = document.getElementById('serverAddressToggle') as HTMLButtonElement;
     this.serverAddressOptions = document.getElementById('serverAddressOptions') as HTMLSpanElement;
-    this.serverAddressLabel = this.serverAddressInput.closest('label') as HTMLLabelElement;
+    this.serverHealthButton = document.getElementById('serverHealthButton') as HTMLAnchorElement;
+    this.serverHealthStatus = document.getElementById('serverHealthStatus') as HTMLDivElement;
+    this.serverHealthMessage = document.getElementById('serverHealthMessage') as HTMLSpanElement;
     this.actionButton = document.getElementById('actionButton') as HTMLButtonElement;
+    this.hotSeatPanel = document.getElementById('hotSeatPanel') as HTMLDivElement | null;
+    this.startHotSeatButton = document.getElementById('startHotSeatButton') as HTMLButtonElement | null;
+    this.hotSeatPlayerOneInput = document.getElementById('hotSeatPlayerOneInput') as HTMLInputElement | null;
+    this.hotSeatPlayerTwoInput = document.getElementById('hotSeatPlayerTwoInput') as HTMLInputElement | null;
     this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
     this.inviteInputLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
     this.registrationError = document.getElementById('registrationError') as HTMLDivElement;
@@ -66,16 +101,26 @@ export class UIManager {
     this.fireButton = document.getElementById('fireButton') as HTMLButtonElement;
     this.rematchButton = document.getElementById('rematchButton') as HTMLButtonElement;
     this.serverAddressInput.value = defaultServerAddress;
-    this.updateActionButton();
+    this.updateLobbyVisibility();
 
     this.playerNameInput.maxLength = 15;
+    this.joinPlayerNameInput.maxLength = 15;
     this.playerNameInput.addEventListener('input', () => {
       if (this.playerNameInput.value.length > 15) {
         this.playerNameInput.value = this.playerNameInput.value.slice(0, 15);
       }
     });
 
+    this.angleInput.addEventListener('input', () => {
+      this.angleInput.value = this.angleInput.value.slice(0, 2);
+    });
+
+    this.velocityInput.addEventListener('input', () => {
+      this.velocityInput.value = this.velocityInput.value.slice(0, 3);
+    });
+
     this.setupEventListeners();
+    void this.checkServerHealth(defaultServerAddress);
     this.playerNameInput.focus();
   }
 
@@ -83,6 +128,36 @@ export class UIManager {
    * Set up DOM event listeners
    */
   private setupEventListeners(): void {
+    const setListboxOpen = (toggle: HTMLButtonElement, options: HTMLSpanElement, open: boolean): void => {
+      options.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+    };
+
+    this.lobbyModeToggle.addEventListener('click', () => {
+      setListboxOpen(this.lobbyModeToggle, this.lobbyModeOptions, this.lobbyModeOptions.hidden === true);
+    });
+    this.createModeToggle.addEventListener('click', () => {
+      setListboxOpen(this.createModeToggle, this.createModeOptions, this.createModeOptions.hidden === true);
+    });
+
+    this.lobbyModeOptions.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
+      option.addEventListener('click', () => {
+        this.lobbyMode = option.dataset.mode?.toLowerCase() === 'join' ? 'join' : 'create';
+        this.lobbyModeToggle.textContent = this.lobbyMode === 'join' ? 'Join' : 'Create';
+        setListboxOpen(this.lobbyModeToggle, this.lobbyModeOptions, false);
+        this.updateLobbyVisibility();
+      });
+    });
+
+    this.createModeOptions.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
+      option.addEventListener('click', () => {
+        this.createMode = option.dataset.mode === 'device' ? 'device' : 'internet';
+        this.createModeToggle.textContent = this.createMode === 'device' ? 'on this device' : 'over Internet';
+        setListboxOpen(this.createModeToggle, this.createModeOptions, false);
+        this.updateLobbyVisibility();
+      });
+    });
+
     const setOptionsExpanded = (expanded: boolean): void => {
       this.serverAddressOptions.hidden = !expanded;
       this.serverAddressToggle.setAttribute('aria-expanded', String(expanded));
@@ -95,100 +170,68 @@ export class UIManager {
 
     this.serverAddressOptions.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
       option.addEventListener('click', () => {
-        this.serverAddressInput.value = option.dataset.serverAddress || '';
+        const serverAddress = option.dataset.serverAddress || '';
+        this.serverAddressInput.value = serverAddress;
         setOptionsExpanded(false);
+        void this.checkServerHealth(serverAddress);
       });
     });
 
-    const validateInputs = (): { playerName: string; serverAddress: string } | null => {
+    this.serverHealthButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
+      void this.checkServerHealth(serverAddress);
+    });
+
+    const submitCreate = (): void => {
       const playerName = this.playerNameInput.value.trim();
       const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
-
-      if (!playerName) {
-        this.registrationError.textContent = 'Please enter your name';
-        return null;
-      }
-
-      if (playerName.length < 2) {
-        this.registrationError.textContent = 'Name must be at least 2 characters';
-        return null;
-      }
-
-      if (playerName.length > 15) {
-        this.registrationError.textContent = 'Name must be 15 characters or less';
-        return null;
-      }
-
-      try {
-        const parsedUrl = new URL(serverAddress);
-        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-          this.registrationError.textContent = 'Server address must start with http:// or https://';
-          return null;
-        }
-      } catch {
-        this.registrationError.textContent = 'Please enter a valid server address, e.g. http://localhost:3000';
-        return null;
-      }
-
+      if (!this.validateName(playerName) || !this.validateServer(serverAddress)) return;
       this.registrationError.textContent = '';
-      return { playerName, serverAddress };
+      this.onCreateGameCallback?.(playerName, serverAddress);
     };
 
-    this.actionButton.addEventListener('click', () => {
-      const valid = validateInputs();
-      if (!valid) {
+    const submitJoin = (): void => {
+      const playerName = this.joinPlayerNameInput.value.trim();
+      const inviteCode = this.inviteInput.value.trim();
+      const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
+      if (!this.validateName(playerName) || !this.validateServer(serverAddress)) return;
+      if (!/^[A-Za-z0-9]{4}$/.test(inviteCode)) {
+        this.registrationError.textContent = 'Enter a 4-character invite code';
         return;
       }
+      this.registrationError.textContent = '';
+      this.onJoinGameCallback?.(inviteCode, playerName, serverAddress);
+    };
 
-      const inviteCode = this.inviteInput.value.trim();
-      if (inviteCode) {
-        if (!/^[A-Za-z0-9]{4}$/.test(inviteCode)) {
-          this.registrationError.textContent = 'Enter a 4-character invite code';
-          return;
+    this.actionButton.addEventListener('click', submitCreate);
+    this.joinGameButton.addEventListener('click', submitJoin);
+
+    [this.playerNameInput, this.joinPlayerNameInput, this.inviteInput].forEach((input) => {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          (this.lobbyMode === 'join' ? this.joinGameButton : this.actionButton).click();
         }
-
-        if (this.onJoinGameCallback) {
-          this.registrationError.textContent = '';
-          this.onJoinGameCallback(inviteCode, valid.playerName, valid.serverAddress);
-        }
-      } else if (this.onCreateGameCallback) {
-        this.onCreateGameCallback(valid.playerName, valid.serverAddress);
-      }
-    });
-
-    this.inviteInput.addEventListener('input', () => {
-      this.updateActionButton();
-    });
-
-    this.playerNameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        this.actionButton.click();
-      }
-    });
-
-    this.inviteInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        this.actionButton.click();
-      }
+      });
     });
 
     // Fire button
     this.fireButton.addEventListener('click', () => {
-      const angle = parseInt(this.angleInput.value, 10);
-      const velocity = parseInt(this.velocityInput.value, 10);
+      const angle = Number(this.angleInput.value);
+      const velocity = Number(this.velocityInput.value);
 
-      if (isNaN(angle) || isNaN(velocity)) {
+      if (!Number.isInteger(angle) || !Number.isInteger(velocity)) {
         this.messageEl.textContent = 'Invalid input';
         return;
       }
 
-      if (angle < 0 || angle > 360) {
-        this.messageEl.textContent = 'Angle must be between 0 and 360';
+      if (angle < 0 || angle > 99) {
+        this.messageEl.textContent = 'Angle must be between 0 and 99';
         return;
       }
 
-      if (velocity <= 0) {
-        this.messageEl.textContent = 'Velocity must be positive';
+      if (velocity < 30 || velocity > 999) {
+        this.messageEl.textContent = 'Velocity must be between 30 and 999';
         return;
       }
 
@@ -199,6 +242,15 @@ export class UIManager {
 
     this.rematchButton.addEventListener('click', () => {
       this.onRematchCallback?.();
+    });
+
+    this.startHotSeatButton?.addEventListener('click', () => {
+      const firstName = this.hotSeatPlayerOneInput?.value.trim() ?? '';
+      const secondName = this.hotSeatPlayerTwoInput?.value.trim() ?? '';
+      const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
+      if (!this.validateName(firstName) || !this.validateName(secondName) || !this.validateServer(serverAddress)) return;
+      this.registrationError.textContent = '';
+      this.onHotSeatCallback?.(firstName, secondName, serverAddress);
     });
 
     this.velocityInput.addEventListener('keypress', (e) => {
@@ -265,6 +317,10 @@ export class UIManager {
     this.onJoinGameCallback = callback;
   }
 
+  public onHotSeat(callback: (firstName: string, secondName: string, serverAddress: string) => void): void {
+    this.onHotSeatCallback = callback;
+  }
+
   /**
    * Register callback for fire event
    */
@@ -280,14 +336,17 @@ export class UIManager {
    * Show registration in progress
    */
   public showRegistering(): void {
-    this.creatingGame = !this.hasInviteCode();
-    if (this.creatingGame) {
-      this.registrationFields.style.display = 'none';
-      this.inviteInputLabel.style.display = 'none';
-      this.registrationActions.classList.add('registration-actions-pending');
+    this.creatingGame = this.lobbyMode === 'create';
+    this.actionButton.disabled = this.creatingGame && this.createMode === 'internet';
+    this.joinGameButton.disabled = !this.creatingGame;
+    if (this.hotSeatPanel) {
+      const startingHotSeat = this.creatingGame && this.createMode === 'device';
+      const button = this.startHotSeatButton;
+      if (button) button.disabled = startingHotSeat;
+      if (startingHotSeat) button!.textContent = 'Starting...';
     }
-    this.actionButton.disabled = true;
-    this.actionButton.textContent = this.hasInviteCode() ? 'Joining...' : 'Creating...';
+    if (this.creatingGame && this.createMode === 'internet') this.actionButton.textContent = 'Creating...';
+    if (this.lobbyMode === 'join') this.joinGameButton.textContent = 'Joining...';
   }
 
   /**
@@ -295,14 +354,16 @@ export class UIManager {
    */
   public showRegistrationError(error: string): void {
     this.registrationError.textContent = error;
-    if (this.creatingGame) {
-      this.registrationFields.style.display = '';
-      this.inviteInputLabel.style.display = '';
-      this.registrationActions.classList.remove('registration-actions-pending');
-    }
     this.creatingGame = false;
     this.actionButton.disabled = false;
-    this.updateActionButton();
+    this.actionButton.textContent = 'Create Game';
+    this.joinGameButton.disabled = false;
+    this.joinGameButton.textContent = 'Join the game';
+    if (this.startHotSeatButton) {
+      this.startHotSeatButton.disabled = false;
+      this.startHotSeatButton.textContent = 'Start Hot Seat';
+    }
+    this.updateLobbyVisibility();
   }
 
   public showInviteInfo(code: string, inviteUrl: string): void {
@@ -353,23 +414,85 @@ export class UIManager {
    * invite code/link input (pre-filled internally) to avoid confusing the user.
    */
   public enterJoinOnlyMode(inviteCode: string): void {
+    this.joinOnlyMode = true;
+    this.lobbyMode = 'join';
     this.inviteInput.value = inviteCode;
-    this.serverAddressLabel.style.display = 'none';
+    this.serverRow.hidden = true;
+    this.lobbyModeRow.hidden = true;
+    this.createGameRow.hidden = true;
+    this.internetGameRow.hidden = true;
+    if (this.hotSeatPanel) this.hotSeatPanel.hidden = true;
     this.serverAddressInput.disabled = true;
     this.serverAddressToggle.disabled = true;
     this.inviteInputLabel.style.display = 'none';
-    this.updateActionButton();
-    this.playerNameInput.focus();
+    this.joinGameRow.hidden = false;
+    this.joinPlayerNameInput.focus();
   }
 
-  private hasInviteCode(): boolean {
-    return this.inviteInput.value.trim().length > 0;
+  private validateName(name: string): boolean {
+    if (!name) {
+      this.registrationError.textContent = 'Please enter your name';
+      return false;
+    }
+    if (name.length < 2) {
+      this.registrationError.textContent = 'Name must be at least 2 characters';
+      return false;
+    }
+    if (name.length > 15) {
+      this.registrationError.textContent = 'Name must be 15 characters or less';
+      return false;
+    }
+    return true;
   }
 
-  private updateActionButton(): void {
-    this.actionButton.textContent = this.hasInviteCode()
-      ? 'Join with Invite'
-      : 'Create Private Game';
+  private validateServer(serverAddress: string): boolean {
+    try {
+      const parsedUrl = new URL(serverAddress);
+      if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') return true;
+    } catch {
+      // Fall through to the shared validation message.
+    }
+    this.registrationError.textContent = 'Please enter a valid server address, e.g. http://localhost:3000';
+    return false;
+  }
+
+  private async checkServerHealth(serverAddress: string): Promise<void> {
+    const checkId = ++this.serverHealthCheckId;
+    this.serverHealthStatus.classList.remove('error');
+    this.serverHealthMessage.textContent = 'Checking server...';
+    const startedAt = performance.now();
+
+    try {
+      const response = await fetch(`${serverAddress.replace(/\/$/, '')}/api/v1/health`);
+      const duration = Math.round(performance.now() - startedAt);
+      if (checkId !== this.serverHealthCheckId) return;
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+      const health = await response.json() as { version?: string; contractVersion?: string };
+      this.serverHealthStatus.classList.remove('error');
+      this.serverHealthMessage.textContent = `Server v${health.version ?? 'unknown'} | Contract v${health.contractVersion ?? 'unknown'} | Response time: ${duration}ms`;
+    } catch (error) {
+      if (checkId !== this.serverHealthCheckId) return;
+      this.serverHealthStatus.classList.add('error');
+      this.serverHealthMessage.textContent = error instanceof Error ? error.message : 'Unable to reach server';
+    }
+  }
+
+  private updateLobbyVisibility(): void {
+    if (this.joinOnlyMode) return;
+    const joining = this.lobbyMode === 'join';
+    this.serverRow.hidden = !joining && this.createMode === 'device';
+    this.joinGameRow.hidden = !joining;
+    this.createGameRow.hidden = joining;
+    this.internetGameRow.hidden = joining || this.createMode !== 'internet';
+    if (this.hotSeatPanel) this.hotSeatPanel.hidden = joining || this.createMode !== 'device';
+    this.lobbyModeOptions.querySelectorAll<HTMLElement>('[role="option"]').forEach((option) => {
+      option.setAttribute('aria-selected', String(option.dataset.mode === this.lobbyMode));
+    });
+    this.createModeOptions.querySelectorAll<HTMLElement>('[role="option"]').forEach((option) => {
+      option.setAttribute('aria-selected', String(option.dataset.mode === this.createMode));
+    });
   }
 
   /**
@@ -452,6 +575,15 @@ export class UIManager {
       } else {
         rightNameEl?.classList.add('player-name-active-turn');
       }
+
+      if (isMyTurn) {
+        this.angleInput.focus();
+      }
+  }
+
+  public setShotInputs(shot: ShotHistoryEntry | undefined): void {
+    this.angleInput.value = String(shot?.angle ?? 45);
+    this.velocityInput.value = String(shot?.velocity ?? 150);
   }
 
   /**

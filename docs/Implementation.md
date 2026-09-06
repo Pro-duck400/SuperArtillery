@@ -28,7 +28,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Random castle placement on terrain (not in valleys)
 
 #### Physics & Ballistics
-- [ ] Angle validation (0-90° for player 1, mirrored for player 2)
+- [ ] Angle validation (0-99° for player 1, mirrored for player 2)
 - [ ] Velocity limit (>350 = cannon explodes, lose turn)
 
 #### Game Mechanics

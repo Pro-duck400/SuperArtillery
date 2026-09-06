@@ -264,6 +264,21 @@ describe('GameManager', () => {
   });
 
   describe('fire action', () => {
+    it('starts a hot-seat game from one connected socket', () => {
+      const created = gameManager.createHotSeatGame('Alice', 'Bob');
+      if ('error' in created) throw new Error('Should create hot-seat game');
+
+      const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      const connection = gameManager.connectPlayer(created.gameId, created.players[0].playerToken, socket);
+      expect(connection).toEqual({ playerId: 0 });
+
+      const game = (gameManager as any).games.get(created.gameId);
+      expect(game.gameStarted).toBe(true);
+      expect(game.initiator.websocket).toBe(socket);
+      expect(game.invited.websocket).toBe(socket);
+      expect(socket.send).toHaveBeenCalledTimes(2);
+    });
+
     it('accepts fire with valid session token', () => {
       const created = gameManager.createGame('Alice');
       if ('error' in created) throw new Error('Should create game');
@@ -299,13 +314,21 @@ describe('GameManager', () => {
       const created = gameManager.createGame('Alice');
       if ('error' in created) throw new Error('Should create game');
 
+      const accepted = gameManager.acceptInvitation(created.inviteCode, 'Bob');
+      if ('error' in accepted) throw new Error('Should accept invitation');
+      const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      gameManager.connectPlayer(created.gameId, created.playerToken, socket);
+      gameManager.connectPlayer(accepted.gameId, accepted.playerToken, socket);
+
       // Invalid angle
-      const result1 = gameManager.fire(created.gameId, created.playerToken, -10, 50);
-      expect('error' in result1).toBe(true);
+      const result1 = gameManager.fire(created.gameId, created.playerToken, 100, 30);
+      expect('error' in result1 && result1.code).toBe('INVALID_ANGLE');
 
       // Invalid velocity
-      const result2 = gameManager.fire(created.gameId, created.playerToken, 45, -10);
-      expect('error' in result2).toBe(true);
+      const result2 = gameManager.fire(created.gameId, created.playerToken, 45, 29);
+      expect('error' in result2 && result2.code).toBe('INVALID_VELOCITY');
+
+      expect('error' in gameManager.fire(created.gameId, created.playerToken, 99, 30)).toBe(false);
     });
   });
 

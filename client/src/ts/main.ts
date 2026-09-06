@@ -60,12 +60,14 @@ const uiManager = new UIManager(getDefaultServerAddress());
 let gameClient: GameClient | null = null;
 let clientName = '';
 let opponentName = '';
+let hotSeatNames: [string, string] | null = null;
 let historicalTrajectories: HistoricalTrajectory[] = [];
 let activeTrajectory: TrajectoryPoint[] = [];
 let activeShotIsLocal = false;
 let animationActive = false;
 let pendingVisualTurn: { playerId: 0 | 1; isMyTurn: boolean } | null = null;
 let pendingGameOver: { didIWin: boolean } | null = null;
+let pendingDefeatedPlayerId: 0 | 1 | null = null;
 let rematchRequested = false;
 
 function applyPendingPresentation(): void {
@@ -75,6 +77,11 @@ function applyPendingPresentation(): void {
     const result = pendingGameOver;
     pendingGameOver = null;
     pendingVisualTurn = null;
+    if (pendingDefeatedPlayerId !== null) {
+      renderer.setDefeatedPlayer(pendingDefeatedPlayerId);
+      pendingDefeatedPlayerId = null;
+      renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
+    }
     uiManager.showGameOver(result.didIWin, clientName, opponentName);
     return;
   }
@@ -84,7 +91,10 @@ function applyPendingPresentation(): void {
     pendingVisualTurn = null;
     renderer.setActiveTurn(turn.playerId);
     renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
-    const turnPlayerName = turn.isMyTurn ? clientName : opponentName;
+    const localNames = game.isHotSeat() ? hotSeatNames : null;
+    const turnPlayerName = localNames
+      ? localNames[turn.playerId]
+      : (turn.isMyTurn ? clientName : opponentName);
     uiManager.setMessage(`${turnPlayerName} turn`);
   }
 }
@@ -114,6 +124,7 @@ animator.onComplete(() => {
 function wireGameClientEvents(client: GameClient): void {
   client.onGameStart((_gameId: string, battlefield) => {
     rematchRequested = false;
+    renderer.setDefeatedPlayer(null);
     uiManager.prepareForNewRound();
     renderer.applyBattlefield(battlefield);
     historicalTrajectories = [];
@@ -122,6 +133,7 @@ function wireGameClientEvents(client: GameClient): void {
     animationActive = false;
     pendingVisualTurn = null;
     pendingGameOver = null;
+    pendingDefeatedPlayerId = null;
     uiManager.setWindLabel(battlefield.wind);
     animator.configureScene(
       renderer.getCanvasWidth(),
@@ -134,6 +146,11 @@ function wireGameClientEvents(client: GameClient): void {
     const playerId = client.getPlayerId();
     // Get opponent name from GameStartMessage if available
     opponentName = '';
+    const localNames = client.getLocalPlayerNames();
+    if (localNames) {
+      clientName = localNames[0];
+      opponentName = localNames[1];
+    }
     const lastGameStartMessage = client.getLastGameStartMessage();
     if (lastGameStartMessage && typeof lastGameStartMessage.opponentName === 'string') {
       opponentName = lastGameStartMessage.opponentName;
@@ -156,16 +173,20 @@ function wireGameClientEvents(client: GameClient): void {
   client.onShot((data) => {
     animationActive = true;
     const playerId = client.getPlayerId();
-    const isMyShot = playerId !== null && data.playerId === playerId;
+    const isMyShot = client.isHotSeat() || (playerId !== null && data.playerId === playerId);
     if (isMyShot) {
       activeShotIsLocal = true;
-      uiManager.renderShotHistory(game.getShotHistory());
+      uiManager.renderShotHistory(
+        client.isHotSeat() ? game.getShotHistoryForPlayer(data.playerId as 0 | 1) : game.getShotHistory()
+      );
       const battlefield = game.getBattlefield();
       if (battlefield) {
         historicalTrajectories = createHistoricalTrajectories(
           battlefield,
-          game.getShotHistory().slice(1),
-          playerId as 0 | 1
+          client.isHotSeat()
+            ? game.getShotHistoryForPlayer(data.playerId as 0 | 1).slice(1)
+            : game.getShotHistory().slice(1),
+          data.playerId as 0 | 1
         );
       }
     } else {
@@ -178,22 +199,40 @@ function wireGameClientEvents(client: GameClient): void {
   });
 
   client.onTurnChange((playerId: number, isMyTurn: boolean) => {
-    uiManager.updateTurnUI(playerId as 0 | 1, isMyTurn);
+    const activePlayerId = playerId as 0 | 1;
+    const inputHistory = game.isHotSeat()
+      ? game.getShotHistoryForPlayer(activePlayerId)
+      : game.getShotHistory();
+    uiManager.renderShotHistory(inputHistory);
+    uiManager.setShotInputs(inputHistory[0]);
+    uiManager.updateTurnUI(activePlayerId, isMyTurn);
     pendingVisualTurn = { playerId: playerId as 0 | 1, isMyTurn };
     const localPlayerId = client.getPlayerId();
     const battlefield = game.getBattlefield();
     if (isMyTurn && localPlayerId !== null && battlefield && !activeShotIsLocal) {
-      historicalTrajectories = createHistoricalTrajectories(
+        historicalTrajectories = createHistoricalTrajectories(
         battlefield,
-        game.getShotHistory(),
-        localPlayerId as 0 | 1
+          game.isHotSeat() ? game.getShotHistoryForPlayer(activePlayerId) : game.getShotHistory(),
+        activePlayerId
       );
     }
     applyPendingPresentation();
   });
 
-  client.onGameOver((_winnerId: number, didIWin: boolean) => {
+  client.onGameOver((winnerId: number, didIWin: boolean) => {
     uiManager.disableFireButton();
+    const defeatedPlayerId = winnerId === 0 ? 1 : 0;
+    pendingDefeatedPlayerId = defeatedPlayerId;
+    if (client.isHotSeat()) {
+      const localNames = client.getLocalPlayerNames();
+      if (localNames) {
+        pendingGameOver = { didIWin: true };
+        clientName = localNames[winnerId as 0 | 1];
+        opponentName = localNames[(winnerId === 0 ? 1 : 0) as 0 | 1];
+        applyPendingPresentation();
+        return;
+      }
+    }
     pendingGameOver = { didIWin };
     applyPendingPresentation();
   });
@@ -247,6 +286,7 @@ uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
     wireGameClientEvents(gameClient);
 
     clientName = playerName;
+    hotSeatNames = null;
     uiManager.showRegistering();
     const createResult = await gameClient.createGame(playerName);
     lobbyState.lastInviteUrl = createResult.inviteUrl;
@@ -273,6 +313,7 @@ uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddres
     wireGameClientEvents(gameClient);
 
     clientName = playerName;
+    hotSeatNames = null;
     uiManager.showRegistering();
     const inviteValue = parseInviteInput(inviteCode);
     const accepted = await gameClient.acceptInvitation(inviteValue, playerName);
@@ -287,6 +328,24 @@ uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddres
       uiManager.hideInviteInfo();
     }
     const errorMessage = error instanceof Error ? error.message : 'Unable to join game. Please try again.';
+    uiManager.showRegistrationError(errorMessage);
+  }
+});
+
+uiManager.onHotSeat(async (firstName: string, secondName: string, serverAddress: string) => {
+  try {
+    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
+    gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
+    wireGameClientEvents(gameClient);
+    clientName = firstName;
+    opponentName = secondName;
+    hotSeatNames = [firstName, secondName];
+    uiManager.showRegistering();
+    await gameClient.createHotSeatGame(firstName, secondName);
+    await gameClient.connectToGame();
+  } catch (error) {
+    console.error('Hot-seat game creation failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Hot-seat game creation failed. Please try again.';
     uiManager.showRegistrationError(errorMessage);
   }
 });

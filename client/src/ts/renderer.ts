@@ -10,7 +10,7 @@ export interface RenderState {
   historicalTrajectories: HistoricalTrajectory[];
 }
 
-const ACTIVE_TRAJECTORY_COLOR = '#FFA500';
+const ACTIVE_TRAJECTORY_COLOR = '#555555';
 const CASTLE_EMOJIS = [
   '🏰', '🏯', '🏟️', '🏛️', '🛖', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '💒', '🗼', '⛪', '🗽', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛺', '🎪'
 ] as const;
@@ -25,6 +25,7 @@ export class Renderer {
   private castleLeftByPlayerId: Record<0 | 1, number> = { 0: 20, 1: 260 };
   private castleGlyphs: Record<0 | 1, string> = { 0: '🏰', 1: '🏯' };
   private activeCastlePlayerId: 0 | 1 | null = null;
+  private defeatedCastlePlayerId: 0 | 1 | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -106,7 +107,9 @@ export class Renderer {
 
   public drawCastle(playerId: 0 | 1, leftX: number, isActive: boolean = false): void {
     const baseY = this.getCastleBaseY(leftX);
-    const glyph = this.castleGlyphs[playerId] ?? (playerId === 0 ? '🏰' : '🏯');
+    const glyph = this.defeatedCastlePlayerId === playerId
+      ? '💥'
+      : (this.castleGlyphs[playerId] ?? (playerId === 0 ? '🏰' : '🏯'));
     const fontSize = Math.max(10, Math.round(this.castleHeight * 1.7));
 
     this.ctx.save();
@@ -133,6 +136,7 @@ export class Renderer {
     this.groundY = battlefield.groundY;
     this.castleWidth = battlefield.castleWidth;
     this.castleHeight = battlefield.castleHeight;
+    this.defeatedCastlePlayerId = null;
     this.randomizeCastleGlyphs();
 
     battlefield.castles.forEach((castle) => {
@@ -190,6 +194,10 @@ export class Renderer {
     this.activeCastlePlayerId = playerId;
   }
 
+  public setDefeatedPlayer(playerId: 0 | 1 | null): void {
+    this.defeatedCastlePlayerId = playerId;
+  }
+
   public drawProjectile(projectile: Projectile): void {
     this.ctx.fillStyle = '#FF0000';
     this.ctx.beginPath();
@@ -220,7 +228,7 @@ export class Renderer {
       if (trajectory.points.length < 2) continue;
 
       this.ctx.save();
-      this.ctx.strokeStyle = `rgba(255, 165, 0, ${trajectory.opacity})`;
+      this.ctx.strokeStyle = `rgba(85, 85, 85, ${trajectory.opacity})`;
       this.ctx.lineWidth = 2;
       this.ctx.setLineDash([2, 3]);
       this.ctx.beginPath();
