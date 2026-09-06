@@ -5,6 +5,7 @@ import type { BattlefieldConfig } from './types/messages';
 export interface ShotHistoryEntry {
   angle: number;
   velocity: number;
+  playerId?: 0 | 1;
 }
 
 export class Game {
@@ -17,7 +18,9 @@ export class Game {
   private battlefield: BattlefieldConfig | null = null;
   private playerName: string | null = null;
   private opponentName: string | null = null;
+  private hotSeat = false;
   private shotHistory: ShotHistoryEntry[] = [];
+  private shotHistoryByPlayer: [ShotHistoryEntry[], ShotHistoryEntry[]] = [[], []];
 
   public getState(): GameState {
     return { ...this.state };
@@ -27,6 +30,15 @@ export class Game {
     this.state.playerId = id;
     this.playerName = playerName;
     this.updateTurnState();
+  }
+
+  public setHotSeat(enabled: boolean): void {
+    this.hotSeat = enabled;
+    this.updateTurnState();
+  }
+
+  public isHotSeat(): boolean {
+    return this.hotSeat;
   }
 
   public setGameId(id: string): void {
@@ -55,7 +67,7 @@ export class Game {
   }
 
   private updateTurnState(): void {
-    this.state.isMyTurn = this.state.playerId !== null && this.state.playerId === this.state.currentTurn;
+    this.state.isMyTurn = this.hotSeat || (this.state.playerId !== null && this.state.playerId === this.state.currentTurn);
   }
 
   public setOpponentName(name: string): void {
@@ -70,16 +82,25 @@ export class Game {
     return this.opponentName;
   }
 
-  public addShotToHistory(angle: number, velocity: number): void {
-    this.shotHistory = [{ angle, velocity }, ...this.shotHistory].slice(0, 4);
+  public addShotToHistory(angle: number, velocity: number, playerId?: 0 | 1): void {
+    const shot = { angle, velocity, ...(playerId === undefined ? {} : { playerId }) };
+    this.shotHistory = [shot, ...this.shotHistory].slice(0, 4);
+    if (playerId !== undefined) {
+      this.shotHistoryByPlayer[playerId] = [shot, ...this.shotHistoryByPlayer[playerId]].slice(0, 4);
+    }
   }
 
   public getShotHistory(): ShotHistoryEntry[] {
     return this.shotHistory.map((shot) => ({ ...shot }));
   }
 
+  public getShotHistoryForPlayer(playerId: 0 | 1): ShotHistoryEntry[] {
+    return this.shotHistoryByPlayer[playerId].map((shot) => ({ ...shot }));
+  }
+
   public resetShotHistory(): void {
     this.shotHistory = [];
+    this.shotHistoryByPlayer = [[], []];
   }
 }
 

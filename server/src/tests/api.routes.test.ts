@@ -28,6 +28,20 @@ describe('API routes', () => {
     expect(response.body.inviteUrl).toContain('invite=');
   });
 
+  it('creates a hot-seat game with credentials for both players', async () => {
+    const response = await request(app)
+      .post('/api/v1/hot-seat/games')
+      .send({ firstPlayerName: 'Alice', secondPlayerName: 'Bob' })
+      .expect(201);
+
+    expect(response.body.gameId).toBeTruthy();
+    expect(response.body.players).toHaveLength(2);
+    expect(response.body.players[0]).toMatchObject({ playerId: 0, playerName: 'Alice' });
+    expect(response.body.players[1]).toMatchObject({ playerId: 1, playerName: 'Bob' });
+    expect(response.body.players[0].playerToken).toBeTruthy();
+    expect(response.body.players[1].playerToken).toBeTruthy();
+  });
+
   it('accepts an invitation by code', async () => {
     const created = gameManager.createGame('Alice');
     if ('error' in created) throw new Error('Expected created game');

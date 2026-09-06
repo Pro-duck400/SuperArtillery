@@ -1,7 +1,7 @@
 // Coordinates network communication (HTTP + WebSocket)
 import { Game } from './game';
 import { WebSocketClient } from './network/websocket';
-import { ApiClient, type CreateGameResponse, type AcceptInvitationResponse } from './network/api';
+import { ApiClient, type CreateGameResponse, type AcceptInvitationResponse, type CreateHotSeatResponse } from './network/api';
 import type {
   BattlefieldConfig,
   GameMessage,
@@ -22,6 +22,8 @@ interface GameSession {
   gameId: string;
   sessionToken: string;
   playerName: string;
+  hotSeat?: boolean;
+  players?: [{ playerId: 0; playerName: string; sessionToken: string }, { playerId: 1; playerName: string; sessionToken: string }];
 }
 
 export class GameClient {
@@ -113,6 +115,27 @@ export class GameClient {
     this.game.setPlayer(1, playerName); // Invited player is always player 1
 
     console.log(`✅ Invitation accepted: ${response.gameId}`);
+    return response;
+  }
+
+  public async createHotSeatGame(firstPlayerName: string, secondPlayerName: string): Promise<CreateHotSeatResponse> {
+    await this.apiClient.healthCheckWithRetry();
+    const response = await this.apiClient.createHotSeatGame(firstPlayerName, secondPlayerName);
+    this.gameSession = {
+      gameId: response.gameId,
+      sessionToken: response.players[0].playerToken,
+      playerName: response.players[0].playerName,
+      hotSeat: true,
+      players: [
+        { playerId: 0, playerName: response.players[0].playerName, sessionToken: response.players[0].playerToken },
+        { playerId: 1, playerName: response.players[1].playerName, sessionToken: response.players[1].playerToken }
+      ]
+    };
+    this.saveSession();
+    this.game.setGameId(response.gameId);
+    this.game.setPlayer(0, response.players[0].playerName);
+    this.game.setOpponentName(response.players[1].playerName);
+    this.game.setHotSeat(true);
     return response;
   }
 
@@ -226,9 +249,10 @@ export class GameClient {
       throw new Error('Game ID mismatch');
     }
 
+    const sessionToken = this.getTokenForPlayer(this.game.getState().currentTurn);
     await this.apiClient.fire(
       this.gameSession.gameId,
-      this.gameSession.sessionToken,
+      sessionToken,
       angle,
       velocity
     );
@@ -240,10 +264,12 @@ export class GameClient {
       throw new Error('No active game session');
     }
 
-    await this.apiClient.requestRematch(
-      this.gameSession.gameId,
-      this.gameSession.sessionToken
-    );
+    if (this.gameSession.hotSeat && this.gameSession.players) {
+      await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.players[0].sessionToken);
+      await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.players[1].sessionToken);
+      return;
+    }
+    await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.sessionToken);
   }
 
   /**
@@ -264,8 +290,8 @@ export class GameClient {
         break;
 
       case 'shot':
-        if (message.playerId === this.game.getPlayerId()) {
-          this.game.addShotToHistory(message.angle, message.velocity);
+        if (this.game.isHotSeat() || message.playerId === this.game.getPlayerId()) {
+          this.game.addShotToHistory(message.angle, message.velocity, this.game.isHotSeat() ? message.playerId as 0 | 1 : undefined);
         }
         if (this.onShotCallback) {
           this.onShotCallback({
@@ -288,8 +314,9 @@ export class GameClient {
       case 'game_over':
         const gameOverState = this.game.getState();
         const myPlayerId = gameOverState.playerId;
-        const didIWin =
-          myPlayerId !== null && myPlayerId === message.playerId_winner;
+        const didIWin = this.game.isHotSeat()
+          ? true
+          : myPlayerId !== null && myPlayerId === message.playerId_winner;
         if (this.onGameOverCallback) {
           this.onGameOverCallback(message.playerId_winner, didIWin);
         }
@@ -333,6 +360,22 @@ export class GameClient {
    */
   public getPlayerId(): number | null {
     return this.game.getPlayerId();
+  }
+
+  public isHotSeat(): boolean {
+    return this.game.isHotSeat();
+  }
+
+  public getLocalPlayerNames(): [string, string] | null {
+    if (!this.gameSession?.players) return null;
+    return [this.gameSession.players[0].playerName, this.gameSession.players[1].playerName];
+  }
+
+  private getTokenForPlayer(playerId: 0 | 1): string {
+    if (this.gameSession?.hotSeat && this.gameSession.players) {
+      return this.gameSession.players[playerId].sessionToken;
+    }
+    return this.gameSession?.sessionToken ?? '';
   }
 
   public getLastGameStartMessage(): GameStartMessage | null {

@@ -102,6 +102,18 @@ export function createApiRouter(game: GameManager): Router {
     return res.status(HTTP_STATUS.CREATED).json(result);
   });
 
+  router.post('/v1/hot-seat/games', (req, res) => {
+    const { firstPlayerName, secondPlayerName } = req.body;
+    const result = game.createHotSeatGame(firstPlayerName, secondPlayerName);
+    if ('error' in result) {
+      const statusCode = result.code === GameManager.ERROR_CODES.MAX_GAMES_REACHED
+        ? HTTP_STATUS.SERVICE_UNAVAILABLE
+        : HTTP_STATUS.BAD_REQUEST;
+      return res.status(statusCode).json({ code: result.code, message: result.error });
+    }
+    return res.status(HTTP_STATUS.CREATED).json(result);
+  });
+
   // POST /api/v1/invitations/accept - Accept an invitation
   router.post('/v1/invitations/accept', (req, res) => {
     const { inviteCode, playerName } = req.body;
