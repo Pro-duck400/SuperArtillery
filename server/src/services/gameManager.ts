@@ -327,6 +327,10 @@ export class GameManager {
     if (game.hotSeat && playerId < 2) {
       game.initiator.websocket = ws;
       game.invited.websocket = ws;
+      game.lobbySlots.forEach(s => {
+        s.status = 'ready';
+        s.session.websocket = ws;
+      });
     }
 
     console.log(`✅ Player ${playerId} (${slot.session.name ?? `Player ${playerId + 1}`}) connected to game ${gameId}`);
@@ -587,7 +591,7 @@ export class GameManager {
         players: this.getPlayerStates(game)
       });
     }
-  
+
     return {
       success: true,
       answer,
