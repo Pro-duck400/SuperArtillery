@@ -675,6 +675,9 @@ export class UIManager {
    */
   public updateTurnUI(currentTurn: number, isMyTurn: boolean): void {
     this.fireButton.disabled = !isMyTurn;
+    if (this.directionInput) {
+      this.directionInput.disabled = !isMyTurn;
+    }
     if (isMyTurn) {
       this.angleInput.disabled = false;
       this.velocityInput.disabled = false;
@@ -714,6 +717,9 @@ export class UIManager {
   public setShotInputs(shot: ShotHistoryEntry | undefined): void {
     this.angleInput.value = String(shot?.angle ?? 45);
     this.velocityInput.value = String(shot?.velocity ?? 150);
+    if (this.directionInput && shot?.direction) {
+      this.directionInput.value = shot.direction;
+    }
   }
 
   /**

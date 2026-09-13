@@ -208,13 +208,23 @@ function wireGameClientEvents(client: GameClient): void {
     );
 
     const playerId = client.getPlayerId();
-    const castleIds = battlefield.castles.map(castle => castle.playerId);
-    uiManager.setDirectionVisible(
-      playerId !== null && castleIds.length > 2 && playerId !== Math.min(...castleIds) && playerId !== Math.max(...castleIds)
-    );
-    uiManager.setDirectionDefault(
-      playerId === Math.min(...castleIds) ? 'Right' : 'Left'
-    );
+    const targetPlayerId = client.isHotSeat() ? 0 : playerId;
+    if (battlefield.castles.length > 0 && targetPlayerId !== null && targetPlayerId !== undefined) {
+      const leftmostPlayerId = battlefield.castles[0].playerId;
+      const rightmostPlayerId = battlefield.castles[battlefield.castles.length - 1].playerId;
+      const isLeftmost = targetPlayerId === leftmostPlayerId;
+      const isRightmost = targetPlayerId === rightmostPlayerId;
+      const isMiddlePlayer = !isLeftmost && !isRightmost;
+
+      uiManager.setDirectionVisible(isMiddlePlayer);
+      if (isLeftmost) {
+        uiManager.setDirectionDefault('Right');
+      } else if (isRightmost) {
+        uiManager.setDirectionDefault('Left');
+      }
+    } else {
+      uiManager.setDirectionVisible(false);
+    }
     // Get opponent name from GameStartMessage if available
     opponentName = '';
     const localNames = client.getLocalPlayerNames();
@@ -224,8 +234,7 @@ function wireGameClientEvents(client: GameClient): void {
     }
     const lastGameStartMessage = client.getLastGameStartMessage();
     if (lastGameStartMessage) {
-      const localPlayerId = client.getPlayerId();
-      const opponent = lastGameStartMessage.players.find(player => player.playerId !== localPlayerId);
+      const opponent = lastGameStartMessage.players.find(player => player.playerId !== playerId);
       opponentName = opponent?.name ?? opponentName;
     }
 
@@ -273,6 +282,28 @@ function wireGameClientEvents(client: GameClient): void {
 
   client.onTurnChange((playerId: number, isMyTurn: boolean) => {
     const activePlayerId = playerId;
+    const battlefield = game.getBattlefield();
+    const localPlayerId = client.getPlayerId();
+    const targetPlayerId = client.isHotSeat() ? activePlayerId : localPlayerId;
+
+    if (battlefield && battlefield.castles.length > 0 && targetPlayerId !== null && targetPlayerId !== undefined) {
+      const leftmostPlayerId = battlefield.castles[0].playerId;
+      const rightmostPlayerId = battlefield.castles[battlefield.castles.length - 1].playerId;
+
+      const isLeftmost = targetPlayerId === leftmostPlayerId;
+      const isRightmost = targetPlayerId === rightmostPlayerId;
+      const isMiddlePlayer = !isLeftmost && !isRightmost;
+
+      uiManager.setDirectionVisible(isMiddlePlayer);
+      if (isLeftmost) {
+        uiManager.setDirectionDefault('Right');
+      } else if (isRightmost) {
+        uiManager.setDirectionDefault('Left');
+      }
+    } else {
+      uiManager.setDirectionVisible(false);
+    }
+
     const inputHistory = game.isHotSeat()
       ? game.getShotHistoryForPlayer(activePlayerId)
       : game.getShotHistory();
@@ -284,8 +315,6 @@ function wireGameClientEvents(client: GameClient): void {
     );
     uiManager.updateTurnUI(activePlayerId, isMyTurn);
     pendingVisualTurn = { playerId: playerId as 0 | 1, isMyTurn };
-    const localPlayerId = client.getPlayerId();
-    const battlefield = game.getBattlefield();
     if (isMyTurn && localPlayerId !== null && battlefield && !activeShotIsLocal) {
         historicalTrajectories = createHistoricalTrajectories(
         battlefield,

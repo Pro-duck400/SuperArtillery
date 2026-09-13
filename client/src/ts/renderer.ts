@@ -12,7 +12,7 @@ export interface RenderState {
 
 const ACTIVE_TRAJECTORY_COLOR = '#555555';
 const CASTLE_EMOJIS = [
-  '🏰', '🏯', '🏟️', '🏛️', '🛖', '🏚️', '🏠', '🏡', '🏦', '🏫', '💒', '🗼', '⛪', '🗽', '🕌', '🛕', '🕍', '🎪', '🏭'
+  '🏰', '🏯', '🏛️', '🛖', '🏚️', '🏠', '🏡', '🏦', '🏫', '🗼', '⛪', '🕌', '🛕', '🕍', '🎪', '🏭'
 ] as const;
 
 export class Renderer {
