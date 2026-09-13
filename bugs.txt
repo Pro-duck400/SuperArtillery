@@ -6,4 +6,3 @@ Change them to "Shoot↖️" and "Shoot↗️"? Display direction in Fire button
 Keep accumulated with each rematch.
 4. The creator when drops, no one can shoot
 5. When players drops (responding I had enough on rematch), close its Web Socket connection.
-6. Player which changed its playerId can't be hit

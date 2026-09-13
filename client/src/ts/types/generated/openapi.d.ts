@@ -666,10 +666,21 @@ export interface components {
             games: number;
             /** @description Number of pending invitations */
             invites: number;
-            /** @description Total number of games ever started on the server */
-            gamesEverStarted: number;
-            /** @description True if server is at maximum capacity */
-            maxReached: boolean;
+            /** @description Lifetime counts of games started and rematches played, split by mode */
+            totals: {
+                internet: {
+                    /** @description Total number of Internet (invite-based) games ever started */
+                    games: number;
+                    /** @description Total number of Internet games continued as a rematch with the same players */
+                    rematches: number;
+                };
+                device: {
+                    /** @description Total number of on-this-device (hot-seat) games ever started */
+                    games: number;
+                    /** @description Total number of on-this-device games continued as a rematch with the same players */
+                    rematches: number;
+                };
+            };
             version: string;
             /** @description Client/server protocol contract version */
             contractVersion: string;

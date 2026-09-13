@@ -59,8 +59,10 @@ export interface HealthResponse {
   uptime: string;
   games: number;
   invites: number;
-  gamesEverStarted: number;
-  maxReached: boolean;
+  totals: {
+    internet: { games: number; rematches: number };
+    device: { games: number; rematches: number };
+  };
   version: string;
   contractVersion: string;
 }

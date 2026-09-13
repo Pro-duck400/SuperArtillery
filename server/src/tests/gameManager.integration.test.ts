@@ -164,7 +164,8 @@ describe('Integration: Private Games Flow', () => {
       const stats = gameManager.getStats();
       expect(stats.games).toBe(2);
       expect(stats.invites).toBe(1);
-      expect(stats.gamesEverStarted).toBe(2);
+      expect(stats.totals.internet.games).toBe(2);
+      expect(stats.totals.device.games).toBe(0);
       expect(stats.maxReached).toBe(false);
     });
   });

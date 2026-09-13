@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.4.1
+  version: 1.5.0
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -655,7 +655,7 @@ components:
     HealthResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, games, invites, gamesEverStarted, maxReached, version, contractVersion]
+      required: [status, timestamp, uptime, games, invites, totals, version, contractVersion]
       properties:
         status:
           type: string
@@ -676,13 +676,38 @@ components:
           type: integer
           minimum: 0
           description: Number of pending invitations
-        gamesEverStarted:
-          type: integer
-          minimum: 0
-          description: Total number of games ever started on the server
-        maxReached:
-          type: boolean
-          description: True if server is at maximum capacity
+        totals:
+          type: object
+          additionalProperties: false
+          required: [internet, device]
+          description: Lifetime counts of games started and rematches played, split by mode
+          properties:
+            internet:
+              type: object
+              additionalProperties: false
+              required: [games, rematches]
+              properties:
+                games:
+                  type: integer
+                  minimum: 0
+                  description: Total number of Internet (invite-based) games ever started
+                rematches:
+                  type: integer
+                  minimum: 0
+                  description: Total number of Internet games continued as a rematch with the same players
+            device:
+              type: object
+              additionalProperties: false
+              required: [games, rematches]
+              properties:
+                games:
+                  type: integer
+                  minimum: 0
+                  description: Total number of on-this-device (hot-seat) games ever started
+                rematches:
+                  type: integer
+                  minimum: 0
+                  description: Total number of on-this-device games continued as a rematch with the same players
         version:
           type: string
         contractVersion:

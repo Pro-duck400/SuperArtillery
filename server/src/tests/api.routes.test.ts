@@ -121,8 +121,10 @@ describe('API routes', () => {
       status: 'ok',
       games: expect.any(Number),
       invites: expect.any(Number),
-      gamesEverStarted: expect.any(Number),
-      maxReached: expect.any(Boolean),
+      totals: {
+        internet: { games: expect.any(Number), rematches: expect.any(Number) },
+        device: { games: expect.any(Number), rematches: expect.any(Number) }
+      },
       timestamp: expect.any(String),
       uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
       contractVersion: CONTRACT_VERSION

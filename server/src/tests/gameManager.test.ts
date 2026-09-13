@@ -450,6 +450,31 @@ describe('GameManager', () => {
       expect(game.status).toBe('active');
       expect(firstSocket.send).toHaveBeenCalledWith(expect.stringContaining('"round":2'));
       expect(secondSocket.send).toHaveBeenCalledWith(expect.stringContaining('"round":2'));
+
+      const stats = gameManager.getStats();
+      expect(stats.totals.internet.games).toBe(1);
+      expect(stats.totals.internet.rematches).toBe(1);
+      expect(stats.totals.device.rematches).toBe(0);
+    });
+
+    it('counts a hot-seat rematch under totals.device', () => {
+      const created = gameManager.createHotSeatGame('Alice', 'Bob');
+      if ('error' in created) throw new Error('Should create hot-seat game');
+
+      const game = (gameManager as any).games.get(created.gameId);
+      game.status = 'finished';
+      game.gameFinishedAt = Date.now();
+
+      const waiting = gameManager.requestRematch(created.gameId, created.players[0].playerToken);
+      expect(waiting).toMatchObject({ success: true, playersReady: 1, roundStarted: false });
+
+      const started = gameManager.requestRematch(created.gameId, created.players[1].playerToken);
+      expect(started).toMatchObject({ success: true, playersReady: 2, roundStarted: true });
+
+      const stats = gameManager.getStats();
+      expect(stats.totals.device.games).toBe(1);
+      expect(stats.totals.device.rematches).toBe(1);
+      expect(stats.totals.internet.rematches).toBe(0);
     });
 
     it('keeps final rematch answers in the status payload before clearing the state', () => {
@@ -484,17 +509,17 @@ describe('GameManager', () => {
     it('returns accurate game count', () => {
       const stats1 = gameManager.getStats();
       expect(stats1.games).toBe(0);
-      expect(stats1.gamesEverStarted).toBe(0);
+      expect(stats1.totals.internet.games).toBe(0);
 
       gameManager.createGame('Alice');
       const stats2 = gameManager.getStats();
       expect(stats2.games).toBe(1);
-      expect(stats2.gamesEverStarted).toBe(1);
+      expect(stats2.totals.internet.games).toBe(1);
 
       gameManager.createGame('Bob');
       const stats3 = gameManager.getStats();
       expect(stats3.games).toBe(2);
-      expect(stats3.gamesEverStarted).toBe(2);
+      expect(stats3.totals.internet.games).toBe(2);
     });
 
     it('counts only pending invitations', () => {
