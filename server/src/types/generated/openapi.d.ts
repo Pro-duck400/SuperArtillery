@@ -12,8 +12,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Enhanced health check for the server
-         * @description Returns server health, game count, and capacity information
+         * Lightweight health check for the server
+         * @description Returns server health, active game count, and version information
          */
         get: {
             parameters: {
@@ -31,6 +31,45 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["HealthResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comprehensive server statistics
+         * @description Returns server health, uptime, active connection metrics, and lifetime totals
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Server statistics retrieved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StatsResponse"];
                     };
                 };
             };
@@ -666,6 +705,25 @@ export interface components {
             games: number;
             /** @description Number of pending invitations */
             invites: number;
+            version: string;
+            contractVersion: string;
+        };
+        StatsResponse: {
+            /**
+             * @description Server status (degraded if at max capacity)
+             * @enum {string}
+             */
+            status: "ok" | "degraded";
+            /** Format: date-time */
+            timestamp: string;
+            /** @description Server uptime formatted as D.HH:mm:ss.ggg */
+            uptime: string;
+            /** @description Number of active games */
+            games: number;
+            /** @description Number of pending invitations */
+            invites: number;
+            /** @description Number of currently open WebSocket connections */
+            webSockets: number;
             /** @description Lifetime counts of games started and rematches played, split by mode */
             totals: {
                 internet: {
@@ -682,7 +740,6 @@ export interface components {
                 };
             };
             version: string;
-            /** @description Client/server protocol contract version */
             contractVersion: string;
         };
         GameStartMessage: {

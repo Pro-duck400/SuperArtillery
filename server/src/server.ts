@@ -34,14 +34,14 @@ app.use(cors());
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Mount API routes
-app.use('/api', createApiRouter(game));
-
 // Create HTTP server
 const httpServer = createServer(app);
 
 // Create WebSocket server attached to HTTP server
 const wss = new WebSocketServer({ server: httpServer });
+
+// Mount API routes
+app.use('/api', createApiRouter(game, () => Array.from(wss.clients).filter(client => client.readyState === WebSocket.OPEN).length));
 
 // Map to track connection metadata: gameId and playerId for each WebSocket
 const connectionMetadata = new WeakMap<WebSocket, { gameId: string; playerId: number }>();

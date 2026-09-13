@@ -119,6 +119,17 @@ export interface HealthResponse {
   uptime: string;
   games: number;
   invites: number;
+  version: string;
+  contractVersion: string;
+}
+
+export interface StatsResponse {
+  status: 'ok' | 'degraded';
+  timestamp: string;
+  uptime: string;
+  games: number;
+  invites: number;
+  webSockets: number;
   totals: {
     internet: { games: number; rematches: number };
     device: { games: number; rematches: number };
