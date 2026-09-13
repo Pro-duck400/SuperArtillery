@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.4.1
+  version: 1.5.0
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -14,8 +14,8 @@ paths:
   /api/v1/health:
     get:
       tags: [Health]
-      summary: Enhanced health check for the server
-      description: Returns server health, game count, and capacity information
+      summary: Lightweight health check for the server
+      description: Returns server health, active game count, and version information
       responses:
         '200':
           description: Server is healthy
@@ -23,6 +23,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/stats:
+    get:
+      tags: [Health]
+      summary: Comprehensive server statistics
+      description: Returns server health, uptime, active connection metrics, and lifetime totals
+      responses:
+        '200':
+          description: Server statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
 
   /api/v1/games:
     post:
@@ -655,7 +668,7 @@ components:
     HealthResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, games, invites, gamesEverStarted, maxReached, version, contractVersion]
+      required: [status, timestamp, uptime, games, invites, version, contractVersion]
       properties:
         status:
           type: string
@@ -676,18 +689,75 @@ components:
           type: integer
           minimum: 0
           description: Number of pending invitations
-        gamesEverStarted:
-          type: integer
-          minimum: 0
-          description: Total number of games ever started on the server
-        maxReached:
-          type: boolean
-          description: True if server is at maximum capacity
         version:
           type: string
         contractVersion:
           type: string
-          description: Client/server protocol contract version
+
+    StatsResponse:
+      type: object
+      additionalProperties: false
+      required: [status, timestamp, uptime, games, invites, webSockets, totals, version, contractVersion]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Server status (degraded if at max capacity)
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: string
+          pattern: '^\\d+\\.\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$'
+          description: Server uptime formatted as D.HH:mm:ss.ggg
+        games:
+          type: integer
+          minimum: 0
+          description: Number of active games
+        invites:
+          type: integer
+          minimum: 0
+          description: Number of pending invitations
+        webSockets:
+          type: integer
+          minimum: 0
+          description: Number of currently open WebSocket connections
+        totals:
+          type: object
+          additionalProperties: false
+          required: [internet, device]
+          description: Lifetime counts of games started and rematches played, split by mode
+          properties:
+            internet:
+              type: object
+              additionalProperties: false
+              required: [games, rematches]
+              properties:
+                games:
+                  type: integer
+                  minimum: 0
+                  description: Total number of Internet (invite-based) games ever started
+                rematches:
+                  type: integer
+                  minimum: 0
+                  description: Total number of Internet games continued as a rematch with the same players
+            device:
+              type: object
+              additionalProperties: false
+              required: [games, rematches]
+              properties:
+                games:
+                  type: integer
+                  minimum: 0
+                  description: Total number of on-this-device (hot-seat) games ever started
+                rematches:
+                  type: integer
+                  minimum: 0
+                  description: Total number of on-this-device games continued as a rematch with the same players
+        version:
+          type: string
+        contractVersion:
+          type: string
 
     # WebSocket Message Types
 

@@ -26,11 +26,43 @@ Used by the client to detect a sleeping/cold-starting server before create/accep
 **Response `200`:**
 ```json
 {
-  "status": "ok" | "degraded",
-  "timestamp": "2026-08-31T12:00:00.000Z",
-  "gameCount": 3,
-  ...
-  "version": "1.0.1"
+  "status": "ok",
+  "timestamp": "2026-09-13T08:21:58.459Z",
+  "uptime": "0.01:05:51.042",
+  "games": 2,
+  "invites": 0,
+  "version": "1.3.1",
+  "contractVersion": "1.5.0"
+}
+```
+
+### Server Statistics
+
+Provides detailed metrics on active WebSocket connections, active games, pending invitations, and lifetime totals split by game mode.
+
+**GET** `/api/v1/stats`
+
+**Response `200`:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-09-13T08:21:58.459Z",
+  "uptime": "0.01:05:51.042",
+  "games": 2,
+  "invites": 0,
+  "webSockets": 3,
+  "totals": {
+    "internet": {
+      "games": 2,
+      "rematches": 4
+    },
+    "device": {
+      "games": 3,
+      "rematches": 2
+    }
+  },
+  "version": "1.3.1",
+  "contractVersion": "1.5.0"
 }
 ```
 

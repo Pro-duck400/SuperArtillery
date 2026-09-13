@@ -57,7 +57,10 @@ export class GameManager {
   private readonly gameRules: GameRules;
   private readonly timerScheduler: TimerScheduler;
   private cleanupInterval: NodeJS.Timeout | null = null;
-  private gamesEverStarted: number = 0;
+  private internetGamesEverStarted: number = 0;
+  private internetRematches: number = 0;
+  private deviceGamesEverStarted: number = 0;
+  private deviceRematches: number = 0;
 
   // Configuration
   constructor(
@@ -113,7 +116,7 @@ export class GameManager {
       };
     }
 
-    this.gamesEverStarted++;
+    this.internetGamesEverStarted++;
 
     return this.invitationService.createGame(playerName, clientOrigin, serverOrigin, Date.now(), playerCount);
   }
@@ -150,6 +153,8 @@ export class GameManager {
         code: GameManager.ERROR_CODES.MAX_GAMES_REACHED
       };
     }
+
+    this.deviceGamesEverStarted++;
 
     const gameId = TokenService.generateGameId();
     const firstToken = TokenService.generateSessionToken();
@@ -570,6 +575,9 @@ export class GameManager {
     }
 
     const transition = this.gameRules.requestRematch(game, playerId, answer);
+    if (transition.kind === 'started') {
+      game.hotSeat ? this.deviceRematches++ : this.internetRematches++;
+    }
     const answers = transition.answers ?? game.rematchAnswers ?? [];
     const statusMessage: RematchStatusMessage = {
       type: 'rematch_status',
@@ -746,8 +754,11 @@ export class GameManager {
   public getStats(): {
     games: number;
     invites: number;
-    gamesEverStarted: number;
     maxReached: boolean;
+    totals: {
+      internet: { games: number; rematches: number };
+      device: { games: number; rematches: number };
+    };
   } {
     let invites = 0;
     for (const game of this.games.values()) {
@@ -759,8 +770,11 @@ export class GameManager {
     return {
       games: this.games.size,
       invites: invites,
-      gamesEverStarted: this.gamesEverStarted,
-      maxReached: this.games.size >= GAME_CONFIG.maxActiveGames
+      maxReached: this.games.size >= GAME_CONFIG.maxActiveGames,
+      totals: {
+        internet: { games: this.internetGamesEverStarted, rematches: this.internetRematches },
+        device: { games: this.deviceGamesEverStarted, rematches: this.deviceRematches }
+      }
     };
   }
 }

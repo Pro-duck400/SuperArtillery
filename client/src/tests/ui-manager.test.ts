@@ -35,6 +35,12 @@ describe('UIManager private game flow', () => {
             <div id="playerNameRight"></div>
           </div>
           <div id="controls">
+            <label id="directionField" hidden>
+              <select id="directionInput">
+                <option value="Left">Left</option>
+                <option value="Right">Right</option>
+              </select>
+            </label>
             <input id="angleInput" value="45" />
             <input id="velocityInput" value="150" />
             <button id="fireButton" disabled>Fire!</button>
@@ -320,6 +326,24 @@ describe('UIManager private game flow', () => {
     expect(inviteInfo.style.display).toBe('block');
     expect(inviteInfo.textContent).toContain('ABCD');
     expect(inviteInfo.textContent).toContain('https://example.com/?invite=token');
+  });
+
+  it('controls direction field visibility and default value', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const directionField = document.getElementById('directionField') as HTMLLabelElement;
+    const directionInput = document.getElementById('directionInput') as HTMLSelectElement;
+
+    expect(directionField.hidden).toBe(true);
+
+    ui.setDirectionVisible(true);
+    expect(directionField.hidden).toBe(false);
+
+    ui.setDirectionDefault('Right');
+    expect(directionInput.value).toBe('Right');
+    expect(ui.getDirection()).toBe('Right');
+
+    ui.setDirectionVisible(false);
+    expect(directionField.hidden).toBe(true);
   });
 
   it('hides lobby inputs while creating and restores them after an error', () => {

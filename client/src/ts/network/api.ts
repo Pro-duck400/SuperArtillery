@@ -59,8 +59,21 @@ export interface HealthResponse {
   uptime: string;
   games: number;
   invites: number;
-  gamesEverStarted: number;
-  maxReached: boolean;
+  version: string;
+  contractVersion: string;
+}
+
+export interface StatsResponse {
+  status: 'ok' | 'degraded';
+  timestamp: string;
+  uptime: string;
+  games: number;
+  invites: number;
+  webSockets: number;
+  totals: {
+    internet: { games: number; rematches: number };
+    device: { games: number; rematches: number };
+  };
   version: string;
   contractVersion: string;
 }
@@ -117,6 +130,21 @@ export class ApiClient {
 
     if (!response.ok) {
       throw new Error('Server is not responding');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch comprehensive server statistics
+   */
+  public async getStats(): Promise<StatsResponse> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/stats`, {
+      method: 'GET'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to retrieve server stats');
     }
 
     return response.json();

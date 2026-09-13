@@ -3,7 +3,7 @@ import type { Request } from 'express';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { GameManager } from '../services/gameManager';
-import type { HealthResponse, ErrorResponse } from '../types/private-game';
+import type { HealthResponse, StatsResponse, ErrorResponse } from '../types/private-game';
 import { HTTP_STATUS } from '../httpStatus';
 import { CONTRACT_VERSION } from '../contract-version';
 
@@ -43,7 +43,7 @@ function formatUptime(uptimeSeconds: number): string {
   return `${days}.${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
 }
 
-export function createApiRouter(game: GameManager): Router {
+export function createApiRouter(game: GameManager, getWebSocketCount: () => number = () => 0): Router {
   const router = Router();
 
   router.use((req, res, next) => {
@@ -77,7 +77,7 @@ export function createApiRouter(game: GameManager): Router {
       }
     })();
 
-  // GET /api/v1/health - Enhanced health check
+  // GET /api/v1/health - Lightweight health check
   router.get('/v1/health', (_req, res) => {
     const stats = game.getStats();
     const timestamp = new Date();
@@ -88,12 +88,29 @@ export function createApiRouter(game: GameManager): Router {
       uptime: formatUptime(uptime),
       games: stats.games,
       invites: stats.invites,
-      gamesEverStarted: stats.gamesEverStarted,
-      maxReached: stats.maxReached,
       version: SERVER_VERSION,
       contractVersion: CONTRACT_VERSION
     };
     res.json(healthResponse);
+  });
+
+  // GET /api/v1/stats - Comprehensive server statistics
+  router.get('/v1/stats', (_req, res) => {
+    const stats = game.getStats();
+    const timestamp = new Date();
+    const uptime = process.uptime();
+    const statsResponse: StatsResponse = {
+      status: stats.maxReached ? 'degraded' : 'ok',
+      timestamp: timestamp.toISOString(),
+      uptime: formatUptime(uptime),
+      games: stats.games,
+      invites: stats.invites,
+      webSockets: getWebSocketCount(),
+      totals: stats.totals,
+      version: SERVER_VERSION,
+      contractVersion: CONTRACT_VERSION
+    };
+    res.json(statsResponse);
   });
 
   // POST /api/v1/games - Create a private game
