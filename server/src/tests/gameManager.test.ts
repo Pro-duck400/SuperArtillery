@@ -330,7 +330,7 @@ describe('GameManager', () => {
 
   describe('fire action', () => {
     it('starts a hot-seat game from one connected socket', () => {
-      const created = gameManager.createHotSeatGame('Alice', 'Bob');
+      const created = gameManager.createHotSeatGame(['Alice', 'Bob']);
       if ('error' in created) throw new Error('Should create hot-seat game');
 
       const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
@@ -342,6 +342,44 @@ describe('GameManager', () => {
       expect(game.initiator.websocket).toBe(socket);
       expect(game.invited.websocket).toBe(socket);
       expect(socket.send).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts a hot-seat game with up to 9 players from one connected socket', () => {
+      const names = ['Alice', 'Bob', 'Carl', 'Dana', 'Eve'];
+      const created = gameManager.createHotSeatGame(names);
+      if ('error' in created) throw new Error('Should create hot-seat game');
+      expect(created.players).toHaveLength(5);
+
+      const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      const connection = gameManager.connectPlayer(created.gameId, created.players[0].playerToken, socket);
+      expect(connection).toEqual({ playerId: 0 });
+
+      const game = (gameManager as any).games.get(created.gameId);
+      expect(game.gameStarted).toBe(true);
+      expect(game.lobbySlots.every((slot: any) => slot.session.websocket === socket)).toBe(true);
+      expect(socket.send).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects hot-seat creation with fewer than 2 or more than 9 names', () => {
+      const tooFew = gameManager.createHotSeatGame(['Alice']);
+      expect('error' in tooFew && tooFew.code).toBe('INVALID_PLAYER_COUNT');
+
+      const tooMany = gameManager.createHotSeatGame(Array.from({ length: 10 }, (_, i) => `Player${i}`));
+      expect('error' in tooMany && tooMany.code).toBe('INVALID_PLAYER_COUNT');
+    });
+
+    it('ends the whole match when the single hot-seat device disconnects', () => {
+      const created = gameManager.createHotSeatGame(['Alice', 'Bob', 'Carl']);
+      if ('error' in created) throw new Error('Should create hot-seat game');
+
+      const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as any;
+      gameManager.connectPlayer(created.gameId, created.players[0].playerToken, socket);
+
+      const game = (gameManager as any).games.get(created.gameId);
+      gameManager.disconnectPlayer(created.gameId, 0, socket);
+
+      expect(game.status).toBe('finished');
+      expect(game.lobbySlots.every((slot: any) => !slot.active && slot.eliminated)).toBe(true);
     });
 
     it('accepts fire with valid session token', () => {
@@ -458,7 +496,7 @@ describe('GameManager', () => {
     });
 
     it('counts a hot-seat rematch under totals.device', () => {
-      const created = gameManager.createHotSeatGame('Alice', 'Bob');
+      const created = gameManager.createHotSeatGame(['Alice', 'Bob']);
       if ('error' in created) throw new Error('Should create hot-seat game');
 
       const game = (gameManager as any).games.get(created.gameId);

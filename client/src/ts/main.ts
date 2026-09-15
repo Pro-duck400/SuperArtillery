@@ -60,7 +60,7 @@ const uiManager = new UIManager(getDefaultServerAddress());
 let gameClient: GameClient | null = null;
 let clientName = '';
 let opponentName = '';
-let hotSeatNames: [string, string] | null = null;
+let hotSeatNames: string[] | null = null;
 let historicalTrajectories: HistoricalTrajectory[] = [];
 let activeTrajectory: TrajectoryPoint[] = [];
 let activeShotIsLocal = false;
@@ -259,16 +259,16 @@ function wireGameClientEvents(client: GameClient): void {
     if (isMyShot) {
       activeShotIsLocal = true;
       uiManager.renderShotHistory(
-        client.isHotSeat() ? game.getShotHistoryForPlayer(data.playerId as 0 | 1) : game.getShotHistory()
+        client.isHotSeat() ? game.getShotHistoryForPlayer(data.playerId) : game.getShotHistory()
       );
       const battlefield = game.getBattlefield();
       if (battlefield) {
         historicalTrajectories = createHistoricalTrajectories(
           battlefield,
           client.isHotSeat()
-            ? game.getShotHistoryForPlayer(data.playerId as 0 | 1).slice(1)
+            ? game.getShotHistoryForPlayer(data.playerId).slice(1)
             : game.getShotHistory().slice(1),
-          data.playerId as 0 | 1
+          data.playerId
         );
       }
     } else {
@@ -331,20 +331,15 @@ function wireGameClientEvents(client: GameClient): void {
     pendingRipPlayerIds.push(playerId);
   });
 
-  client.onGameOver((winnerId: number, didIWin: boolean) => {
+  client.onGameOver((_winnerId: number, didIWin: boolean) => {
     uiManager.disableFireButton();
     pendingDefeatedPlayerIds = game.getPlayers()
       .filter(player => !player.active)
       .map(player => player.playerId);
     if (client.isHotSeat()) {
-      const localNames = client.getLocalPlayerNames();
-      if (localNames) {
-        pendingGameOver = { didIWin: true };
-        clientName = localNames[winnerId as 0 | 1];
-        opponentName = localNames[(winnerId === 0 ? 1 : 0) as 0 | 1];
-        applyPendingPresentation();
-        return;
-      }
+      pendingGameOver = { didIWin: true };
+      applyPendingPresentation();
+      return;
     }
     pendingGameOver = { didIWin };
     applyPendingPresentation();
@@ -452,16 +447,16 @@ uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddres
   }
 });
 
-uiManager.onHotSeat(async (firstName: string, secondName: string, serverAddress: string) => {
+uiManager.onHotSeat(async (names: string[], serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
     gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
     wireGameClientEvents(gameClient);
-    clientName = firstName;
-    opponentName = secondName;
-    hotSeatNames = [firstName, secondName];
+    clientName = names[0];
+    opponentName = names[1] ?? '';
+    hotSeatNames = names;
     uiManager.showRegistering();
-    await gameClient.createHotSeatGame(firstName, secondName);
+    await gameClient.createHotSeatGame(names);
     await gameClient.connectToGame();
   } catch (error) {
     console.error('Hot-seat game creation failed:', error);

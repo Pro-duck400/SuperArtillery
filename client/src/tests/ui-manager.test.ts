@@ -18,7 +18,7 @@ describe('UIManager private game flow', () => {
           <div id="joinGameRow" hidden><label><input id="joinPlayerNameInput" /></label><label id="inviteInputLabel"><input id="inviteInput" value="" /></label><button id="joinGameButton">Join the game</button></div>
           <div id="createGameRow"><div><button id="createModeToggle">over Internet</button><span id="createModeOptions" role="listbox" hidden><button role="option" data-mode="internet"></button><button role="option" data-mode="device"></button></span></div></div>
           <div id="internetGameRow"><input id="playerNameInput" value="" maxlength="15" /><button id="actionButton">Create Game</button></div>
-          <div id="hotSeatPanel" hidden><input id="hotSeatPlayerOneInput" /><input id="hotSeatPlayerTwoInput" /><button id="startHotSeatButton">Start Hot Seat</button></div>
+          <div id="hotSeatPanel" hidden><ol id="hotSeatPlayersList"></ol><button id="addHotSeatPlayerButton">+ Add player</button><button id="startHotSeatButton">Start Hot Seat</button></div>
           <div id="registrationError"></div>
           <div id="inviteInfo">
             <span id="inviteCodeText"></span>
@@ -190,11 +190,40 @@ describe('UIManager private game flow', () => {
     (document.querySelector<HTMLButtonElement>('[data-mode="internet"]') as HTMLButtonElement).click();
     expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(false);
 
-    (document.getElementById('hotSeatPlayerOneInput') as HTMLInputElement).value = 'Alice';
-    (document.getElementById('hotSeatPlayerTwoInput') as HTMLInputElement).value = 'Bob';
+    const nameInputs = document.querySelectorAll<HTMLInputElement>('#hotSeatPlayersList input[type="text"]');
+    nameInputs[0].value = 'Alice';
+    nameInputs[1].value = 'Bob';
     (document.getElementById('startHotSeatButton') as HTMLButtonElement).click();
 
-    expect(hotSeatSpy).toHaveBeenCalledWith('Alice', 'Bob', 'http://localhost:3000');
+    expect(hotSeatSpy).toHaveBeenCalledWith(['Alice', 'Bob'], 'http://localhost:3000');
+  });
+
+  it('supports adding and removing hot-seat players up to a maximum of 9', () => {
+    const ui = new UIManager('http://localhost:3000');
+    const hotSeatSpy = vi.fn();
+    ui.onHotSeat(hotSeatSpy);
+
+    (document.querySelector<HTMLButtonElement>('[data-mode="device"]') as HTMLButtonElement).click();
+
+    const addButton = document.getElementById('addHotSeatPlayerButton') as HTMLButtonElement;
+    for (let i = 0; i < 10; i += 1) addButton.click();
+
+    const inputs = document.querySelectorAll<HTMLInputElement>('#hotSeatPlayersList input[type="text"]');
+    expect(inputs).toHaveLength(9);
+    expect(addButton.disabled).toBe(true);
+
+    inputs.forEach((input, index) => { input.value = `Player${index}`; });
+    (document.getElementById('startHotSeatButton') as HTMLButtonElement).click();
+    expect(hotSeatSpy).toHaveBeenCalledWith(
+      ['Player0', 'Player1', 'Player2', 'Player3', 'Player4', 'Player5', 'Player6', 'Player7', 'Player8'],
+      'http://localhost:3000'
+    );
+
+    for (let i = 0; i < 8; i += 1) {
+      const removeButton = document.querySelector<HTMLButtonElement>('#hotSeatPlayersList li button');
+      removeButton?.click();
+    }
+    expect(document.querySelectorAll('#hotSeatPlayersList input[type="text"]')).toHaveLength(2);
   });
 
   it('blocks names longer than 15 characters and enforces the HTML max length', () => {

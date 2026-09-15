@@ -34,8 +34,8 @@ export class UIManager {
   private actionButton: HTMLButtonElement;
   private hotSeatPanel: HTMLDivElement | null;
   private startHotSeatButton: HTMLButtonElement | null;
-  private hotSeatPlayerOneInput: HTMLInputElement | null;
-  private hotSeatPlayerTwoInput: HTMLInputElement | null;
+  private hotSeatPlayersList: HTMLOListElement | null;
+  private addHotSeatPlayerButton: HTMLButtonElement | null;
   private inviteInput: HTMLInputElement;
   private inviteInputLabel: HTMLLabelElement;
   private registrationError: HTMLDivElement;
@@ -70,7 +70,7 @@ export class UIManager {
   // Event callbacks
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onJoinGameCallback: ((inviteCode: string, name: string, serverAddress: string) => void) | null = null;
-  private onHotSeatCallback: ((firstName: string, secondName: string, serverAddress: string) => void) | null = null;
+  private onHotSeatCallback: ((names: string[], serverAddress: string) => void) | null = null;
   private onFireCallback: ((angle: number, velocity: number, direction?: 'Left' | 'Right') => void) | null = null;
   private onRematchCallback: (() => void) | null = null;
   private onRematchAnswerCallback: ((answer: 'play_again' | 'had_enough') => void) | null = null;
@@ -104,8 +104,8 @@ export class UIManager {
     this.actionButton = document.getElementById('actionButton') as HTMLButtonElement;
     this.hotSeatPanel = document.getElementById('hotSeatPanel') as HTMLDivElement | null;
     this.startHotSeatButton = document.getElementById('startHotSeatButton') as HTMLButtonElement | null;
-    this.hotSeatPlayerOneInput = document.getElementById('hotSeatPlayerOneInput') as HTMLInputElement | null;
-    this.hotSeatPlayerTwoInput = document.getElementById('hotSeatPlayerTwoInput') as HTMLInputElement | null;
+    this.hotSeatPlayersList = document.getElementById('hotSeatPlayersList') as HTMLOListElement | null;
+    this.addHotSeatPlayerButton = document.getElementById('addHotSeatPlayerButton') as HTMLButtonElement | null;
     this.inviteInput = document.getElementById('inviteInput') as HTMLInputElement;
     this.inviteInputLabel = document.getElementById('inviteInputLabel') as HTMLLabelElement;
     this.registrationError = document.getElementById('registrationError') as HTMLDivElement;
@@ -136,6 +136,7 @@ export class UIManager {
       option.setAttribute('aria-selected', String(option.dataset.mode === 'create'));
     });
     this.updateLobbyVisibility();
+    this.initHotSeatPlayerRows();
 
     this.playerNameInput.maxLength = 15;
     this.joinPlayerNameInput.maxLength = 15;
@@ -287,13 +288,14 @@ export class UIManager {
 
     this.skipWaitingButton?.addEventListener('click', () => this.onSkipWaitingCallback?.());
 
+    this.addHotSeatPlayerButton?.addEventListener('click', () => this.addHotSeatPlayerRow());
+
     this.startHotSeatButton?.addEventListener('click', () => {
-      const firstName = this.hotSeatPlayerOneInput?.value.trim() ?? '';
-      const secondName = this.hotSeatPlayerTwoInput?.value.trim() ?? '';
+      const names = this.getHotSeatPlayerInputs().map((input) => input.value.trim());
       const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
-      if (!this.validateName(firstName) || !this.validateName(secondName) || !this.validateServer(serverAddress)) return;
+      if (!names.every((name) => this.validateName(name)) || !this.validateServer(serverAddress)) return;
       this.registrationError.textContent = '';
-      this.onHotSeatCallback?.(firstName, secondName, serverAddress);
+      this.onHotSeatCallback?.(names, serverAddress);
     });
 
     this.velocityInput.addEventListener('keypress', (e) => {
@@ -377,8 +379,58 @@ export class UIManager {
     this.onJoinGameCallback = callback;
   }
 
-  public onHotSeat(callback: (firstName: string, secondName: string, serverAddress: string) => void): void {
+  public onHotSeat(callback: (names: string[], serverAddress: string) => void): void {
     this.onHotSeatCallback = callback;
+  }
+
+  private getHotSeatPlayerInputs(): HTMLInputElement[] {
+    if (!this.hotSeatPlayersList) return [];
+    return Array.from(this.hotSeatPlayersList.querySelectorAll<HTMLInputElement>('input[type="text"]'));
+  }
+
+  private initHotSeatPlayerRows(): void {
+    if (!this.hotSeatPlayersList) return;
+    this.hotSeatPlayersList.replaceChildren();
+    this.addHotSeatPlayerRow();
+    this.addHotSeatPlayerRow();
+  }
+
+  private addHotSeatPlayerRow(): void {
+    if (!this.hotSeatPlayersList) return;
+    const players = this.getHotSeatPlayerInputs();
+    if (players.length >= 9) return;
+
+    const item = document.createElement('li');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 15;
+    input.placeholder = `Player ${players.length + 1} name`;
+    item.appendChild(input);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.textContent = '✕';
+    removeButton.setAttribute('aria-label', 'Remove player');
+    removeButton.addEventListener('click', () => this.removeHotSeatPlayerRow(item));
+    item.appendChild(removeButton);
+
+    this.hotSeatPlayersList.appendChild(item);
+    this.updateHotSeatPlayerControls();
+  }
+
+  private removeHotSeatPlayerRow(item: HTMLLIElement): void {
+    if (this.getHotSeatPlayerInputs().length <= 2) return;
+    item.remove();
+    this.updateHotSeatPlayerControls();
+  }
+
+  private updateHotSeatPlayerControls(): void {
+    if (!this.hotSeatPlayersList) return;
+    const count = this.getHotSeatPlayerInputs().length;
+    if (this.addHotSeatPlayerButton) this.addHotSeatPlayerButton.disabled = count >= 9;
+    this.hotSeatPlayersList.querySelectorAll<HTMLButtonElement>('li button').forEach((button) => {
+      button.disabled = count <= 2;
+    });
   }
 
   /**

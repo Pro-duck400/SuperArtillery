@@ -22,10 +22,7 @@ export interface AcceptInvitationResponse {
 
 export interface CreateHotSeatResponse {
   gameId: string;
-  players: [
-    { playerId: 0; name: string; playerToken: string },
-    { playerId: 1; name: string; playerToken: string }
-  ];
+  players: Array<{ playerId: number; name: string; playerToken: string }>;
 }
 
 export interface GameStatusResponse {
@@ -171,14 +168,11 @@ export class ApiClient {
     return response.json();
   }
 
-  public async createHotSeatGame(
-    firstPlayerName: string,
-    secondPlayerName: string
-  ): Promise<CreateHotSeatResponse> {
+  public async createHotSeatGame(names: string[]): Promise<CreateHotSeatResponse> {
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/hot-seat/games`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName: firstPlayerName, secondName: secondPlayerName })
+      body: JSON.stringify({ names })
     });
 
     if (!response.ok) {

@@ -603,8 +603,8 @@ export interface components {
             playerCount?: number;
         };
         CreateHotSeatRequest: {
-            firstName: string;
-            secondName: string;
+            /** @description Display names for each on-this-device player, in turn order */
+            names: string[];
         };
         HotSeatPlayer: {
             playerId: components["schemas"]["PlayerId"];

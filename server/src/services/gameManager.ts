@@ -135,12 +135,17 @@ export class GameManager {
   }
 
   public createHotSeatGame(
-    firstPlayerName: string,
-    secondPlayerName: string
+    playerNames: string[]
   ): CreateHotSeatResponse | { error: string; code: string } {
-    const firstName = TokenService.normalizeName(firstPlayerName);
-    const secondName = TokenService.normalizeName(secondPlayerName);
-    if (!firstName || !secondName) {
+    if (!Array.isArray(playerNames) || playerNames.length < 2 || playerNames.length > 9) {
+      return {
+        error: GameManager.ERROR_MESSAGES.INVALID_PLAYER_COUNT,
+        code: GameManager.ERROR_CODES.INVALID_PLAYER_COUNT
+      };
+    }
+
+    const names = playerNames.map(name => TokenService.normalizeName(name));
+    if (names.some(name => !name)) {
       return {
         error: GameManager.ERROR_MESSAGES.INVALID_PLAYER_NAME,
         code: GameManager.ERROR_CODES.INVALID_PLAYER_NAME
@@ -157,8 +162,7 @@ export class GameManager {
     this.deviceGamesEverStarted++;
 
     const gameId = TokenService.generateGameId();
-    const firstToken = TokenService.generateSessionToken();
-    const secondToken = TokenService.generateSessionToken();
+    const tokens = names.map(() => TokenService.generateSessionToken());
     const now = Date.now();
     const game: PrivateGame = {
       id: gameId,
@@ -167,7 +171,7 @@ export class GameManager {
       expiresAt: now + GAME_CONFIG.invitationTtlMs,
       lastActivityAt: now,
       hotSeat: true,
-      playerCount: 2,
+      playerCount: names.length,
       lobbySlots: [],
       invitation: {
         inviteCode: '',
@@ -175,33 +179,30 @@ export class GameManager {
         expiresAt: now,
         accepted: true
       },
-      initiator: {
-        name: firstName,
-        sessionTokenHash: TokenService.hashToken(firstToken),
-        websocket: null
-      },
-      invited: {
-        name: secondName,
-        sessionTokenHash: TokenService.hashToken(secondToken),
-        websocket: null
-      },
+      // initiator/invited kept as aliases to slots 0/1 for code that still reads those fields directly
+      initiator: { name: names[0]!, sessionTokenHash: TokenService.hashToken(tokens[0]), websocket: null },
+      invited: { name: names[1]!, sessionTokenHash: TokenService.hashToken(tokens[1]), websocket: null },
       currentTurn: 0,
       gameStarted: false,
       round: 1,
-      rematchReady: [false, false]
+      rematchReady: names.map(() => false)
     };
-    game.lobbySlots = [
-      { playerId: 0, session: game.initiator, status: 'waiting', active: true, eliminated: false },
-      { playerId: 1, session: game.invited, status: 'waiting', active: true, eliminated: false }
-    ];
+    game.lobbySlots = names.map((name, playerId) => ({
+      playerId,
+      session: playerId === 0 ? game.initiator : playerId === 1 ? game.invited : {
+        name: name!,
+        sessionTokenHash: TokenService.hashToken(tokens[playerId]),
+        websocket: null
+      },
+      status: 'waiting',
+      active: true,
+      eliminated: false
+    }));
     this.games.set(game);
 
     return {
       gameId,
-      players: [
-        { playerId: 0, name: firstName, playerToken: firstToken },
-        { playerId: 1, name: secondName, playerToken: secondToken }
-      ]
+      players: names.map((name, playerId) => ({ playerId, name: name!, playerToken: tokens[playerId] }))
     };
   }
 
@@ -247,7 +248,7 @@ export class GameManager {
 
   private getPlayersConnected(game: PrivateGame): number {
     return game.hotSeat
-      ? (game.initiator.websocket?.readyState === WebSocket.OPEN ? 2 : 0)
+      ? (game.initiator.websocket?.readyState === WebSocket.OPEN ? game.playerCount : 0)
       : game.lobbySlots.filter(slot => slot.session.websocket?.readyState === WebSocket.OPEN).length;
   }
 
@@ -329,7 +330,8 @@ export class GameManager {
     if (playerId === 0) game.initiator.websocket = ws;
     if (playerId === 1) game.invited.websocket = ws;
 
-    if (game.hotSeat && playerId < 2) {
+    // A hot-seat game has a single physical client, always authenticating as player 0's token.
+    if (game.hotSeat && playerId === 0) {
       game.initiator.websocket = ws;
       game.invited.websocket = ws;
       game.lobbySlots.forEach(s => {
@@ -456,10 +458,19 @@ export class GameManager {
     const currentSocket = game.lobbySlots[playerId]?.session.websocket;
     if (currentSocket !== ws) return;
 
+    // One device controls every hot-seat player, so any disconnect ends the whole match.
     if (game.hotSeat) {
       game.initiator.websocket = null;
       game.invited.websocket = null;
-      if (playerId < 2) this.gameRules.disconnect(game, playerId as 0 | 1);
+      game.lobbySlots.forEach(s => {
+        s.session.websocket = null;
+        s.active = false;
+        s.eliminated = true;
+      });
+      if (game.status !== 'finished') {
+        game.status = 'finished';
+        game.gameFinishedAt = Date.now();
+      }
       return;
     }
 

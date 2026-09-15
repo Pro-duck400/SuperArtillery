@@ -24,7 +24,7 @@ interface GameSession {
   sessionToken: string;
   playerName: string;
   hotSeat?: boolean;
-  players?: [{ playerId: 0; playerName: string; sessionToken: string }, { playerId: 1; playerName: string; sessionToken: string }];
+  players?: Array<{ playerId: number; playerName: string; sessionToken: string }>;
 }
 
 export class GameClient {
@@ -124,18 +124,15 @@ export class GameClient {
     return response;
   }
 
-  public async createHotSeatGame(firstPlayerName: string, secondPlayerName: string): Promise<CreateHotSeatResponse> {
+  public async createHotSeatGame(playerNames: string[]): Promise<CreateHotSeatResponse> {
     await this.apiClient.healthCheckWithRetry();
-    const response = await this.apiClient.createHotSeatGame(firstPlayerName, secondPlayerName);
+    const response = await this.apiClient.createHotSeatGame(playerNames);
     this.gameSession = {
       gameId: response.gameId,
       sessionToken: response.players[0].playerToken,
       playerName: response.players[0].name,
       hotSeat: true,
-      players: [
-        { playerId: 0, playerName: response.players[0].name, sessionToken: response.players[0].playerToken },
-        { playerId: 1, playerName: response.players[1].name, sessionToken: response.players[1].playerToken }
-      ]
+      players: response.players.map(player => ({ playerId: player.playerId, playerName: player.name, sessionToken: player.playerToken }))
     };
     this.saveSession();
     this.game.setGameId(response.gameId);
@@ -265,8 +262,9 @@ export class GameClient {
     }
 
     if (this.gameSession.hotSeat && this.gameSession.players) {
-      await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.players[0].sessionToken, answer);
-      await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.players[1].sessionToken, answer);
+      for (const player of this.gameSession.players) {
+        await this.apiClient.requestRematch(this.gameSession.gameId, player.sessionToken, answer);
+      }
       return;
     }
     await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.sessionToken, answer);
@@ -416,14 +414,14 @@ export class GameClient {
     return this.game.isHotSeat();
   }
 
-  public getLocalPlayerNames(): [string, string] | null {
+  public getLocalPlayerNames(): string[] | null {
     if (!this.gameSession?.players) return null;
-    return [this.gameSession.players[0].playerName, this.gameSession.players[1].playerName];
+    return this.gameSession.players.map(player => player.playerName);
   }
 
   private getTokenForPlayer(playerId: number): string {
     if (this.gameSession?.hotSeat && this.gameSession.players) {
-      const player = this.gameSession.players[playerId as 0 | 1];
+      const player = this.gameSession.players.find(candidate => candidate.playerId === playerId);
       return player?.sessionToken ?? '';
     }
     return this.gameSession?.sessionToken ?? '';
