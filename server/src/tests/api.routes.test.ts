@@ -31,7 +31,7 @@ describe('API routes', () => {
   it('creates a hot-seat game with credentials for both players', async () => {
     const response = await request(app)
       .post('/api/v1/hot-seat/games')
-      .send({ firstName: 'Alice', secondName: 'Bob' })
+      .send({ names: ['Alice', 'Bob'] })
       .expect(201);
 
     expect(response.body.gameId).toBeTruthy();
@@ -40,6 +40,16 @@ describe('API routes', () => {
     expect(response.body.players[1]).toMatchObject({ playerId: 1, name: 'Bob' });
     expect(response.body.players[0].playerToken).toBeTruthy();
     expect(response.body.players[1].playerToken).toBeTruthy();
+  });
+
+  it('creates a hot-seat game with up to 9 players', async () => {
+    const names = ['Alice', 'Bob', 'Carl', 'Dana', 'Eve', 'Finn', 'Gia', 'Hana', 'Ivo'];
+    const response = await request(app)
+      .post('/api/v1/hot-seat/games')
+      .send({ names })
+      .expect(201);
+
+    expect(response.body.players).toHaveLength(9);
   });
 
   it('accepts an invitation by code', async () => {

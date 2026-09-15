@@ -49,8 +49,8 @@ export function createApiRouter(game: GameManager, getWebSocketCount: () => numb
   router.use((req, res, next) => {
     const bodyPlayerName = typeof req.body?.name === 'string'
       ? req.body.name
-      : typeof req.body?.firstName === 'string'
-        ? [req.body.firstName, req.body.secondName].filter((name): name is string => typeof name === 'string').join(', ')
+      : Array.isArray(req.body?.names)
+        ? req.body.names.filter((name: unknown): name is string => typeof name === 'string').join(', ')
         : undefined;
     const token = typeof req.query.sessionToken === 'string' ? req.query.sessionToken : undefined;
     const gameId = typeof req.params.gameId === 'string' ? req.params.gameId : undefined;
@@ -160,8 +160,8 @@ export function createApiRouter(game: GameManager, getWebSocketCount: () => numb
   });
 
   router.post('/v1/hot-seat/games', (req, res) => {
-    const { firstName, secondName } = req.body;
-    const result = game.createHotSeatGame(firstName, secondName);
+    const { names } = req.body;
+    const result = game.createHotSeatGame(names);
     if ('error' in result) {
       const statusCode = result.code === GameManager.ERROR_CODES.MAX_GAMES_REACHED
         ? HTTP_STATUS.SERVICE_UNAVAILABLE

@@ -90,10 +90,7 @@ export interface AcceptInvitationResponse {
 
 export interface CreateHotSeatResponse {
   gameId: string;
-  players: [
-    { playerId: 0; name: string; playerToken: string },
-    { playerId: 1; name: string; playerToken: string }
-  ];
+  players: Array<{ playerId: number; name: string; playerToken: string }>;
 }
 
 export interface GameStatusResponse {
