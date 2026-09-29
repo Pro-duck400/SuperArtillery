@@ -5,6 +5,7 @@ import { Renderer } from './renderer';
 import { ProjectileAnimator } from './projectile-animator';
 import { UIManager } from './ui-manager';
 import { GameClient } from './game-client';
+import { LocalGameGateway } from './network/local-game-gateway';
 import { RemoteGameGateway } from './network/remote-game-gateway';
 import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 import clientPackage from '../../package.json';
@@ -448,10 +449,9 @@ uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddres
   }
 });
 
-uiManager.onHotSeat(async (names: string[], serverAddress: string) => {
+uiManager.onHotSeat(async (names: string[]) => {
   try {
-    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
-    gameClient = new GameClient(new RemoteGameGateway(apiBaseUrl, wsBaseUrl), game);
+    gameClient = new GameClient(new LocalGameGateway(), game);
     wireGameClientEvents(gameClient);
     clientName = names[0];
     opponentName = names[1] ?? '';

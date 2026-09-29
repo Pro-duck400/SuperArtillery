@@ -274,7 +274,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a hot-seat game */
+        /**
+         * Create a hot-seat game
+         * @deprecated
+         * @description Deprecated; on-this-device games are created locally in the client. This route remains for compatibility with cached clients for one release.
+         */
         post: {
             parameters: {
                 query?: never;

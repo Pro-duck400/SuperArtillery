@@ -293,7 +293,7 @@ export class UIManager {
     this.startHotSeatButton?.addEventListener('click', () => {
       const names = this.getHotSeatPlayerInputs().map((input) => input.value.trim());
       const serverAddress = this.serverAddressInput.value.trim() || this.defaultServerAddress;
-      if (!names.every((name) => this.validateName(name)) || !this.validateServer(serverAddress)) return;
+      if (!names.every((name) => this.validateName(name))) return;
       this.registrationError.textContent = '';
       this.onHotSeatCallback?.(names, serverAddress);
     });
@@ -657,6 +657,7 @@ export class UIManager {
   private updateLobbyVisibility(): void {
     if (this.joinOnlyMode) return;
     const joining = this.lobbyMode === 'join';
+    this.serverRow.hidden = !joining && this.createMode === 'device';
     this.joinGameRow.hidden = !joining;
     this.createGameRow.hidden = joining;
     this.internetGameRow.hidden = joining || this.createMode !== 'internet';

@@ -450,6 +450,7 @@ export class GameClient {
   }
 
   public clearSession(): void {
+    this.gateway.disconnect();
     this.gameSession = null;
     sessionStorage.removeItem('gameSession');
   }

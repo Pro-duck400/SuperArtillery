@@ -249,13 +249,13 @@ Legend for the status column: `[ ]` unclassified · `[x]` covered · `[-]` inten
 
 - [ ] provides editable server address choices
 - [ ] shows server health details after selecting a server
-- [ ] checks the preselected server automatically
+- [x] checks the preselected server automatically — covered-by: packages/client/src/tests/ui-manager.test.ts :: checks the preselected server on startup without additional checks in on-device mode
 - [ ] checks the current server when the refresh button is pressed
 - [ ] shows a red error when the selected server health check fails
 - [ ] shows Create and over Internet as the collapsed default selections
 - [ ] allows creating a private game from the lobby
 - [ ] creates a game after explicitly selecting Create
-- [ ] switches between create modes and starts hot seat on this device
+- [x] switches between create modes and starts hot seat on this device — covered-by: packages/client/src/tests/ui-manager.test.ts :: switches between create modes and starts hot seat on this device
 - [ ] supports adding and removing hot-seat players up to a maximum of 9
 - [ ] blocks names longer than 15 characters and enforces the HTML max length
 - [ ] fires when Enter is pressed in the velocity input

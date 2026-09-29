@@ -92,18 +92,19 @@ describe('UIManager private game flow', () => {
     vi.unstubAllGlobals();
   });
 
-  it('checks the preselected server automatically', async () => {
+  it('checks the preselected server on startup without additional checks in on-device mode', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.2.0' })
+      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.8.0' })
     });
     vi.stubGlobal('fetch', fetchSpy);
     new UIManager('http://localhost:3000');
 
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3000/api/v1/health'));
-    await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toMatch(
-      new RegExp(`^Server v1\\.2\\.0 \\| Core v${CORE_VERSION.replaceAll('.', '\\.')} \\| Contract v1\\.2\\.0 \\| Response time: \\d+ms$`)
-    ));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    (document.querySelector<HTMLButtonElement>('[data-mode="device"]') as HTMLButtonElement).click();
+    expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
   });
 
@@ -186,7 +187,7 @@ describe('UIManager private game flow', () => {
 
     expect((document.getElementById('internetGameRow') as HTMLDivElement).hidden).toBe(true);
     expect((document.getElementById('hotSeatPanel') as HTMLDivElement).hidden).toBe(false);
-    expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(false);
+    expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(true);
 
     (document.querySelector<HTMLButtonElement>('[data-mode="internet"]') as HTMLButtonElement).click();
     expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(false);

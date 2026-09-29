@@ -43,10 +43,10 @@ export interface SkipWaitingResponse {
 }
 
 export interface RematchResponse {
-  answer: 'play_again' | 'had_enough';
+  answer: 'play_again' | 'had_enough' | 'not_sure';
   answered: number;
   required: number;
-  players: Array<{ playerId: number; name: string; answer?: 'play_again' | 'had_enough' }>;
+  players: Array<{ playerId: number; name: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>;
   roundStarted: boolean;
 }
 

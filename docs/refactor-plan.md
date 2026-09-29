@@ -99,11 +99,18 @@ suite (done for `gameRules.test.ts` and `gameCleanupService.test.ts` in Phase 2)
 - Added a remote-adapter test for URL construction, message forwarding, and disconnect; updated
   `GameClient` tests to inject the gateway boundary.
 
-### Phase 5 — Offline "on this device"
-`LocalGameGateway` owns an in-browser `GameEngine` and fans messages out via `queueMicrotask` so
-async ordering matches the socket path. `createMode === 'device'` selects it. Deprecate
-`/api/v1/hot-seat/games` in the OpenAPI contract with a version bump, keeping the route for one
-release for cached clients.
+### Phase 5 — Offline "on this device" — DONE
+- Added `LocalGameGateway`, backed by the browser-safe core `GameEngine`. It maps gateway operations
+  to engine results and fans `PlayerConnection` messages out with `queueMicrotask`; it uses no
+  `fetch` or WebSocket transport.
+- `createMode === 'device'` now selects the local gateway. Local creation, connection, shots, turns,
+  and rematches use the same core transitions and message types as the remote path.
+- Kept one server health probe on browser startup as a separate online-readiness indicator; device
+  mode hides server controls and does not trigger further requests. Local game creation, connection,
+  shots, turns, and rematches themselves use no `fetch` or WebSocket calls.
+- Deprecated `/api/v1/hot-seat/games` in OpenAPI 1.8.0 while retaining the server route for one
+  compatibility release. Offline games and their in-process device stats are not sent to server
+  stats; server totals remain server-local.
 
 ### Phase 6 — Server splits
 `GameManager` → `LobbyService` / `SessionService` / `GameplayService` / `Broadcaster` /
@@ -119,14 +126,12 @@ Roster / ServerHealth views. `renderer.ts` → Terrain / Castle / Trajectory / W
 
 ## Current baseline
 
-Post-Phase 4 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 48
-client = **126 tests**.
+Post-Phase 5 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 49
+client = **127 tests**.
 
 ## Open questions
 
-1. Offline games cannot increment `totals.device` in `StatsResponse`. Options: drop the field
-   (contract change, recommended), send a best-effort telemetry beacon, or keep it reporting zero.
-2. Offline state is lost on page refresh. Options: accept it (recommended — it matches today's
+1. Offline state is lost on page refresh. Options: accept it (recommended — it matches today's
    behaviour after a server restart), or snapshot the engine to `localStorage`.
 
 ## Gotchas
