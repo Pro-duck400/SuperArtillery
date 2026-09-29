@@ -7,6 +7,11 @@ import { UIManager } from './ui-manager';
 import { GameClient } from './game-client';
 import { LocalGameGateway } from './network/local-game-gateway';
 import { RemoteGameGateway } from './network/remote-game-gateway';
+import { getDirectionPolicy } from './direction-policy';
+import { parseInviteInput, parseInviteLink } from './invite-link';
+import { createRosterPositions, createRosterView } from './roster-view';
+import { getDefaultServerAddress, resolveServerBaseUrls } from './server-address';
+import { PendingPresentationQueue } from './pending-presentation-queue';
 import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 import clientPackage from '../../package.json';
 import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
@@ -19,30 +24,7 @@ if (clientVersion) {
   clientVersion.textContent = `Client v${clientPackage.version} | Core v${CORE_VERSION} | Contract v${CONTRACT_VERSION}`;
 }
 
-const BUILT_IN_DEFAULT = 'http://localhost:3000';
-
-function getDefaultServerAddress(): string {
-  const envUrl = import.meta.env.VITE_SERVER_URL;
-  if (envUrl) return envUrl;
-
-  // Runtime detection: local development uses the local server; hosted clients use Railway.
-  const host = window.location.hostname || '';
-
-  if (host === 'localhost' || host.startsWith('127.') || host === '') {
-    return BUILT_IN_DEFAULT;
-  }
-
-  return 'https://superartillery-server-production.up.railway.app';
-}
-
-function resolveServerBaseUrls(serverAddress: string): { apiBaseUrl: string; wsBaseUrl: string } {
-  const chosen = (serverAddress && serverAddress.trim()) || getDefaultServerAddress();
-  const parsedUrl = new URL(chosen);
-  const apiBaseUrl = parsedUrl.origin;
-  const wsProtocol = parsedUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsBaseUrl = `${wsProtocol}//${parsedUrl.host}`;
-  return { apiBaseUrl, wsBaseUrl };
-}
+const defaultServerAddress = getDefaultServerAddress(import.meta.env.VITE_SERVER_URL, window.location.hostname);
 
 // Initialize canvas and renderer
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -58,7 +40,7 @@ console.log('Renderer initialized');
 // Create core components
 const game = new Game();
 const animator = new ProjectileAnimator(renderer, canvas.width);
-const uiManager = new UIManager(getDefaultServerAddress());
+const uiManager = new UIManager(defaultServerAddress);
 let gameClient: GameClient | null = null;
 let clientName = '';
 let opponentName = '';
@@ -67,18 +49,21 @@ let historicalTrajectories: HistoricalTrajectory[] = [];
 let activeTrajectory: TrajectoryPoint[] = [];
 let activeShotIsLocal = false;
 let animationActive = false;
-let pendingVisualTurn: { playerId: 0 | 1; isMyTurn: boolean } | null = null;
-let pendingGameOver: { didIWin: boolean } | null = null;
-let pendingDefeatedPlayerIds: number[] = [];
-let pendingHitName: string | null = null;
-let pendingRipPlayerIds: number[] = [];
+const pendingPresentations = new PendingPresentationQueue();
 
 function refreshRosterPositions(): void {
   if (!game.getBattlefield()) return;
+  const players = game.getPlayers();
   uiManager.setRosterNames(
-    game.getPlayers().map(player => ({ playerId: player.playerId, name: player.name, active: player.active })),
-    new Map(game.getPlayers().map(player => [player.playerId, renderer.getCastleLabelPosition(player.playerId)]))
+    createRosterView(players),
+    createRosterPositions(players, playerId => renderer.getCastleLabelPosition(playerId))
   );
+}
+
+function applyDirectionPolicy(playerId: number | null): void {
+  const policy = getDirectionPolicy(game.getBattlefield(), playerId);
+  uiManager.setDirectionVisible(policy.visible);
+  if (policy.defaultDirection) uiManager.setDirectionDefault(policy.defaultDirection);
 }
 
 // Browser zoom/viewport changes can change the canvas's displayed CSS size
@@ -89,15 +74,15 @@ if (typeof ResizeObserver !== 'undefined') {
 }
 
 function schedulePendingRip(): void {
-  if (pendingRipPlayerIds.length === 0) return;
-  const ripPlayerIds = [...pendingRipPlayerIds];
-  pendingRipPlayerIds = [];
+  if (!pendingPresentations.hasPendingRip()) return;
+  const ripPlayerIds = pendingPresentations.takeRipPlayerIds();
   window.setTimeout(() => {
     renderer.setRIPPlayers(ripPlayerIds);
     renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
+    const players = game.getPlayers();
     uiManager.setRosterNames(
-      game.getPlayers().map(player => ({ playerId: player.playerId, name: player.name, active: player.active })),
-      new Map(game.getPlayers().map(player => [player.playerId, renderer.getCastleLabelPosition(player.playerId)]))
+      createRosterView(players),
+      createRosterPositions(players, playerId => renderer.getCastleLabelPosition(playerId))
     );
   }, 1000);
 }
@@ -105,12 +90,11 @@ function schedulePendingRip(): void {
 function applyPendingPresentation(): void {
   if (animationActive) return;
 
-  if (pendingGameOver) {
-    pendingGameOver = null;
-    pendingVisualTurn = null;
-    if (pendingDefeatedPlayerIds.length > 0) {
-      renderer.setDefeatedPlayers(pendingDefeatedPlayerIds);
-      pendingDefeatedPlayerIds = [];
+  if (pendingPresentations.takeGameOver()) {
+    pendingPresentations.clearTurn();
+    const defeatedPlayerIds = pendingPresentations.takeDefeatedPlayerIds();
+    if (defeatedPlayerIds.length > 0) {
+      renderer.setDefeatedPlayers(defeatedPlayerIds);
       renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
     }
     schedulePendingRip();
@@ -119,24 +103,23 @@ function applyPendingPresentation(): void {
     return;
   }
 
-  if (pendingDefeatedPlayerIds.length > 0) {
-    renderer.setDefeatedPlayers(pendingDefeatedPlayerIds);
-    pendingDefeatedPlayerIds = [];
+  const defeatedPlayerIds = pendingPresentations.takeDefeatedPlayerIds();
+  if (defeatedPlayerIds.length > 0) {
+    renderer.setDefeatedPlayers(defeatedPlayerIds);
     renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
   }
 
-  if (pendingHitName && !pendingVisualTurn) {
-    uiManager.setMessage(`${pendingHitName} hit`);
-    pendingHitName = null;
+  if (pendingPresentations.pendingHitName && !pendingPresentations.hasPendingTurn()) {
+    uiManager.setMessage(`${pendingPresentations.pendingHitName} hit`);
+    pendingPresentations.clearHitName();
   }
 
-  if (pendingRipPlayerIds.length > 0) {
+  if (pendingPresentations.hasPendingRip()) {
     schedulePendingRip();
   }
 
-  if (pendingVisualTurn) {
-    const turn = pendingVisualTurn;
-    pendingVisualTurn = null;
+  const turn = pendingPresentations.takeTurn();
+  if (turn) {
     renderer.setActiveTurn(turn.playerId);
     renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
     const localNames = game.isHotSeat() ? hotSeatNames : null;
@@ -144,11 +127,11 @@ function applyPendingPresentation(): void {
     const turnPlayerName = localNames
       ? localNames[turn.playerId]
       : (rosterPlayerName ?? (turn.isMyTurn ? clientName : opponentName));
-    const hitName = pendingHitName;
+    const hitName = pendingPresentations.pendingHitName;
     uiManager.setMessage(hitName
       ? `${hitName} hit. ${turnPlayerName} turn`
       : `${turnPlayerName} turn`);
-    pendingHitName = null;
+    pendingPresentations.clearHitName();
   }
 }
 
@@ -195,11 +178,7 @@ function wireGameClientEvents(client: GameClient): void {
     activeTrajectory = [];
     activeShotIsLocal = false;
     animationActive = false;
-    pendingVisualTurn = null;
-    pendingGameOver = null;
-    pendingDefeatedPlayerIds = [];
-    pendingHitName = null;
-    pendingRipPlayerIds = [];
+    pendingPresentations.reset();
     uiManager.setWindLabel(battlefield.wind);
     animator.configureScene(
       renderer.getCanvasWidth(),
@@ -211,22 +190,7 @@ function wireGameClientEvents(client: GameClient): void {
 
     const playerId = client.getPlayerId();
     const targetPlayerId = client.isHotSeat() ? 0 : playerId;
-    if (battlefield.castles.length > 0 && targetPlayerId !== null && targetPlayerId !== undefined) {
-      const leftmostPlayerId = battlefield.castles[0].playerId;
-      const rightmostPlayerId = battlefield.castles[battlefield.castles.length - 1].playerId;
-      const isLeftmost = targetPlayerId === leftmostPlayerId;
-      const isRightmost = targetPlayerId === rightmostPlayerId;
-      const isMiddlePlayer = !isLeftmost && !isRightmost;
-
-      uiManager.setDirectionVisible(isMiddlePlayer);
-      if (isLeftmost) {
-        uiManager.setDirectionDefault('Right');
-      } else if (isRightmost) {
-        uiManager.setDirectionDefault('Left');
-      }
-    } else {
-      uiManager.setDirectionVisible(false);
-    }
+    applyDirectionPolicy(targetPlayerId);
     // Get opponent name from GameStartMessage if available
     opponentName = '';
     const localNames = client.getLocalPlayerNames();
@@ -288,35 +252,20 @@ function wireGameClientEvents(client: GameClient): void {
     const localPlayerId = client.getPlayerId();
     const targetPlayerId = client.isHotSeat() ? activePlayerId : localPlayerId;
 
-    if (battlefield && battlefield.castles.length > 0 && targetPlayerId !== null && targetPlayerId !== undefined) {
-      const leftmostPlayerId = battlefield.castles[0].playerId;
-      const rightmostPlayerId = battlefield.castles[battlefield.castles.length - 1].playerId;
-
-      const isLeftmost = targetPlayerId === leftmostPlayerId;
-      const isRightmost = targetPlayerId === rightmostPlayerId;
-      const isMiddlePlayer = !isLeftmost && !isRightmost;
-
-      uiManager.setDirectionVisible(isMiddlePlayer);
-      if (isLeftmost) {
-        uiManager.setDirectionDefault('Right');
-      } else if (isRightmost) {
-        uiManager.setDirectionDefault('Left');
-      }
-    } else {
-      uiManager.setDirectionVisible(false);
-    }
+    applyDirectionPolicy(targetPlayerId);
 
     const inputHistory = game.isHotSeat()
       ? game.getShotHistoryForPlayer(activePlayerId)
       : game.getShotHistory();
     uiManager.renderShotHistory(inputHistory);
     uiManager.setShotInputs(inputHistory[0]);
+    const players = game.getPlayers();
     uiManager.setRosterNames(
-      game.getPlayers().map(player => ({ playerId: player.playerId, name: player.name, active: player.active || pendingDefeatedPlayerIds.includes(player.playerId) })),
-      new Map(game.getPlayers().map(player => [player.playerId, renderer.getCastleLabelPosition(player.playerId)]))
+      createRosterView(players, players.filter(player => pendingPresentations.isDefeated(player.playerId)).map(player => player.playerId)),
+      createRosterPositions(players, playerId => renderer.getCastleLabelPosition(playerId))
     );
     uiManager.updateTurnUI(activePlayerId, isMyTurn);
-    pendingVisualTurn = { playerId: playerId as 0 | 1, isMyTurn };
+    pendingPresentations.queueTurn({ playerId, isMyTurn });
     if (isMyTurn && localPlayerId !== null && battlefield && !activeShotIsLocal) {
         historicalTrajectories = createHistoricalTrajectories(
         battlefield,
@@ -327,23 +276,14 @@ function wireGameClientEvents(client: GameClient): void {
     applyPendingPresentation();
   });
 
-  client.onPlayerHit((playerId, playerName) => {
-    pendingHitName = playerName;
-    pendingDefeatedPlayerIds.push(playerId);
-    pendingRipPlayerIds.push(playerId);
-  });
+  client.onPlayerHit((playerId, playerName) => pendingPresentations.queuePlayerHit(playerId, playerName));
 
-  client.onGameOver((_winnerId: number, didIWin: boolean) => {
+  client.onGameOver((_winnerId: number, _didIWin: boolean) => {
     uiManager.disableFireButton();
-    pendingDefeatedPlayerIds = game.getPlayers()
+    const defeatedPlayerIds = game.getPlayers()
       .filter(player => !player.active)
       .map(player => player.playerId);
-    if (client.isHotSeat()) {
-      pendingGameOver = { didIWin: true };
-      applyPendingPresentation();
-      return;
-    }
-    pendingGameOver = { didIWin };
+    pendingPresentations.queueGameOver(defeatedPlayerIds);
     applyPendingPresentation();
   });
 
@@ -360,34 +300,19 @@ const lobbyState = {
   lastInviteCode: ''
 };
 
-function parseInviteInput(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  const match = trimmed.match(/[?&]invite=([^&]+)/i);
-  return match ? decodeURIComponent(match[1]) : trimmed;
-}
-
-function getServerFromInviteUrl(): string | null {
-  const server = new URLSearchParams(window.location.search).get('server');
-  return server ? server : null;
-}
-
 // If the page was opened via an invite link, only the name + Join controls are relevant.
-const inviteFromUrl = new URLSearchParams(window.location.search).get('invite');
+const inviteLink = parseInviteLink(window.location.search);
+const inviteFromUrl = inviteLink.inviteCode;
 if (inviteFromUrl) {
-  const inviteServer = getServerFromInviteUrl();
-  if (inviteServer) {
-    uiManager.setServerAddress(inviteServer);
+  if (inviteLink.serverAddress) {
+    uiManager.setServerAddress(inviteLink.serverAddress);
   }
   uiManager.enterJoinOnlyMode(inviteFromUrl);
 }
 
 uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
   try {
-    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
+    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress, defaultServerAddress);
     gameClient = new GameClient(new RemoteGameGateway(apiBaseUrl, wsBaseUrl), game);
     wireGameClientEvents(gameClient);
 
@@ -425,7 +350,7 @@ uiManager.onSkipWaiting(async () => {
 
 uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddress: string) => {
   try {
-    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
+    const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress, defaultServerAddress);
     gameClient = new GameClient(new RemoteGameGateway(apiBaseUrl, wsBaseUrl), game);
     wireGameClientEvents(gameClient);
 

@@ -123,16 +123,23 @@ suite (done for `gameRules.test.ts` and `gameCleanupService.test.ts` in Phase 2)
   into server-side lobby/session/gameplay/stats services would duplicate domain ownership, so the
   planned responsibility split is fulfilled by the core engine and its focused services.
 
-### Phase 7 — Client splits
-`main.ts` → `PendingPresentationQueue`, `roster-view`, `direction-policy`, `server-address`,
-`invite-link`. `ui-manager.ts` → `dom/elements` plus Lobby / HotSeat / Game / Rematch / LobbyStatus /
-Roster / ServerHealth views. `renderer.ts` → Terrain / Castle / Trajectory / Wind renderers plus
-`CastleVisualState`. `game-client.ts` → `GameMessageDispatcher`, `SessionStore`, typed event emitter.
+### Phase 7 — Client splits — DONE
+- Extracted `PendingPresentationQueue`, roster projection, direction policy, server-address policy,
+  and invite-link parsing from `main.ts`; startup wiring continues to select local or remote gateways.
+- Moved DOM discovery into `dom/elements.ts` and decomposed UI rendering/state into Lobby, HotSeat,
+  Game, Rematch, LobbyStatus, Roster, and ServerHealth views. `UIManager` remains the callback-facing
+  facade used by `main.ts`.
+- Split renderer responsibilities into `TerrainRenderer`, `CastleRenderer`, `TrajectoryRenderer`,
+  `WindRenderer`, and `CastleVisualState`; `Renderer` preserves the existing public drawing API.
+- Moved session persistence into `SessionStore`, message-to-state handling into
+  `GameMessageDispatcher`, and client callbacks into a typed event emitter. `GameClient` remains the
+  facade used by the app and depends only on `GameGateway`.
+- Added policy and presentation-queue unit coverage; existing client behavior suites still pass.
 
 ## Current baseline
 
-Post-Phase 6 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 49
-client = **127 tests**.
+Post-Phase 7 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 57
+client = **135 tests**.
 
 ## Open questions
 

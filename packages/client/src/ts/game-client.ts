@@ -9,49 +9,43 @@ import type {
 } from './network/game-gateway';
 import type {
   BattlefieldConfig,
-  GameMessage,
   GameStartMessage
 } from './types/messages';
+import { SessionStore, type GameSession } from './session-store';
+import { GameMessageDispatcher } from './game-message-dispatcher';
+import { TypedEventEmitter, type GameClientEventMap, type ShotEventData } from './game-client-events';
 
-export interface ShotEventData {
-  playerId: number;
-  angle: number;
-  velocity: number;
-  direction: 'Left' | 'Right';
-}
-
-/**
- * Game session data persisted in sessionStorage
- */
-interface GameSession {
-  gameId: string;
-  sessionToken: string;
-  playerName: string;
-  hotSeat?: boolean;
-  players?: Array<{ playerId: number; playerName: string; sessionToken: string }>;
-}
+export type { ShotEventData } from './game-client-events';
 
 export class GameClient {
   private game: Game;
   private gateway: GameGateway;
-  private lastGameStartMessage: GameStartMessage | null = null;
-  private gameSession: GameSession | null = null;
+  private readonly sessionStore: SessionStore;
+  private readonly events: TypedEventEmitter<GameClientEventMap>;
+  private readonly messageDispatcher: GameMessageDispatcher;
   private pendingConnectResolve: (() => void) | null = null;
   private pendingConnectReject: ((error: Error) => void) | null = null;
-  private onShotCallback: ((data: ShotEventData) => void) | null = null;
-  private onTurnChangeCallback: ((playerId: number, isMyTurn: boolean) => void) | null = null;
-  private onGameStartCallback: ((gameId: string, battlefield: BattlefieldConfig) => void) | null = null;
-  private onGameOverCallback: ((winnerId: number, didIWin: boolean) => void) | null = null;
-  private onPlayerHitCallback: ((playerId: number, playerName: string) => void) | null = null;
-  private onRematchStatusCallback: ((answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>) => void) | null = null;
-  private onLobbyStatusCallback: ((status: GameStatusResponse) => void) | null = null;
 
   constructor(gateway: GameGateway, game: Game) {
     this.game = game;
     this.gateway = gateway;
+    this.sessionStore = new SessionStore();
+    this.events = new TypedEventEmitter<GameClientEventMap>();
+    this.messageDispatcher = new GameMessageDispatcher(game, this.events);
+    this.events.on('gameStart', () => this.pendingConnectResolve?.());
+    this.events.on('lobbyStatus', status => {
+      if (status.status === 'expired') {
+        this.pendingConnectReject?.(new Error('Game expired. The server may have restarted.'));
+      }
+    });
+  }
 
-    // Try to restore session from storage
-    this.restoreSession();
+  private get gameSession(): GameSession | null {
+    return this.sessionStore.get();
+  }
+
+  private set gameSession(session: GameSession | null) {
+    this.sessionStore.set(session);
   }
 
   /**
@@ -79,8 +73,6 @@ export class GameClient {
       sessionToken: response.playerToken,
       playerName
     };
-    this.saveSession();
-
     // Set up game state
     this.game.setGameId(response.gameId);
     this.game.setPlayer(0, playerName); // Initiator is always player 0
@@ -115,8 +107,6 @@ export class GameClient {
       sessionToken: response.playerToken,
       playerName
     };
-    this.saveSession();
-
     // Set up game state
     this.game.setGameId(response.gameId);
     this.game.setPlayer(response.playerId, playerName);
@@ -135,7 +125,6 @@ export class GameClient {
       hotSeat: true,
       players: response.players.map(player => ({ playerId: player.playerId, playerName: player.name, sessionToken: player.playerToken }))
     };
-    this.saveSession();
     this.game.setGameId(response.gameId);
     this.game.setPlayer(0, response.players[0].name);
     this.game.setOpponentName(response.players[1].name);
@@ -191,7 +180,7 @@ export class GameClient {
         this.gameSession.gameId,
         this.gameSession.sessionToken
       );
-      this.onLobbyStatusCallback?.(status);
+      this.events.emit('lobbyStatus', status);
 
       if (status.status === 'expired') {
         throw new Error('Game expired. The server may have restarted.');
@@ -274,96 +263,8 @@ export class GameClient {
   /**
    * Handle incoming WebSocket messages
    */
-  private handleMessage(message: GameMessage): void {
-    switch (message.type) {
-      case 'game_start':
-        this.game.resetShotHistory();
-        this.game.setPlayers(message.players);
-        const localPlayerId = this.game.getPlayerId();
-        const opponent = message.players.find(player => player.playerId !== localPlayerId);
-        this.game.setOpponentName(opponent?.name ?? 'Opponent');
-        const gameId = message.gameId;
-        this.game.setGameId(gameId);
-        this.game.setBattlefield(message.battlefield);
-        this.lastGameStartMessage = message;
-        if (this.onGameStartCallback) {
-          this.onGameStartCallback(gameId, message.battlefield);
-        }
-        this.pendingConnectResolve?.();
-        break;
-
-      case 'shot':
-        if (this.game.isHotSeat() || message.playerId === this.game.getPlayerId()) {
-          this.game.addShotToHistory(message.angle, message.velocity, this.game.isHotSeat() ? message.playerId : undefined, message.direction);
-        }
-        if (this.onShotCallback) {
-          this.onShotCallback({
-            playerId: message.playerId,
-            angle: message.angle,
-            velocity: message.velocity,
-            direction: message.direction
-          });
-        }
-        break;
-
-      case 'turn_change':
-        const previousPlayers = this.game.getPlayers();
-        const previousById = new Map(previousPlayers.map(player => [player.playerId, player]));
-        this.game.setPlayers(message.players);
-        message.players
-          .filter(player => !player.active && previousById.get(player.playerId)?.active)
-          .forEach(player => this.onPlayerHitCallback?.(player.playerId, player.name));
-        this.game.setCurrentTurn(message.turnId);
-        const state = this.game.getState();
-        if (this.onTurnChangeCallback) {
-          this.onTurnChangeCallback(message.turnId, state.isMyTurn);
-        }
-        console.log(`Turn changed to Player ${message.turnId}`);
-        break;
-
-      case 'game_over':
-        const previousGameOverPlayers = this.game.getPlayers();
-        const previousGameOverById = new Map(previousGameOverPlayers.map(player => [player.playerId, player]));
-        this.game.setPlayers(message.players);
-        message.players
-          .filter(player => !player.active && previousGameOverById.get(player.playerId)?.active)
-          .forEach(player => this.onPlayerHitCallback?.(player.playerId, player.name));
-        const gameOverState = this.game.getState();
-        const myPlayerId = gameOverState.playerId;
-        const didIWin = this.game.isHotSeat()
-          ? true
-          : myPlayerId !== null && myPlayerId === message.winnerId;
-        if (this.onGameOverCallback) {
-          this.onGameOverCallback(message.winnerId, didIWin);
-        }
-        break;
-
-      case 'rematch_status':
-        if (this.onRematchStatusCallback) {
-          const legacyStatus = message as typeof message & { playersReady?: number };
-          const answered = message.answered ?? legacyStatus.playersReady ?? 0;
-          const players = (message.players ?? []).map(player => ({ playerId: player.playerId, playerName: player.name, answer: player.answer }));
-          this.onRematchStatusCallback.length <= 1
-            ? (this.onRematchStatusCallback as unknown as (answered: number) => void)(answered)
-            : this.onRematchStatusCallback(answered, message.required, players);
-        }
-        break;
-
-      case 'lobby_status':
-        this.onLobbyStatusCallback?.({
-          status: message.status,
-          playersConnected: message.playersConnected,
-          required: message.required,
-          slots: message.slots,
-          ready: false,
-          readyCount: 0,
-          canSkipWaiting: this.game.getPlayerId() === 0 && message.status === 'pending' && message.playersConnected >= 2
-        });
-        if (message.status === 'expired') {
-          this.pendingConnectReject?.(new Error('Game expired. The server may have restarted.'));
-        }
-        break;
-    }
+  private handleMessage(message: import('./types/messages').GameMessage): void {
+    this.messageDispatcher.dispatch(message);
   }
 
   /**
@@ -372,31 +273,37 @@ export class GameClient {
   public onGameStart(
     callback: (gameId: string, battlefield: BattlefieldConfig) => void
   ): void {
-    this.onGameStartCallback = callback;
+    this.events.on('gameStart', callback);
   }
 
   public onShot(callback: (data: ShotEventData) => void): void {
-    this.onShotCallback = callback;
+    this.events.on('shot', callback);
   }
 
   public onTurnChange(callback: (playerId: number, isMyTurn: boolean) => void): void {
-    this.onTurnChangeCallback = callback;
+    this.events.on('turnChange', callback);
   }
 
   public onGameOver(callback: (winnerId: number, didIWin: boolean) => void): void {
-    this.onGameOverCallback = callback;
+    this.events.on('gameOver', callback);
   }
 
   public onPlayerHit(callback: (playerId: number, playerName: string) => void): void {
-    this.onPlayerHitCallback = callback;
+    this.events.on('playerHit', callback);
   }
 
   public onRematchStatus(callback: (answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>) => void): void {
-    this.onRematchStatusCallback = callback;
+    this.events.on('rematchStatus', (answered, requiredPlayers, players) => {
+      if (callback.length <= 1) {
+        (callback as unknown as (answered: number) => void)(answered);
+      } else {
+        callback(answered, requiredPlayers, players);
+      }
+    });
   }
 
   public onLobbyStatus(callback: (status: GameStatusResponse) => void): void {
-    this.onLobbyStatusCallback = callback;
+    this.events.on('lobbyStatus', callback);
   }
 
   /**
@@ -424,39 +331,16 @@ export class GameClient {
   }
 
   public getLastGameStartMessage(): GameStartMessage | null {
-    return this.lastGameStartMessage;
-  }
-
-  /**
-   * Session storage management
-   */
-  private saveSession(): void {
-    if (this.gameSession) {
-      sessionStorage.setItem('gameSession', JSON.stringify(this.gameSession));
-    }
-  }
-
-  private restoreSession(): void {
-    const stored = sessionStorage.getItem('gameSession');
-    if (stored) {
-      try {
-        this.gameSession = JSON.parse(stored) as GameSession;
-        console.log(`Restored game session: ${this.gameSession.gameId}`);
-      } catch (error) {
-        console.error('Failed to restore session:', error);
-        sessionStorage.removeItem('gameSession');
-      }
-    }
+    return this.messageDispatcher.getLastGameStartMessage();
   }
 
   public clearSession(): void {
     this.gateway.disconnect();
     this.gameSession = null;
-    sessionStorage.removeItem('gameSession');
   }
 
   public hasActiveSession(): boolean {
-    return this.gameSession !== null;
+    return this.sessionStore.hasSession();
   }
 
   public getGameSession(): GameSession | null {
