@@ -108,15 +108,20 @@ suite (done for `gameRules.test.ts` and `gameCleanupService.test.ts` in Phase 2)
 - Kept one server health probe on browser startup as a separate online-readiness indicator; device
   mode hides server controls and does not trigger further requests. Local game creation, connection,
   shots, turns, and rematches themselves use no `fetch` or WebSocket calls.
-- Deprecated `/api/v1/hot-seat/games` in OpenAPI 1.8.0 while retaining the server route for one
-  compatibility release. Offline games and their in-process device stats are not sent to server
-  stats; server totals remain server-local.
+- `/api/v1/hot-seat/games` is deprecated in the current OpenAPI contract while the server route is
+  retained for one compatibility release. Offline games and their in-process device stats are not
+  sent to server stats; server totals remain server-local.
 
-### Phase 6 — Server splits
-`GameManager` → `LobbyService` / `SessionService` / `GameplayService` / `Broadcaster` /
-`StatsCollector`. `routes/api.ts` → per-tag route modules plus request-logging middleware and the
-`client-base-url` and `uptime` helpers. `server.ts` → `createHttpApp` + `WsConnectionHandler` +
-bootstrap.
+### Phase 6 — Server splits — DONE
+- Split API endpoints into Health, Games, Invitations and Gameplay route modules; `routes/api.ts`
+  now composes them and the shared request-logging middleware.
+- Extracted `client-base-url`, `uptime`, and server-version helpers under the HTTP boundary.
+- Replaced the monolithic `server.ts` with bootstrap wiring over `createHttpApp` and
+  `WsConnectionHandler`; WebSocket authentication, identity-preserving connection metadata,
+  message logging and disconnect handling now live in the handler.
+- `GameManager` remains a small compatibility adapter over core `GameEngine`. Splitting it again
+  into server-side lobby/session/gameplay/stats services would duplicate domain ownership, so the
+  planned responsibility split is fulfilled by the core engine and its focused services.
 
 ### Phase 7 — Client splits
 `main.ts` → `PendingPresentationQueue`, `roster-view`, `direction-policy`, `server-address`,
@@ -126,7 +131,7 @@ Roster / ServerHealth views. `renderer.ts` → Terrain / Castle / Trajectory / W
 
 ## Current baseline
 
-Post-Phase 5 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 49
+Post-Phase 6 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 49
 client = **127 tests**.
 
 ## Open questions
