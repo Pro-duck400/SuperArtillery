@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CORE_VERSION } from '@superartillery/core';
 import { UIManager } from '../ts/ui-manager';
 
 describe('UIManager private game flow', () => {
@@ -77,7 +78,7 @@ describe('UIManager private game flow', () => {
   it('shows server health details after selecting a server', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ version: '1.2.0', contractVersion: '1.2.0' })
+      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.2.0' })
     });
     vi.stubGlobal('fetch', fetchSpy);
     new UIManager('http://localhost:3000');
@@ -86,7 +87,7 @@ describe('UIManager private game flow', () => {
     option.click();
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('https://superartillery-server-production.up.railway.app/api/v1/health'));
     await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toMatch(
-      /^Server v1\.2\.0 \| Contract v1\.2\.0 \| Response time: \d+ms$/
+      new RegExp(`^Server v1\\.2\\.0 \\| Core v${CORE_VERSION.replaceAll('.', '\\.')} \\| Contract v1\\.2\\.0 \\| Response time: \\d+ms$`)
     ));
     vi.unstubAllGlobals();
   });
@@ -94,14 +95,14 @@ describe('UIManager private game flow', () => {
   it('checks the preselected server automatically', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ version: '1.2.0', contractVersion: '1.2.0' })
+      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.2.0' })
     });
     vi.stubGlobal('fetch', fetchSpy);
     new UIManager('http://localhost:3000');
 
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3000/api/v1/health'));
     await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toMatch(
-      /^Server v1\.2\.0 \| Contract v1\.2\.0 \| Response time: \d+ms$/
+      new RegExp(`^Server v1\\.2\\.0 \\| Core v${CORE_VERSION.replaceAll('.', '\\.')} \\| Contract v1\\.2\\.0 \\| Response time: \\d+ms$`)
     ));
     vi.unstubAllGlobals();
   });
@@ -109,7 +110,7 @@ describe('UIManager private game flow', () => {
   it('checks the current server when the refresh button is pressed', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ version: '1.2.0', contractVersion: '1.2.0' })
+      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.2.0' })
     });
     vi.stubGlobal('fetch', fetchSpy);
     new UIManager('http://localhost:3000');

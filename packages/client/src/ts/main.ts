@@ -5,7 +5,8 @@ import { Renderer } from './renderer';
 import { ProjectileAnimator } from './projectile-animator';
 import { UIManager } from './ui-manager';
 import { GameClient } from './game-client';
-import { CONTRACT_VERSION } from '@superartillery/core';
+import { RemoteGameGateway } from './network/remote-game-gateway';
+import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 import clientPackage from '../../package.json';
 import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
 import { createHistoricalTrajectories } from './trajectory';
@@ -14,7 +15,7 @@ console.log('SuperArtillery initializing...');
 
 const clientVersion = document.getElementById('clientVersion');
 if (clientVersion) {
-  clientVersion.textContent = `Client v${clientPackage.version} | Contract v${CONTRACT_VERSION}`;
+  clientVersion.textContent = `Client v${clientPackage.version} | Core v${CORE_VERSION} | Contract v${CONTRACT_VERSION}`;
 }
 
 const BUILT_IN_DEFAULT = 'http://localhost:3000';
@@ -386,7 +387,7 @@ if (inviteFromUrl) {
 uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
-    gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
+    gameClient = new GameClient(new RemoteGameGateway(apiBaseUrl, wsBaseUrl), game);
     wireGameClientEvents(gameClient);
 
     clientName = playerName;
@@ -424,7 +425,7 @@ uiManager.onSkipWaiting(async () => {
 uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
-    gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
+    gameClient = new GameClient(new RemoteGameGateway(apiBaseUrl, wsBaseUrl), game);
     wireGameClientEvents(gameClient);
 
     clientName = playerName;
@@ -450,7 +451,7 @@ uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddres
 uiManager.onHotSeat(async (names: string[], serverAddress: string) => {
   try {
     const { apiBaseUrl, wsBaseUrl } = resolveServerBaseUrls(serverAddress);
-    gameClient = new GameClient(apiBaseUrl, wsBaseUrl, game);
+    gameClient = new GameClient(new RemoteGameGateway(apiBaseUrl, wsBaseUrl), game);
     wireGameClientEvents(gameClient);
     clientName = names[0];
     opponentName = names[1] ?? '';

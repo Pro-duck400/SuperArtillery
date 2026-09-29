@@ -705,7 +705,11 @@ export interface components {
             games: number;
             /** @description Number of pending invitations */
             invites: number;
+            /** @description Server package version */
             version: string;
+            /** @description Core game package version */
+            coreVersion: string;
+            /** @description OpenAPI contract version */
             contractVersion: string;
         };
         StatsResponse: {
@@ -739,7 +743,11 @@ export interface components {
                     rematches: number;
                 };
             };
+            /** @description Server package version */
             version: string;
+            /** @description Core game package version */
+            coreVersion: string;
+            /** @description OpenAPI contract version */
             contractVersion: string;
         };
         GameStartMessage: {

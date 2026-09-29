@@ -1,7 +1,7 @@
 // Canvas rendering
 import type { Projectile } from './types/game';
 import type { BattlefieldConfig } from './types/messages';
-import { Terrain } from './terrain';
+import { getTerrainY } from '@superartillery/core';
 import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
 
 export interface RenderState {
@@ -48,9 +48,9 @@ export class Renderer {
     this.ctx.strokeStyle = '#4CAF50';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    this.ctx.moveTo(0, Terrain.getY(this.battlefield, 0));
+    this.ctx.moveTo(0, getTerrainY(this.battlefield, 0));
     for (let x = this.battlefield.terrain.sampleWidth; x <= this.canvas.width; x += this.battlefield.terrain.sampleWidth) {
-      this.ctx.lineTo(x, Terrain.getY(this.battlefield, x));
+      this.ctx.lineTo(x, getTerrainY(this.battlefield, x));
     }
     this.ctx.lineTo(this.canvas.width, this.canvas.height);
     this.ctx.lineTo(0, this.canvas.height);
@@ -58,9 +58,9 @@ export class Renderer {
     this.ctx.fill();
 
     this.ctx.beginPath();
-    this.ctx.moveTo(0, Terrain.getY(this.battlefield, 0));
+    this.ctx.moveTo(0, getTerrainY(this.battlefield, 0));
     for (let x = this.battlefield.terrain.sampleWidth; x <= this.canvas.width; x += this.battlefield.terrain.sampleWidth) {
-      this.ctx.lineTo(x, Terrain.getY(this.battlefield, x));
+      this.ctx.lineTo(x, getTerrainY(this.battlefield, x));
     }
     this.ctx.stroke();
   }
@@ -155,7 +155,7 @@ export class Renderer {
   }
 
   public getTerrainY(x: number): number {
-    return this.battlefield ? Terrain.getY(this.battlefield, x) : this.groundY;
+    return this.battlefield ? getTerrainY(this.battlefield, x) : this.groundY;
   }
 
   private getCastleBaseY(leftX: number): number {

@@ -1,13 +1,17 @@
 // Coordinates network communication (HTTP + WebSocket)
 import { Game } from './game';
-import { WebSocketClient } from './network/websocket';
-import { ApiClient, type CreateGameResponse, type AcceptInvitationResponse, type CreateHotSeatResponse, type GameStatusResponse } from './network/api';
+import type { GameGateway } from './network/game-gateway';
+import type {
+  AcceptInvitationResponse,
+  CreateGameResponse,
+  CreateHotSeatResponse,
+  GameStatusResponse
+} from './network/game-gateway';
 import type {
   BattlefieldConfig,
   GameMessage,
   GameStartMessage
 } from './types/messages';
-import { CONTRACT_VERSION } from '@superartillery/core';
 
 export interface ShotEventData {
   playerId: number;
@@ -29,9 +33,7 @@ interface GameSession {
 
 export class GameClient {
   private game: Game;
-  private apiClient: ApiClient;
-  private wsClient: WebSocketClient | null = null;
-  private wsBaseUrl: string;
+  private gateway: GameGateway;
   private lastGameStartMessage: GameStartMessage | null = null;
   private gameSession: GameSession | null = null;
   private pendingConnectResolve: (() => void) | null = null;
@@ -44,10 +46,9 @@ export class GameClient {
   private onRematchStatusCallback: ((answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>) => void) | null = null;
   private onLobbyStatusCallback: ((status: GameStatusResponse) => void) | null = null;
 
-  constructor(apiBaseUrl: string, wsBaseUrl: string, game: Game) {
+  constructor(gateway: GameGateway, game: Game) {
     this.game = game;
-    this.apiClient = new ApiClient(apiBaseUrl);
-    this.wsBaseUrl = wsBaseUrl;
+    this.gateway = gateway;
 
     // Try to restore session from storage
     this.restoreSession();
@@ -59,7 +60,7 @@ export class GameClient {
   public async createGame(playerName: string, playerCount: number = 2): Promise<CreateGameResponse> {
     try {
       // Wake server with health check
-      await this.apiClient.healthCheckWithRetry();
+      await this.gateway.healthCheckWithRetry();
     } catch (error) {
       console.error('Server health check failed:', error);
       throw new Error(
@@ -69,8 +70,8 @@ export class GameClient {
 
     // Create the game
     const response = playerCount === 2
-      ? await this.apiClient.createGame(playerName, window.location.href)
-      : await this.apiClient.createGame(playerName, window.location.href, playerCount);
+      ? await this.gateway.createGame(playerName, window.location.href)
+      : await this.gateway.createGame(playerName, window.location.href, playerCount);
     
     // Store session
     this.gameSession = {
@@ -97,7 +98,7 @@ export class GameClient {
   ): Promise<AcceptInvitationResponse> {
     try {
       // Wake server with health check
-      await this.apiClient.healthCheckWithRetry();
+      await this.gateway.healthCheckWithRetry();
     } catch (error) {
       console.error('Server health check failed:', error);
       throw new Error(
@@ -106,7 +107,7 @@ export class GameClient {
     }
 
     // Accept the invitation
-    const response = await this.apiClient.acceptInvitation(inviteCode, playerName);
+    const response = await this.gateway.acceptInvitation(inviteCode, playerName);
 
     // Store session
     this.gameSession = {
@@ -125,8 +126,8 @@ export class GameClient {
   }
 
   public async createHotSeatGame(playerNames: string[]): Promise<CreateHotSeatResponse> {
-    await this.apiClient.healthCheckWithRetry();
-    const response = await this.apiClient.createHotSeatGame(playerNames);
+    await this.gateway.healthCheckWithRetry();
+    const response = await this.gateway.createHotSeatGame(playerNames);
     this.gameSession = {
       gameId: response.gameId,
       sessionToken: response.players[0].playerToken,
@@ -153,22 +154,17 @@ export class GameClient {
     // Connect WebSocket with gameId and sessionToken first - the server only counts
     // a player as "connected" once its socket is open, so waiting on status beforehand
     // would deadlock (both clients waiting for a count that never increments).
-    const wsUrl = `${this.wsBaseUrl}?gameId=${encodeURIComponent(
-      this.gameSession.gameId
-    )}&sessionToken=${encodeURIComponent(this.gameSession.sessionToken)}&contractVersion=${encodeURIComponent(CONTRACT_VERSION)}`;
-
-    this.wsClient = new WebSocketClient(wsUrl);
-    this.wsClient.onMessage((message) => this.handleMessage(message));
     let rejectProtocolError: ((error: Error) => void) | null = null;
     const protocolError = new Promise<never>((_, reject) => {
       rejectProtocolError = reject;
     });
-    this.wsClient.onError((error) => {
+    this.gateway.onMessage(message => this.handleMessage(message));
+    this.gateway.onError((error) => {
       rejectProtocolError?.(new Error(error.message));
     });
 
     try {
-      await this.wsClient.connect();
+      await this.gateway.connect(this.gameSession.gameId, this.gameSession.sessionToken);
     } catch (error) {
       throw new Error(
         `Failed to connect to game: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -191,7 +187,7 @@ export class GameClient {
     }
 
     try {
-      const status = await this.apiClient.getGameStatus(
+      const status = await this.gateway.getGameStatus(
         this.gameSession.gameId,
         this.gameSession.sessionToken
       );
@@ -246,7 +242,7 @@ export class GameClient {
     }
 
     const sessionToken = this.getTokenForPlayer(this.game.getState().currentTurn);
-    await this.apiClient.fire(
+    await this.gateway.fire(
       this.gameSession.gameId,
       sessionToken,
       angle,
@@ -263,16 +259,16 @@ export class GameClient {
 
     if (this.gameSession.hotSeat && this.gameSession.players) {
       for (const player of this.gameSession.players) {
-        await this.apiClient.requestRematch(this.gameSession.gameId, player.sessionToken, answer);
+        await this.gateway.requestRematch(this.gameSession.gameId, player.sessionToken, answer);
       }
       return;
     }
-    await this.apiClient.requestRematch(this.gameSession.gameId, this.gameSession.sessionToken, answer);
+    await this.gateway.requestRematch(this.gameSession.gameId, this.gameSession.sessionToken, answer);
   }
 
   public async skipWaiting(): Promise<void> {
     if (!this.gameSession) throw new Error('No active game session');
-    await this.apiClient.skipWaiting(this.gameSession.gameId, this.gameSession.sessionToken);
+    await this.gateway.skipWaiting(this.gameSession.gameId, this.gameSession.sessionToken);
   }
 
   /**

@@ -3,7 +3,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createApiRouter } from '../routes/api';
 import { GameManager } from '../services/gameManager';
-import { CONTRACT_VERSION } from '@superartillery/core';
+import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 
 describe('API routes', () => {
   let app: express.Express;
@@ -133,6 +133,7 @@ describe('API routes', () => {
       invites: expect.any(Number),
       timestamp: expect.any(String),
       uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
+      coreVersion: CORE_VERSION,
       contractVersion: CONTRACT_VERSION
     });
     expect(response.body.totals).toBeUndefined();
@@ -154,6 +155,7 @@ describe('API routes', () => {
       },
       timestamp: expect.any(String),
       uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
+      coreVersion: CORE_VERSION,
       contractVersion: CONTRACT_VERSION
     });
   });

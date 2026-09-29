@@ -57,6 +57,7 @@ export interface HealthResponse {
   games: number;
   invites: number;
   version: string;
+  coreVersion: string;
   contractVersion: string;
 }
 
@@ -72,6 +73,7 @@ export interface StatsResponse {
     device: { games: number; rematches: number };
   };
   version: string;
+  coreVersion: string;
   contractVersion: string;
 }
 

@@ -1,5 +1,5 @@
 // Handles projectile animation and trajectory tracking
-import { Physics } from './physics';
+import { calculateVelocityComponents, updateProjectile } from '@superartillery/core';
 import type { Renderer } from './renderer';
 import type { Projectile } from './types/game';
 import type { TrajectoryPoint } from './trajectory';
@@ -55,7 +55,7 @@ export class ProjectileAnimator {
       : labelPosition.x < this.canvasWidth / 2 ? angle : 180 - angle;
 
     // Calculate initial velocity components
-    const { vx, vy } = Physics.calculateVelocityComponents(adjustedAngle, velocity);
+    const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
 
     // Initialize projectile at castle position
     this.currentProjectile = {
@@ -113,7 +113,7 @@ export class ProjectileAnimator {
 
     if (deltaTime > 0 && deltaTime < 0.1) {
       // Update projectile physics
-      this.currentProjectile = Physics.updateProjectile(this.currentProjectile, deltaTime, this.gravity, this.wind);
+      this.currentProjectile = updateProjectile(this.currentProjectile, deltaTime, this.gravity, this.wind);
       
       // Add to trajectory
       this.trajectory.push({ x: this.currentProjectile.x, y: this.currentProjectile.y });

@@ -71,31 +71,33 @@ suite (done for `gameRules.test.ts` and `gameCleanupService.test.ts` in Phase 2)
 - Origin defaults are injected via `GameManagerOptions`; only `server.ts` reads `process.env`.
 - `packages/server/src/http/errorMapper.ts` replaced five duplicated status-code ternaries.
 - Deleted `gameManager.test.ts` and `gameManager.integration.test.ts` (49 tests) per the testing
-  policy; the inventory records them as awaiting the Phase 3 `GameEngine` suite.
+  policy; Phase 3 now replaces their coverage in the core `GameEngine` suite and reconciles their
+  inventory entries.
 - Scope change: the `Result<T>` / `GameError` migration moved from Phase 2 to Phase 3, to avoid
   churning return shapes immediately before the `GameEngine` facade rewrites those call sites.
 
-### Phase 3 — Extract core — NEXT
-Move into `packages/core`: physics, battlefield/terrain, shotResolver, `GameRules`,
-`GameRepository`, `GameCleanupService`, `TokenService`, `InvitationService`, `gameConfig`,
-`gameErrors`, and the `PrivateGame` domain types. Then:
+### Phase 3 — Extract core — DONE
+- Moved physics, battlefield/terrain, shot resolution, `GameRules`, `GameRepository`,
+  `GameCleanupService`, `TokenService`, `InvitationService`, configuration/errors, and private game
+  types into `packages/core`. Server module paths remain as thin compatibility re-exports; the
+  server's `GameManager` now adapts the core `GameEngine` and keeps HTTP status mapping at the edge.
+- Added `GameEngine`, `GameMessageFactory`, `Result<T>` and `GameError`. Engine operations return
+  transport-neutral results and publish the existing contract messages through `PlayerConnection`.
+- Removed the client's duplicate `physics.ts` and `terrain.ts`; client animation, trajectory and
+  rendering now use core physics and terrain functions.
+- Moved battlefield, shot resolver, game rules, cleanup, invitation and token tests to core. The
+  `GameEngine` suite covers the archived lifecycle, lobby, authentication, gameplay, rematch, and
+  stats scenarios from the 49 deleted `GameManager` tests; those inventory entries are reconciled.
+- Fixed cleanup of games with empty lobby slots so legacy initiator/invited connections are closed.
 
-- Add a `GameEngine` facade with one method per contract operation (`createGame`,
-  `acceptInvitation`, `createLocalGame`, `getGameStatus`, `skipWaiting`, `fire`, `requestRematch`,
-  `connect`, `disconnect`, `getStats`, `shutdown`) returning `Result<T>` and pushing messages through
-  `PlayerConnection`.
-- Add `GameMessageFactory` for the `game_start` / `turn_change` / `game_over` / `lobby_status` /
-  `rematch_status` payloads currently inlined in `GameManager`.
-- Introduce `Result<T>` and `GameError` (deferred from Phase 2).
-- Delete the client's duplicated `physics.ts` and `terrain.ts` in favour of core.
-- Move `battlefield.test.ts`, `shotResolver.test.ts` and `gameRules.test.ts` to core (import paths only).
-- Write the `GameEngine` suite that absorbs the 49 deleted `GameManager` tests, then reconcile those
-  inventory lines.
-
-### Phase 4 — Client transport abstraction
-`GameGateway` interface whose verbs mirror the REST contract and whose pushes mirror the WebSocket
-messages. `RemoteGameGateway` wraps the existing `ApiClient` and `WebSocketClient`. `GameClient`
-depends only on the interface. No behaviour change.
+### Phase 4 — Client transport abstraction — DONE
+- Added `GameGateway` for the existing REST operations and WebSocket connect/disconnect/message push
+  surface. `RemoteGameGateway` composes the existing `ApiClient` and `WebSocketClient`, including
+  the current contract-version query parameter.
+- `GameClient` now depends only on `GameGateway`; production create/join/hot-seat paths construct
+  `RemoteGameGateway`. Session persistence and message handling are unchanged.
+- Added a remote-adapter test for URL construction, message forwarding, and disconnect; updated
+  `GameClient` tests to inject the gateway boundary.
 
 ### Phase 5 — Offline "on this device"
 `LocalGameGateway` owns an in-browser `GameEngine` and fans messages out via `queueMicrotask` so
@@ -117,8 +119,8 @@ Roster / ServerHealth views. `renderer.ts` → Terrain / Castle / Trajectory / W
 
 ## Current baseline
 
-`npm run build` and `npm test` from the repository root: 9 core + 62 server + 47 client =
-**118 tests passing**.
+Post-Phase 4 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 48
+client = **126 tests**.
 
 ## Open questions
 

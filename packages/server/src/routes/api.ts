@@ -6,7 +6,7 @@ import { GameManager } from '../services/gameManager';
 import type { HealthResponse, StatsResponse, ErrorResponse } from '../types/private-game';
 import { HTTP_STATUS } from '../httpStatus';
 import { errorCodeToHttpStatus } from '../http/errorMapper';
-import { CONTRACT_VERSION } from '@superartillery/core';
+import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 
 // Derive a full base URL for the client that preserves any pathname when possible.
 // Prefer the full Referer (origin + pathname) so invite links include the app path
@@ -90,6 +90,7 @@ export function createApiRouter(game: GameManager, getWebSocketCount: () => numb
       games: stats.games,
       invites: stats.invites,
       version: SERVER_VERSION,
+      coreVersion: CORE_VERSION,
       contractVersion: CONTRACT_VERSION
     };
     res.json(healthResponse);
@@ -109,6 +110,7 @@ export function createApiRouter(game: GameManager, getWebSocketCount: () => numb
       webSockets: getWebSocketCount(),
       totals: stats.totals,
       version: SERVER_VERSION,
+      coreVersion: CORE_VERSION,
       contractVersion: CONTRACT_VERSION
     };
     res.json(statsResponse);

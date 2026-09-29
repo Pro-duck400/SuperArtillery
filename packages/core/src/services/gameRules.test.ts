@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayerConnection } from '@superartillery/core';
+import type { PlayerConnection } from '../ports/player-connection';
 import type { PrivateGame } from '../types/private-game';
-import { GameRules } from '../services/gameRules';
+import { GameRules } from './gameRules';
 import { createBattlefield } from '../utils/battlefield';
 
 function createOpenConnection(): PlayerConnection {
@@ -9,54 +9,45 @@ function createOpenConnection(): PlayerConnection {
 }
 
 function createFlatBattlefield() {
-  const battlefield = createBattlefield(1, [0,1]);
+  const battlefield = createBattlefield(1, [0, 1]);
   battlefield.terrain.hillHeight = 0;
   battlefield.terrain.leftY = battlefield.groundY;
   battlefield.terrain.rightY = battlefield.groundY;
-  battlefield.castles[0].base_y = battlefield.groundY;
-  battlefield.castles[1].base_y = battlefield.groundY;
+  battlefield.castles[0]!.base_y = battlefield.groundY;
+  battlefield.castles[1]!.base_y = battlefield.groundY;
   return battlefield;
 }
 
 function createGame(): PrivateGame {
+  const initiator = { name: 'Alice', sessionTokenHash: 'alice-hash', connection: null };
+  const invited = { name: 'Bob', sessionTokenHash: 'bob-hash', connection: null };
   return {
     id: 'game-1',
     status: 'pending',
     createdAt: 100,
     expiresAt: 1_000,
     lastActivityAt: 100,
-    invitation: {
-      inviteCode: 'ABCD',
-      inviteCodeHash: 'code-hash',
-      expiresAt: 1_000,
-      accepted: true
-    },
-    initiator: {
-      name: 'Alice',
-      sessionTokenHash: 'alice-hash',
-      connection: null
-    },
-    invited: {
-      name: 'Bob',
-      sessionTokenHash: 'bob-hash',
-      connection: null
-    },
+    invitation: { inviteCode: 'ABCD', inviteCodeHash: 'code-hash', expiresAt: 1_000, accepted: true },
+    initiator,
+    invited,
     currentTurn: 0,
     gameStarted: false,
     round: 1,
-    rematchReady: [false, false]
+    rematchReady: [false, false],
+    lobbySlots: [
+      { playerId: 0, session: initiator, status: 'ready', active: true, eliminated: false },
+      { playerId: 1, session: invited, status: 'ready', active: true, eliminated: false }
+    ]
   };
 }
 
 describe('GameRules', () => {
-  it('starts a game when both players have open sockets', () => {
+  it('starts a game when all non-skipped players have open connections', () => {
     const game = createGame();
     const connection = createOpenConnection();
     game.initiator.connection = connection;
     game.invited.connection = connection;
-
     const result = new GameRules().startIfReady(game, 200);
-
     expect(result).not.toBeNull();
     expect(game.status).toBe('active');
     expect(game.gameStarted).toBe(true);
@@ -65,12 +56,9 @@ describe('GameRules', () => {
     expect(game.battlefield).toEqual(result?.battlefield);
   });
 
-  it('transitions a pending game to expired when the initiator disconnects', () => {
+  it('expires a pending game when the initiator disconnects', () => {
     const game = createGame();
-
-    const result = new GameRules().disconnect(game, 0, 300);
-
-    expect(result).toEqual({ statusChanged: true, status: 'expired' });
+    expect(new GameRules().disconnect(game, 0, 300)).toEqual({ statusChanged: true, status: 'expired' });
     expect(game.initiator.connection).toBeNull();
   });
 
@@ -79,10 +67,7 @@ describe('GameRules', () => {
     game.status = 'active';
     game.gameStarted = true;
     game.battlefield = createFlatBattlefield();
-
-    const result = new GameRules().disconnect(game, 1, 400);
-
-    expect(result).toEqual({ statusChanged: true, status: 'finished' });
+    expect(new GameRules().disconnect(game, 1, 400)).toEqual({ statusChanged: true, status: 'finished' });
     expect(game.gameFinishedAt).toBe(400);
   });
 
@@ -91,10 +76,7 @@ describe('GameRules', () => {
     game.status = 'active';
     game.gameStarted = true;
     game.battlefield = createFlatBattlefield();
-
-    const result = new GameRules().fire(game, 0, 45, 10, 500);
-
-    expect(result).toEqual({ kind: 'miss', nextPlayerId: 1 });
+    expect(new GameRules().fire(game, 0, 45, 10, 500)).toEqual({ kind: 'miss', nextPlayerId: 1 });
     expect(game.currentTurn).toBe(1);
     expect(game.lastActivityAt).toBe(500);
   });
@@ -105,10 +87,7 @@ describe('GameRules', () => {
     game.gameStarted = true;
     game.battlefield = createFlatBattlefield();
     game.currentTurn = 1;
-
-    const result = new GameRules().fire(game, 1, 45, 10, 600);
-
-    expect(result).toEqual({ kind: 'miss', nextPlayerId: 0 });
+    expect(new GameRules().fire(game, 1, 45, 10, 600)).toEqual({ kind: 'miss', nextPlayerId: 0 });
     expect(game.currentTurn).toBe(0);
   });
 
@@ -117,9 +96,7 @@ describe('GameRules', () => {
     game.status = 'active';
     game.gameStarted = true;
     game.battlefield = createFlatBattlefield();
-
     const result = new GameRules().fire(game, 0, 0, 900, 600);
-
     expect(result.kind).toBe('hit');
     expect(game.status).toBe('finished');
     expect(game.gameFinishedAt).toBe(600);
@@ -133,20 +110,16 @@ describe('GameRules', () => {
     game.round = 2;
     game.gameFinishedAt = 700;
     game.battlefield = createFlatBattlefield();
-
     const rules = new GameRules();
     const waiting = rules.requestRematch(game, 0, 800);
-
     expect(waiting).toMatchObject({ kind: 'waiting', answered: 1, playersReady: 1 });
     expect(waiting.answers).toEqual(['play_again', null]);
     expect(game.rematchReady).toEqual([true, false]);
     expect(game.status).toBe('finished');
-
     const connection = createOpenConnection();
     game.initiator.connection = connection;
     game.invited.connection = connection;
     const started = rules.requestRematch(game, 1, 900);
-
     expect(started.kind).toBe('started');
     expect(game.status).toBe('active');
     expect(game.round).toBe(3);
@@ -163,12 +136,8 @@ describe('GameRules', () => {
     game.round = 2;
     game.gameFinishedAt = 700;
     game.battlefield = createFlatBattlefield();
-
     const rules = new GameRules();
-    const firstResponse = rules.requestRematch(game, 0, 'play_again', 800);
-    expect(firstResponse).toMatchObject({ kind: 'waiting', answered: 1, playersReady: 1 });
-    expect(firstResponse.answers).toEqual(['play_again', null]);
-
+    expect(rules.requestRematch(game, 0, 'play_again', 800)).toMatchObject({ kind: 'waiting', answered: 1, playersReady: 1 });
     const finalResponse = rules.requestRematch(game, 1, 'had_enough', 900);
     expect(finalResponse).toMatchObject({ kind: 'waiting', answered: 2, playersReady: 1 });
     expect(finalResponse.answers).toEqual(['play_again', 'had_enough']);
@@ -178,7 +147,7 @@ describe('GameRules', () => {
     expect(game.rematchAnswers).toEqual([null, null]);
   });
 
-  it('starts a new round with only the players who stayed in when another player had enough', () => {
+  it('starts a new round with only players who chose to stay', () => {
     const game = createGame();
     game.status = 'finished';
     game.gameStarted = true;
@@ -186,18 +155,15 @@ describe('GameRules', () => {
     game.gameFinishedAt = 700;
     game.battlefield = createFlatBattlefield();
     game.lobbySlots = [
-      { playerId: 0, session: game.initiator, status: 'ready', active: true, eliminated: false },
-      { playerId: 1, session: game.invited, status: 'ready', active: true, eliminated: false },
+      ...game.lobbySlots,
       { playerId: 2, session: { name: 'Charlie', sessionTokenHash: 'charlie-hash', connection: null }, status: 'ready', active: true, eliminated: false }
     ];
     game.rematchAnswers = [null, null, null];
     game.rematchReady = [false, false, false];
-
     const rules = new GameRules();
     const firstResponse = rules.requestRematch(game, 0, 'play_again', 800);
     const secondResponse = rules.requestRematch(game, 1, 'play_again', 900);
-    const finalResponse = rules.requestRematch(game, 2, 'had_enough', 1000);
-
+    const finalResponse = rules.requestRematch(game, 2, 'had_enough', 1_000);
     expect(firstResponse.kind).toBe('waiting');
     expect(secondResponse.kind).toBe('waiting');
     expect(finalResponse.kind).toBe('started');
@@ -214,9 +180,7 @@ describe('GameRules', () => {
     game.status = 'finished';
     game.gameStarted = true;
     game.rematchReady = [true, true];
-
     new GameRules().disconnect(game, 0, 500);
-
     expect(game.rematchReady).toEqual([false, true]);
     expect(game.status).toBe('finished');
   });

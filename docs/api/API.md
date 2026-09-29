@@ -32,7 +32,8 @@ Used by the client to detect a sleeping/cold-starting server before create/accep
   "games": 2,
   "invites": 0,
   "version": "1.3.1",
-  "contractVersion": "1.5.0"
+  "coreVersion": "1.0.0",
+  "contractVersion": "1.7.0"
 }
 ```
 
@@ -62,7 +63,8 @@ Provides detailed metrics on active WebSocket connections, active games, pending
     }
   },
   "version": "1.3.1",
-  "contractVersion": "1.5.0"
+  "coreVersion": "1.0.0",
+  "contractVersion": "1.7.0"
 }
 ```
 

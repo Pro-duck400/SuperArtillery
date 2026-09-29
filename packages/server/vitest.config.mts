@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: {
     // Tests run against core sources so they never require a core build first.
     alias: {
-      '@superartillery/core': resolve(__dirname, '../core/src/index.ts')
+      '@superartillery/core': resolve(import.meta.dirname, '../core/src/index.ts')
     }
   },
   test: {

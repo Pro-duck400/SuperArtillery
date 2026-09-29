@@ -29,186 +29,186 @@ Legend for the status column: `[ ]` unclassified · `[x]` covered · `[-]` inten
 
 ## server/src/tests/battlefield.test.ts — `battlefield generation`
 
-> Moved verbatim to `packages/core` (import paths only).
+> Moved to `packages/core`; assertions now use core module imports and strict optional access.
 
-- [ ] reproduces the same battlefield for the same seed
-- [ ] places castles on opposite sides and on the terrain surface
-- [ ] generates bounded terrain between the castles
-- [ ] generates deterministic wind within the supported range
-- [ ] generates independent side elevations and bounded middle terrain
-- [ ] can generate both a crest and a depression from different seeds
+- [x] reproduces the same battlefield for the same seed — covered-by: packages/core/src/utils/battlefield.test.ts :: reproduces the same battlefield for the same seed
+- [x] places castles on opposite sides and on the terrain surface — covered-by: packages/core/src/utils/battlefield.test.ts :: places castles on opposite sides and on the terrain surface
+- [x] generates bounded terrain between the castles — covered-by: packages/core/src/utils/battlefield.test.ts :: generates bounded terrain between the castles
+- [x] generates deterministic wind within the supported range — covered-by: packages/core/src/utils/battlefield.test.ts :: generates deterministic wind within the supported range
+- [x] generates independent side elevations and bounded middle terrain — covered-by: packages/core/src/utils/battlefield.test.ts :: generates independent side elevations and bounded middle terrain
+- [x] can generate both a crest and a depression from different seeds — covered-by: packages/core/src/utils/battlefield.test.ts :: can generate both a crest and a depression from different seeds
 
 ## server/src/tests/gameCleanupService.test.ts — `GameCleanupService`
 
-> Kept: fixtures mechanically renamed `websocket` → `connection` in Phase 2.
+> Kept in Phase 2, then moved into `packages/core` with the owning rules implementation in Phase 3.
 
-- [ ] removes an expired pending game and closes its sockets
-- [ ] marks an inactive active game expired without deleting it before its expiry
-- [ ] removes a finished game after its grace period
-- [ ] does not remove a game at the exact expiration boundary
+- [x] removes an expired pending game and closes its sockets — covered-by: packages/core/src/services/gameCleanupService.test.ts :: removes an expired pending game and closes its connections
+- [x] marks an inactive active game expired without deleting it before its expiry — covered-by: packages/core/src/services/gameCleanupService.test.ts :: marks an inactive active game expired without deleting it before its expiry
+- [x] removes a finished game after its grace period — covered-by: packages/core/src/services/gameCleanupService.test.ts :: removes a finished game after its grace period
+- [x] does not remove a game at the exact expiration boundary — covered-by: packages/core/src/services/gameCleanupService.test.ts :: does not remove a game at the exact expiration boundary
 
 ## server/src/tests/gameManager.integration.test.ts — `Integration: Private Games Flow`
 
 > **Deleted in Phase 2** (socket mocks incompatible with the `PlayerConnection` port).
-> Replacement: the `GameEngine` suite in `packages/core` (Phase 3). Lines below stay unclassified
-> until that suite exists.
+> Replacement: the `GameEngine` suite in `packages/core` (Phase 3); every scenario below is mapped
+> to its replacement test.
 
 ### Full game lifecycle
-- [ ] Player A creates a game, Player B accepts, both connect
-- [ ] Player cannot fire in another player's game
-- [ ] Player cannot impersonate other player by changing tokens
+- [x] Player A creates a game, Player B accepts, both connect — covered-by: packages/core/src/services/gameEngine.test.ts :: creates two empty invitation slots and issues a distinct token to the invited player
+- [x] Player cannot fire in another player's game — covered-by: packages/core/src/services/gameEngine.test.ts :: scopes session tokens to a game and supports status before connecting
+- [x] Player cannot impersonate other player by changing tokens — covered-by: packages/core/src/services/gameEngine.test.ts :: scopes session tokens to a game and supports status before connecting
 
 ### Game expiration and disconnection
-- [ ] Pending game expires when initiator disconnects
-- [ ] Active game ends when player disconnects
+- [x] Pending game expires when initiator disconnects — covered-by: packages/core/src/services/gameEngine.test.ts :: expires pending and active network games when their controlling player disconnects
+- [x] Active game ends when player disconnects — covered-by: packages/core/src/services/gameEngine.test.ts :: expires pending and active network games when their controlling player disconnects
 
 ### Turn-based gameplay
-- [ ] Only the current turn player can fire
+- [x] Only the current turn player can fire — covered-by: packages/core/src/services/gameEngine.test.ts :: validates authenticated turns, angle and velocity before broadcasting
 
 ### Cold start and server readiness
-- [ ] Health check returns accurate statistics
+- [x] Health check returns accurate statistics — covered-by: packages/core/src/services/gameEngine.test.ts :: reports current game counts and invitation totals
 
 ### Replay and reconnection
-- [ ] ignores a stale socket closing after a replacement connects
-- [ ] Player can query game status before connecting WebSocket
+- [x] ignores a stale socket closing after a replacement connects — covered-by: packages/core/src/services/gameEngine.test.ts :: ignores a stale connection closing after a replacement connects
+- [x] Player can query game status before connecting WebSocket — covered-by: packages/core/src/services/gameEngine.test.ts :: scopes session tokens to a game and supports status before connecting
 
 ### Error cases
-- [ ] Helpful error when invitation expired
-- [ ] Helpful error when game unavailable
-- [ ] Server reports when at max capacity
+- [x] Helpful error when invitation expired — covered-by: packages/core/src/services/gameEngine.test.ts :: expires invitations and removes expired games through the injected scheduler
+- [x] Helpful error when game unavailable — covered-by: packages/core/src/services/gameEngine.test.ts :: expires pending and active network games when their controlling player disconnects
+- [x] Server reports when at max capacity — covered-by: packages/core/src/services/gameEngine.test.ts :: enforces the maximum active-game capacity
 
 ## server/src/tests/gameManager.test.ts — `GameManager`
 
 > **Deleted in Phase 2** (socket mocks incompatible with the `PlayerConnection` port).
-> Replacement: the `GameEngine` suite in `packages/core` (Phase 3). Lines below stay unclassified
-> until that suite exists.
+> Replacement: the `GameEngine` suite in `packages/core` (Phase 3); every scenario below is mapped
+> to its replacement test.
 
 ### createGame
-- [ ] creates a game with two empty player slots
-- [ ] generates unique opaque game IDs and invitation codes
-- [ ] returns invite URL and code separately
-- [ ] rejects invalid player names
-- [ ] rejects names longer than 15 characters
-- [ ] rejects names starting with non-alphanumeric
+- [x] creates a game with two empty player slots — covered-by: packages/core/src/services/gameEngine.test.ts :: creates two empty invitation slots and issues a distinct token to the invited player
+- [x] generates unique opaque game IDs and invitation codes — covered-by: packages/core/src/services/gameEngine.test.ts :: generates unique opaque game IDs, invite codes, and player tokens
+- [x] returns invite URL and code separately — covered-by: packages/core/src/services/gameEngine.test.ts :: creates an internet game with a path-preserving invitation URL and player slots
+- [x] rejects invalid player names — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown invitations and invalid names
+- [x] rejects names longer than 15 characters — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown invitations and invalid names
+- [x] rejects names starting with non-alphanumeric — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown invitations and invalid names
 
 ### acceptInvitation
-- [ ] allocates multiple lobby slots and reports readiness
-- [ ] lets the creator skip a partially filled lobby and start with two players
-- [ ] starts a full three-player lobby and broadcasts the roster to every socket
-- [ ] accepts a valid invitation via token
-- [ ] accepts a valid invitation via code
-- [ ] rejects an unknown invitation
-- [ ] rejects a second acceptance of the same invitation
-- [ ] rejects invitation with invalid player name
-- [ ] generates separate session token for invited player
+- [x] allocates multiple lobby slots and reports readiness — covered-by: packages/core/src/services/gameEngine.test.ts :: allocates multiple invited players and rejects invite reuse
+- [x] lets the creator skip a partially filled lobby and start with two players — covered-by: packages/core/src/services/gameEngine.test.ts :: allows the creator to skip waiting slots after two players connect
+- [x] starts a full three-player lobby and broadcasts the roster to every socket — covered-by: packages/core/src/services/gameEngine.test.ts :: waits for every invited player, then broadcasts a full multi-player roster
+- [x] accepts a valid invitation via token — covered-by: packages/core/src/services/gameEngine.test.ts :: creates two empty invitation slots and issues a distinct token to the invited player
+- [x] accepts a valid invitation via code — covered-by: packages/core/src/services/gameEngine.test.ts :: allocates multiple invited players and rejects invite reuse
+- [x] rejects an unknown invitation — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown invitations and invalid names
+- [x] rejects a second acceptance of the same invitation — covered-by: packages/core/src/services/gameEngine.test.ts :: allocates multiple invited players and rejects invite reuse
+- [x] rejects invitation with invalid player name — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown invitations and invalid names
+- [x] generates separate session token for invited player — covered-by: packages/core/src/services/gameEngine.test.ts :: creates two empty invitation slots and issues a distinct token to the invited player
 
 ### getPlayerIdFromToken
-- [ ] derives player ID from session token
-- [ ] rejects token for different game
-- [ ] rejects invalid token
+- [x] derives player ID from session token — covered-by: packages/core/src/services/gameEngine.test.ts :: scopes session tokens to a game and supports status before connecting
+- [x] rejects token for different game — covered-by: packages/core/src/services/gameEngine.test.ts :: scopes session tokens to a game and supports status before connecting
+- [x] rejects invalid token — covered-by: packages/core/src/services/gameEngine.test.ts :: scopes session tokens to a game and supports status before connecting
 
 ### expiration and cleanup
-- [ ] expires pending invitations after TTL
-- [ ] removes expired games from memory
-- [ ] enforces maximum active games limit
+- [x] expires pending invitations after TTL — covered-by: packages/core/src/services/gameEngine.test.ts :: expires invitations and removes expired games through the injected scheduler
+- [x] removes expired games from memory — covered-by: packages/core/src/services/gameEngine.test.ts :: expires invitations and removes expired games through the injected scheduler
+- [x] enforces maximum active games limit — covered-by: packages/core/src/services/gameEngine.test.ts :: enforces the maximum active-game capacity
 
 ### WebSocket connection
-- [ ] connects player via session token
-- [ ] rejects invalid session token on WebSocket connect
-- [ ] rejects unknown game ID
+- [x] connects player via session token — covered-by: packages/core/src/services/gameEngine.test.ts :: waits for every invited player, then broadcasts a full multi-player roster
+- [x] rejects invalid session token on WebSocket connect — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown games and invalid session tokens when connecting
+- [x] rejects unknown game ID — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects unknown games and invalid session tokens when connecting
 
 ### fire action
-- [ ] starts a hot-seat game from one connected socket
-- [ ] starts a hot-seat game with up to 9 players from one connected socket
-- [ ] rejects hot-seat creation with fewer than 2 or more than 9 names
-- [ ] ends the whole match when the single hot-seat device disconnects
-- [ ] accepts fire with valid session token
-- [ ] alternates authenticated turns between both players
-- [ ] rejects fire with invalid session token
-- [ ] validates angle and velocity
+- [x] starts a hot-seat game from one connected socket — covered-by: packages/core/src/services/gameEngine.test.ts :: creates a local game and starts it through the PlayerConnection port
+- [x] starts a hot-seat game with up to 9 players from one connected socket — covered-by: packages/core/src/services/gameEngine.test.ts :: starts a nine-player hot-seat match from a single connected device
+- [x] rejects hot-seat creation with fewer than 2 or more than 9 names — covered-by: packages/core/src/services/gameEngine.test.ts :: rejects internet and local games outside the supported player-count range
+- [x] ends the whole match when the single hot-seat device disconnects — covered-by: packages/core/src/services/gameEngine.test.ts :: ends a hot-seat match when its single device disconnects
+- [x] accepts fire with valid session token — covered-by: packages/core/src/services/gameEngine.test.ts :: broadcasts shot and turn-change messages and advances the active turn
+- [x] alternates authenticated turns between both players — covered-by: packages/core/src/services/gameEngine.test.ts :: alternates authenticated turns between the local players
+- [x] rejects fire with invalid session token — covered-by: packages/core/src/services/gameEngine.test.ts :: validates authenticated turns, angle and velocity before broadcasting
+- [x] validates angle and velocity — covered-by: packages/core/src/services/gameEngine.test.ts :: validates authenticated turns, angle and velocity before broadcasting
 
 ### rematch action
-- [ ] starts a new round after both players request it
-- [ ] counts a hot-seat rematch under totals.device
-- [ ] keeps final rematch answers in the status payload before clearing the state
+- [x] starts a new round after both players request it — covered-by: packages/core/src/services/gameEngine.test.ts :: starts a rematch once every local player has answered
+- [x] counts a hot-seat rematch under totals.device — covered-by: packages/core/src/services/gameEngine.test.ts :: retains final rematch answers in the broadcast and counts device rematches
+- [x] keeps final rematch answers in the status payload before clearing the state — covered-by: packages/core/src/services/gameEngine.test.ts :: retains final rematch answers in the broadcast and counts device rematches
 
 ### game statistics
-- [ ] returns accurate game count
-- [ ] counts only pending invitations
+- [x] returns accurate game count — covered-by: packages/core/src/services/gameEngine.test.ts :: reports current game counts and invitation totals
+- [x] counts only pending invitations — covered-by: packages/core/src/services/gameEngine.test.ts :: counts only pending games that still have invitations outstanding
 
 ## server/src/tests/gameRules.test.ts — `GameRules`
 
 > Kept: fixtures mechanically renamed `websocket` → `connection` in Phase 2.
 > Moves to `packages/core` in Phase 3 (import paths only).
 
-- [ ] starts a game when both players have open sockets
-- [ ] transitions a pending game to expired when the initiator disconnects
-- [ ] finishes an active game when a player disconnects
-- [ ] switches turns after a miss and updates activity
-- [ ] switches back to player one after player two misses
-- [ ] finishes the game after a hit without switching turns
-- [ ] waits for both players before starting a rematch
-- [ ] clears rematch answers when a final response declines a rematch
-- [ ] starts a new round with only the players who stayed in when another player had enough
-- [ ] clears rematch readiness when a finished player disconnects
+- [x] starts a game when both players have open sockets — covered-by: packages/core/src/services/gameRules.test.ts :: starts a game when all non-skipped players have open connections
+- [x] transitions a pending game to expired when the initiator disconnects — covered-by: packages/core/src/services/gameRules.test.ts :: expires a pending game when the initiator disconnects
+- [x] finishes an active game when a player disconnects — covered-by: packages/core/src/services/gameRules.test.ts :: finishes an active game when a player disconnects
+- [x] switches turns after a miss and updates activity — covered-by: packages/core/src/services/gameRules.test.ts :: switches turns after a miss and updates activity
+- [x] switches back to player one after player two misses — covered-by: packages/core/src/services/gameRules.test.ts :: switches back to player one after player two misses
+- [x] finishes the game after a hit without switching turns — covered-by: packages/core/src/services/gameRules.test.ts :: finishes the game after a hit without switching turns
+- [x] waits for both players before starting a rematch — covered-by: packages/core/src/services/gameRules.test.ts :: waits for both players before starting a rematch
+- [x] clears rematch answers when a final response declines a rematch — covered-by: packages/core/src/services/gameRules.test.ts :: clears rematch answers when a final response declines a rematch
+- [x] starts a new round with only the players who stayed in when another player had enough — covered-by: packages/core/src/services/gameRules.test.ts :: starts a new round with only players who chose to stay
+- [x] clears rematch readiness when a finished player disconnects — covered-by: packages/core/src/services/gameRules.test.ts :: clears rematch readiness when a finished player disconnects
 
 ## server/src/tests/invitationService.test.ts — `InvitationService`
 
-- [ ] creates an invite URL that preserves the deployment path
-- [ ] accepts an invite once and rejects reuse
+- [x] creates an invite URL that preserves the deployment path — covered-by: packages/core/src/services/invitationService.test.ts :: creates an invite URL that preserves the deployment path
+- [x] accepts an invite once and rejects reuse — covered-by: packages/core/src/services/invitationService.test.ts :: accepts an invite once and rejects reuse
 
 ## server/src/tests/shotResolver.test.ts
 
-> Moved verbatim to `packages/core` (import paths only).
+> Moved to `packages/core` with the owning projectile math implementation.
 
 ### calculateCastleHitTime
-- [ ] resolves a hit using the canonical battlefield
-- [ ] keeps player one firing toward the left castle
-- [ ] returns no collision for a projectile that falls short
-- [ ] requires the projectile to enter the central 80 percent of the castle
-- [ ] does not count a corner touch as a castle hit
+- [x] resolves a hit using the canonical battlefield — covered-by: packages/core/src/utils/shotResolver.test.ts :: resolves a hit using the canonical battlefield
+- [x] keeps player one firing toward the left castle — covered-by: packages/core/src/utils/shotResolver.test.ts :: keeps player one firing toward the left castle
+- [x] returns no collision for a projectile that falls short — covered-by: packages/core/src/utils/shotResolver.test.ts :: returns no collision for a projectile that falls short
+- [x] requires the projectile to enter the central 80 percent of the castle — covered-by: packages/core/src/utils/shotResolver.test.ts :: requires the projectile to enter the central 80 percent of the castle
+- [x] does not count a corner touch as a castle hit — covered-by: packages/core/src/utils/shotResolver.test.ts :: does not count a corner touch as a castle hit
 
 ### calculateCastleHits
-- [ ] pierces every castle in the flat trajectory before the ground stops it
+- [x] pierces every castle in the flat trajectory before the ground stops it — covered-by: packages/core/src/utils/shotResolver.test.ts :: pierces every castle in the flat trajectory before the ground stops it
 
 ## server/src/tests/tokenService.test.ts — `TokenService`
 
 ### generateGameId
-- [ ] generates a valid UUID
-- [ ] generates unique IDs
+- [x] generates a valid UUID — covered-by: packages/core/src/services/tokenService.test.ts :: generates unique UUID game IDs and high-entropy session tokens
+- [x] generates unique IDs — covered-by: packages/core/src/services/tokenService.test.ts :: generates unique UUID game IDs and high-entropy session tokens
 
 ### generateSessionToken
-- [ ] generates a high-entropy token
-- [ ] generates unique tokens
+- [x] generates a high-entropy token — covered-by: packages/core/src/services/tokenService.test.ts :: generates unique UUID game IDs and high-entropy session tokens
+- [x] generates unique tokens — covered-by: packages/core/src/services/tokenService.test.ts :: generates unique UUID game IDs and high-entropy session tokens
 
 ### generateInviteCode
-- [ ] generates a 4-character alphanumeric code
-- [ ] generates unique codes
-- [ ] only uses uppercase letters and numbers
+- [x] generates a 4-character alphanumeric code — covered-by: packages/core/src/services/tokenService.test.ts :: generates typeable invite codes from uppercase letters and non-zero digits
+- [x] generates unique codes — covered-by: packages/core/src/services/tokenService.test.ts :: generates typeable invite codes from uppercase letters and non-zero digits
+- [x] only uses uppercase letters and numbers — covered-by: packages/core/src/services/tokenService.test.ts :: generates typeable invite codes from uppercase letters and non-zero digits
 
 ### hashToken
-- [ ] produces a consistent hash for the same token
-- [ ] produces different hashes for different tokens
-- [ ] produces hex-encoded output
+- [x] produces a consistent hash for the same token — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
+- [x] produces different hashes for different tokens — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
+- [x] produces hex-encoded output — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
 
 ### verifyToken
-- [ ] returns true for a matching token and hash
-- [ ] returns false for a non-matching token and hash
-- [ ] returns false for empty token
-- [ ] uses constant-time comparison (prevents timing attacks)
+- [x] returns true for a matching token and hash — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
+- [x] returns false for a non-matching token and hash — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
+- [x] returns false for empty token — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
+- [x] uses constant-time comparison (prevents timing attacks) — covered-by: packages/core/src/services/tokenService.test.ts :: hashes tokens consistently and verifies matching values
 
 ### validatePlayerName
-- [ ] accepts valid player names
-- [ ] rejects empty names
-- [ ] rejects names longer than 15 characters
-- [ ] rejects names starting with non-alphanumeric character
-- [ ] accepts names with spaces and special chars in middle
-- [ ] rejects null/undefined
+- [x] accepts valid player names — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] rejects empty names — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] rejects names longer than 15 characters — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] rejects names starting with non-alphanumeric character — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] accepts names with spaces and special chars in middle — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] rejects null/undefined — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
 
 ### normalizeName
-- [ ] returns trimmed name for valid names
-- [ ] returns null for invalid names
-- [ ] rejects names exceeding 15 chars
+- [x] returns trimmed name for valid names — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] returns null for invalid names — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
+- [x] rejects names exceeding 15 chars — covered-by: packages/core/src/services/tokenService.test.ts :: validates and normalizes player names
 
 ---
 

@@ -644,9 +644,9 @@ export class UIManager {
       if (!response.ok) {
         throw new Error(`Server returned HTTP ${response.status}`);
       }
-      const health = await response.json() as { version?: string; contractVersion?: string };
+      const health = await response.json() as { version?: string; coreVersion?: string; contractVersion?: string };
       this.serverHealthStatus.classList.remove('error');
-      this.serverHealthMessage.textContent = `Server v${health.version ?? 'unknown'} | Contract v${health.contractVersion ?? 'unknown'} | Response time: ${duration}ms`;
+      this.serverHealthMessage.textContent = `Server v${health.version ?? 'unknown'} | Core v${health.coreVersion ?? 'unknown'} | Contract v${health.contractVersion ?? 'unknown'} | Response time: ${duration}ms`;
     } catch (error) {
       if (checkId !== this.serverHealthCheckId) return;
       this.serverHealthStatus.classList.add('error');

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@superartillery/core': resolve(__dirname, '../core/src/index.ts')
+      '@superartillery/core': resolve(import.meta.dirname, '../core/src/index.ts')
     }
   },
   test: {

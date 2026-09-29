@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.6.0
+  version: 1.7.0
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -669,7 +669,7 @@ components:
     HealthResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, games, invites, version, contractVersion]
+      required: [status, timestamp, uptime, games, invites, version, coreVersion, contractVersion]
       properties:
         status:
           type: string
@@ -692,13 +692,18 @@ components:
           description: Number of pending invitations
         version:
           type: string
+          description: Server package version
+        coreVersion:
+          type: string
+          description: Core game package version
         contractVersion:
           type: string
+          description: OpenAPI contract version
 
     StatsResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, games, invites, webSockets, totals, version, contractVersion]
+      required: [status, timestamp, uptime, games, invites, webSockets, totals, version, coreVersion, contractVersion]
       properties:
         status:
           type: string
@@ -757,8 +762,13 @@ components:
                   description: Total number of on-this-device games continued as a rematch with the same players
         version:
           type: string
+          description: Server package version
+        coreVersion:
+          type: string
+          description: Core game package version
         contractVersion:
           type: string
+          description: OpenAPI contract version
 
     # WebSocket Message Types
 

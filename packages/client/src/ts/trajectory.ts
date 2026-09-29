@@ -1,8 +1,7 @@
 import type { BattlefieldConfig } from './types/messages';
 import type { Projectile } from './types/game';
 import type { ShotHistoryEntry } from './game';
-import { Physics } from './physics';
-import { Terrain } from './terrain';
+import { calculateVelocityComponents, getTerrainY, updateProjectile } from '@superartillery/core';
 
 export interface TrajectoryPoint {
   x: number;
@@ -29,7 +28,7 @@ export function calculateShotTrajectory(
     : castle.left_x + battlefield.castleW / 2 < battlefield.width / 2
       ? shot.angle
       : 180 - shot.angle;
-  const velocity = Physics.calculateVelocityComponents(adjustedAngle, shot.velocity);
+  const velocity = calculateVelocityComponents(adjustedAngle, shot.velocity);
   let projectile: Projectile = {
     x: castle.left_x + battlefield.castleW / 2,
     y: castle.base_y - battlefield.castleH,
@@ -39,7 +38,7 @@ export function calculateShotTrajectory(
   const points: TrajectoryPoint[] = [{ x: projectile.x, y: projectile.y }];
 
   for (let step = 0; step < 600; step += 1) {
-    projectile = Physics.updateProjectile(
+    projectile = updateProjectile(
       projectile,
       1 / 60,
       battlefield.gravity,
@@ -48,7 +47,7 @@ export function calculateShotTrajectory(
     points.push({ x: projectile.x, y: projectile.y });
 
     if (
-      projectile.y >= Terrain.getY(battlefield, projectile.x) ||
+      projectile.y >= getTerrainY(battlefield, projectile.x) ||
       projectile.x < 0 ||
       projectile.x > battlefield.width
     ) {
