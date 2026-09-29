@@ -394,7 +394,7 @@ describe('GameEngine', () => {
     engine.shutdown();
   });
 
-  it('retains final rematch answers in the broadcast and counts device rematches', () => {
+  it('retains final rematch answers in the broadcast and counts local engine totals', () => {
     const games = new InMemoryGameRepository();
     const engine = new GameEngine({ games });
     const created = engine.createLocalGame(['Alice', 'Bob']);
@@ -412,7 +412,7 @@ describe('GameEngine', () => {
     expect(finalStatus).toMatchObject({
       players: [{ answer: 'play_again' }, { answer: 'play_again' }]
     });
-    expect(engine.getStats().totals.device.rematches).toBe(1);
+    expect(engine.getStats().totals).toEqual({ games: 1, rematches: 1 });
     engine.shutdown();
   });
 
@@ -422,7 +422,7 @@ describe('GameEngine', () => {
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     engine.acceptInvitation(created.value.inviteCode, 'Bob');
-    expect(engine.getStats()).toMatchObject({ games: 1, invites: 1, totals: { internet: { games: 1 } } });
+    expect(engine.getStats()).toMatchObject({ games: 1, invites: 1, totals: { games: 1 } });
     engine.shutdown();
   });
 

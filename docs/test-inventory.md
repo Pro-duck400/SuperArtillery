@@ -16,8 +16,8 @@ Legend for the status column: `[ ]` unclassified · `[x]` covered · `[-]` inten
 ## server/src/tests/api.routes.test.ts — `API routes`
 
 - [ ] creates a game and returns invite details
-- [ ] creates a hot-seat game with credentials for both players
-- [ ] creates a hot-seat game with up to 9 players
+- [-] creates a hot-seat game with credentials for both players — dropped: server hot-seat endpoint removed; local games use LocalGameGateway
+- [-] creates a hot-seat game with up to 9 players — dropped: server hot-seat endpoint removed; local games use LocalGameGateway
 - [ ] accepts an invitation by code
 - [ ] requires a session token for status polling
 - [ ] returns status for a valid session token
@@ -129,8 +129,8 @@ Legend for the status column: `[ ]` unclassified · `[x]` covered · `[-]` inten
 
 ### rematch action
 - [x] starts a new round after both players request it — covered-by: packages/core/src/services/gameEngine.test.ts :: starts a rematch once every local player has answered
-- [x] counts a hot-seat rematch under totals.device — covered-by: packages/core/src/services/gameEngine.test.ts :: retains final rematch answers in the broadcast and counts device rematches
-- [x] keeps final rematch answers in the status payload before clearing the state — covered-by: packages/core/src/services/gameEngine.test.ts :: retains final rematch answers in the broadcast and counts device rematches
+- [-] counts a hot-seat rematch under totals.device — dropped: mode-specific stats were removed from the contract; rematch behavior remains covered by packages/core/src/services/gameEngine.test.ts :: retains final rematch answers in the broadcast and counts local engine totals
+- [x] keeps final rematch answers in the status payload before clearing the state — covered-by: packages/core/src/services/gameEngine.test.ts :: retains final rematch answers in the broadcast and counts local engine totals
 
 ### game statistics
 - [x] returns accurate game count — covered-by: packages/core/src/services/gameEngine.test.ts :: reports current game counts and invitation totals

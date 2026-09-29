@@ -49,8 +49,8 @@ export interface EngineStats {
   invites: number;
   maxReached: boolean;
   totals: {
-    internet: { games: number; rematches: number };
-    device: { games: number; rematches: number };
+    games: number;
+    rematches: number;
   };
 }
 
@@ -65,10 +65,8 @@ export class GameEngine {
   private readonly defaultClientOrigin: string;
   private readonly defaultServerOrigin: string;
   private cleanupInterval: TimerHandle | null = null;
-  private internetGamesEverStarted = 0;
-  private internetRematches = 0;
-  private deviceGamesEverStarted = 0;
-  private deviceRematches = 0;
+  private gamesEverStarted = 0;
+  private rematches = 0;
 
   constructor(options: GameEngineOptions = {}) {
     this.games = options.games ?? new InMemoryGameRepository();
@@ -109,7 +107,7 @@ export class GameEngine {
       playerCount
     );
     if ('error' in result) return failure(result.code, result.error);
-    this.internetGamesEverStarted += 1;
+    this.gamesEverStarted += 1;
     return success(result);
   }
 
@@ -157,7 +155,7 @@ export class GameEngine {
       eliminated: false
     }));
     this.games.set(game);
-    this.deviceGamesEverStarted += 1;
+    this.gamesEverStarted += 1;
     return success({
       gameId: game.id,
       players: names.map((name, playerId) => ({ playerId, name: name!, playerToken: tokens[playerId]! }))
@@ -295,10 +293,7 @@ export class GameEngine {
       return failure('INVALID_REMATCH_ANSWER', 'Answer must be play_again, had_enough, or not_sure');
     }
     const transition = this.gameRules.requestRematch(game, playerId, answer, this.clock.now());
-    if (transition.kind === 'started') {
-      if (game.hotSeat) this.deviceRematches += 1;
-      else this.internetRematches += 1;
-    }
+    if (transition.kind === 'started') this.rematches += 1;
     const answers = transition.answers;
     const statusMessage = this.messages.rematchStatus(game, answers);
     this.broadcast(game, statusMessage);
@@ -326,8 +321,8 @@ export class GameEngine {
       invites,
       maxReached: this.games.size >= GAME_CONFIG.maxActiveGames,
       totals: {
-        internet: { games: this.internetGamesEverStarted, rematches: this.internetRematches },
-        device: { games: this.deviceGamesEverStarted, rematches: this.deviceRematches }
+        games: this.gamesEverStarted,
+        rematches: this.rematches
       }
     };
   }

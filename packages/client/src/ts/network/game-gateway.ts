@@ -2,19 +2,19 @@ import type { GameMessage, WebSocketErrorMessage } from '../types/messages';
 import type {
   AcceptInvitationResponse,
   CreateGameResponse,
-  CreateHotSeatResponse,
   GameStatusResponse,
   HealthResponse,
   RematchResponse,
   SkipWaitingResponse,
   StatsResponse
 } from './api';
+import type { CreateHotSeatResponse } from '@superartillery/core';
 
 export interface GameGateway {
   healthCheckWithRetry(): Promise<HealthResponse>;
   getStats(): Promise<StatsResponse>;
   createGame(playerName: string, clientUrl: string, playerCount?: number): Promise<CreateGameResponse>;
-  createHotSeatGame(names: string[]): Promise<CreateHotSeatResponse>;
+  createLocalGame?: (names: string[]) => Promise<CreateHotSeatResponse>;
   acceptInvitation(inviteCode: string, playerName: string): Promise<AcceptInvitationResponse>;
   getGameStatus(gameId: string, sessionToken: string): Promise<GameStatusResponse>;
   skipWaiting(gameId: string, sessionToken: string): Promise<SkipWaitingResponse>;

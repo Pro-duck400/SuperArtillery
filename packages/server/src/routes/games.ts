@@ -40,14 +40,6 @@ export function createGamesRouter(game: GameManager): Router {
     return res.status(HTTP_STATUS.OK).json(result);
   });
 
-  router.post('/v1/hot-seat/games', (req, res) => {
-    const result = game.createHotSeatGame(req.body?.names);
-    if ('error' in result) {
-      return res.status(errorCodeToHttpStatus(result.code)).json({ code: result.code, message: result.error });
-    }
-    return res.status(HTTP_STATUS.CREATED).json(result);
-  });
-
   router.get('/v1/games/:gameId/status', (req, res) => {
     const { gameId } = req.params;
     const sessionToken = req.query.sessionToken as string | undefined;

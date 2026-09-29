@@ -33,13 +33,13 @@ Used by the client to detect a sleeping/cold-starting server before create/accep
   "invites": 0,
   "version": "1.3.1",
   "coreVersion": "1.0.0",
-  "contractVersion": "1.7.0"
+  "contractVersion": "1.9.0"
 }
 ```
 
 ### Server Statistics
 
-Provides detailed metrics on active WebSocket connections, active games, pending invitations, and lifetime totals split by game mode.
+Provides detailed metrics on active WebSocket connections, active games, pending invitations, and lifetime server-process game totals. On-this-device games are local to the client and are not included in server stats.
 
 **GET** `/api/v1/stats`
 
@@ -53,18 +53,12 @@ Provides detailed metrics on active WebSocket connections, active games, pending
   "invites": 0,
   "webSockets": 3,
   "totals": {
-    "internet": {
-      "games": 2,
-      "rematches": 4
-    },
-    "device": {
-      "games": 3,
-      "rematches": 2
-    }
+    "games": 2,
+    "rematches": 4
   },
   "version": "1.3.1",
   "coreVersion": "1.0.0",
-  "contractVersion": "1.7.0"
+  "contractVersion": "1.9.0"
 }
 ```
 

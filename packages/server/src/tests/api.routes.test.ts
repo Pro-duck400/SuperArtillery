@@ -28,28 +28,11 @@ describe('API routes', () => {
     expect(response.body.inviteUrl).toContain('invite=');
   });
 
-  it('creates a hot-seat game with credentials for both players', async () => {
-    const response = await request(app)
+  it('does not expose server-side hot-seat game creation', async () => {
+    await request(app)
       .post('/api/v1/hot-seat/games')
       .send({ names: ['Alice', 'Bob'] })
-      .expect(201);
-
-    expect(response.body.gameId).toBeTruthy();
-    expect(response.body.players).toHaveLength(2);
-    expect(response.body.players[0]).toMatchObject({ playerId: 0, name: 'Alice' });
-    expect(response.body.players[1]).toMatchObject({ playerId: 1, name: 'Bob' });
-    expect(response.body.players[0].playerToken).toBeTruthy();
-    expect(response.body.players[1].playerToken).toBeTruthy();
-  });
-
-  it('creates a hot-seat game with up to 9 players', async () => {
-    const names = ['Alice', 'Bob', 'Carl', 'Dana', 'Eve', 'Finn', 'Gia', 'Hana', 'Ivo'];
-    const response = await request(app)
-      .post('/api/v1/hot-seat/games')
-      .send({ names })
-      .expect(201);
-
-    expect(response.body.players).toHaveLength(9);
+      .expect(404);
   });
 
   it('accepts an invitation by code', async () => {
@@ -150,13 +133,14 @@ describe('API routes', () => {
       invites: expect.any(Number),
       webSockets: expect.any(Number),
       totals: {
-        internet: { games: expect.any(Number), rematches: expect.any(Number) },
-        device: { games: expect.any(Number), rematches: expect.any(Number) }
+        games: expect.any(Number),
+        rematches: expect.any(Number)
       },
+      // The deprecated server hot-seat route is gone; local games never reach server stats.
+      contractVersion: CONTRACT_VERSION,
       timestamp: expect.any(String),
       uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
-      coreVersion: CORE_VERSION,
-      contractVersion: CONTRACT_VERSION
+      coreVersion: CORE_VERSION
     });
   });
 });

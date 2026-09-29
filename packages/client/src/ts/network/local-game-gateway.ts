@@ -5,6 +5,7 @@ import {
   type PlayerConnection,
   type Result
 } from '@superartillery/core';
+import type { CreateHotSeatResponse } from '@superartillery/core';
 import type { GameMessage, WebSocketErrorMessage } from '../types/messages';
 import type { GameGateway } from './game-gateway';
 
@@ -54,7 +55,7 @@ export class LocalGameGateway implements GameGateway {
     return this.unwrap(this.engine.createGame(playerName, clientUrl, undefined, playerCount));
   }
 
-  public async createHotSeatGame(names: string[]) {
+  public async createLocalGame(names: string[]): Promise<CreateHotSeatResponse> {
     return this.unwrap(this.engine.createLocalGame(names));
   }
 

@@ -5,7 +5,6 @@ import {
   InMemoryGameRepository,
   type AcceptInvitationResponse,
   type CreateGameResponse,
-  type CreateHotSeatResponse,
   type GameRepository,
   type GameStatusResponse,
   type RematchAnswer,
@@ -69,10 +68,6 @@ export class GameManager {
 
   public acceptInvitation(inviteCode: string | undefined, playerName: string): AcceptInvitationResponse | LegacyError {
     return this.toLegacy(this.engine.acceptInvitation(inviteCode, playerName));
-  }
-
-  public createHotSeatGame(playerNames: string[]): CreateHotSeatResponse | LegacyError {
-    return this.toLegacy(this.engine.createLocalGame(playerNames));
   }
 
   public getGameStatus(gameId: string, sessionToken: string): GameStatusResponse | LegacyError {

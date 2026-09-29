@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.7.0
+  version: 1.9.0
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -130,32 +130,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '410':
           description: Invitation expired
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/v1/hot-seat/games:
-    post:
-      tags: [Games]
-      summary: Create a hot-seat game
-      deprecated: true
-      description: Deprecated; on-this-device games are created locally in the client. This route remains for compatibility with cached clients for one release.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateHotSeatRequest'
-      responses:
-        '201':
-          description: Hot-seat game created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateHotSeatResponse'
-        '400':
-          description: Invalid player names
           content:
             application/json:
               schema:
@@ -459,47 +433,6 @@ components:
           minimum: 2
           maximum: 9
 
-    CreateHotSeatRequest:
-      type: object
-      additionalProperties: false
-      required: [names]
-      properties:
-        names:
-          type: array
-          minItems: 2
-          maxItems: 9
-          description: Display names for each on-this-device player, in turn order
-          items:
-            type: string
-            minLength: 1
-            maxLength: 15
-
-    HotSeatPlayer:
-      type: object
-      additionalProperties: false
-      required: [playerId, name, playerToken]
-      properties:
-        playerId:
-          $ref: '#/components/schemas/PlayerId'
-        name:
-          type: string
-        playerToken:
-          type: string
-
-    CreateHotSeatResponse:
-      type: object
-      additionalProperties: false
-      required: [gameId, players]
-      properties:
-        gameId:
-          type: string
-        players:
-          type: array
-          minItems: 2
-          maxItems: 9
-          items:
-            $ref: '#/components/schemas/HotSeatPlayer'
-
     AcceptInvitationRequest:
       type: object
       additionalProperties: false
@@ -733,35 +666,17 @@ components:
         totals:
           type: object
           additionalProperties: false
-          required: [internet, device]
-          description: Lifetime counts of games started and rematches played, split by mode
+          required: [games, rematches]
+          description: Lifetime counts of games started and rematches played by this server process
           properties:
-            internet:
-              type: object
-              additionalProperties: false
-              required: [games, rematches]
-              properties:
-                games:
-                  type: integer
-                  minimum: 0
-                  description: Total number of Internet (invite-based) games ever started
-                rematches:
-                  type: integer
-                  minimum: 0
-                  description: Total number of Internet games continued as a rematch with the same players
-            device:
-              type: object
-              additionalProperties: false
-              required: [games, rematches]
-              properties:
-                games:
-                  type: integer
-                  minimum: 0
-                  description: Total number of on-this-device (hot-seat) games ever started
-                rematches:
-                  type: integer
-                  minimum: 0
-                  description: Total number of on-this-device games continued as a rematch with the same players
+            games:
+              type: integer
+              minimum: 0
+              description: Total number of server-hosted games ever started
+            rematches:
+              type: integer
+              minimum: 0
+              description: Total number of server-hosted games continued as a rematch
         version:
           type: string
           description: Server package version

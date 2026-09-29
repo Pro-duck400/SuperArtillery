@@ -22,7 +22,7 @@ function createGateway(): GameGateway {
       games: 0,
       invites: 0,
       webSockets: 0,
-      totals: { internet: { games: 0, rematches: 0 }, device: { games: 0, rematches: 0 } },
+      totals: { games: 0, rematches: 0 },
       version: '1.0.0',
       coreVersion: '1.0.0',
       contractVersion: '1.0.0'
@@ -34,7 +34,7 @@ function createGateway(): GameGateway {
       inviteCode: 'ABCD',
       playerCount: 2
     })),
-    createHotSeatGame: vi.fn(async () => ({
+    createLocalGame: vi.fn(async () => ({
       gameId: 'local-game',
       players: [
         { playerId: 0, name: 'Alice', playerToken: 'token-a' },

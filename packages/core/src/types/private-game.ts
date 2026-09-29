@@ -104,8 +104,8 @@ export interface StatsResponse {
   invites: number;
   webSockets: number;
   totals: {
-    internet: { games: number; rematches: number };
-    device: { games: number; rematches: number };
+    games: number;
+    rematches: number;
   };
   version: string;
   coreVersion: string;

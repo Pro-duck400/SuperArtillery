@@ -28,10 +28,6 @@ export class RemoteGameGateway implements GameGateway {
     return this.apiClient.createGame(playerName, clientUrl, playerCount);
   }
 
-  public createHotSeatGame(names: string[]) {
-    return this.apiClient.createHotSeatGame(names);
-  }
-
   public acceptInvitation(inviteCode: string, playerName: string) {
     return this.apiClient.acceptInvitation(inviteCode, playerName);
   }

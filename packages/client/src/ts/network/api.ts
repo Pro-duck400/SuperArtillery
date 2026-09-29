@@ -20,11 +20,6 @@ export interface AcceptInvitationResponse {
   playerId: number;
 }
 
-export interface CreateHotSeatResponse {
-  gameId: string;
-  players: Array<{ playerId: number; name: string; playerToken: string }>;
-}
-
 export interface GameStatusResponse {
   status: 'pending' | 'active' | 'finished' | 'expired';
   playersConnected: number;
@@ -69,8 +64,8 @@ export interface StatsResponse {
   invites: number;
   webSockets: number;
   totals: {
-    internet: { games: number; rematches: number };
-    device: { games: number; rematches: number };
+    games: number;
+    rematches: number;
   };
   version: string;
   coreVersion: string;
@@ -165,20 +160,6 @@ export class ApiClient {
       throw new Error(
         await this.extractErrorMessage(response, 'Failed to create game')
       );
-    }
-
-    return response.json();
-  }
-
-  public async createHotSeatGame(names: string[]): Promise<CreateHotSeatResponse> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/hot-seat/games`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ names })
-    });
-
-    if (!response.ok) {
-      throw new Error(await this.extractErrorMessage(response, 'Failed to create hot-seat game'));
     }
 
     return response.json();

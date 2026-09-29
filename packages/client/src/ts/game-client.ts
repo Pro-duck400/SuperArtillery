@@ -116,8 +116,10 @@ export class GameClient {
   }
 
   public async createHotSeatGame(playerNames: string[]): Promise<CreateHotSeatResponse> {
+    const createLocalGame = this.gateway.createLocalGame;
+    if (!createLocalGame) throw new Error('On-this-device games require a local gateway');
     await this.gateway.healthCheckWithRetry();
-    const response = await this.gateway.createHotSeatGame(playerNames);
+    const response = await createLocalGame.call(this.gateway, playerNames);
     this.gameSession = {
       gameId: response.gameId,
       sessionToken: response.players[0].playerToken,

@@ -265,59 +265,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hot-seat/games": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a hot-seat game
-         * @deprecated
-         * @description Deprecated; on-this-device games are created locally in the client. This route remains for compatibility with cached clients for one release.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateHotSeatRequest"];
-                };
-            };
-            responses: {
-                /** @description Hot-seat game created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CreateHotSeatResponse"];
-                    };
-                };
-                /** @description Invalid player names */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/games/{gameId}/status": {
         parameters: {
             query?: never;
@@ -606,19 +553,6 @@ export interface components {
             inviteCode: string;
             playerCount?: number;
         };
-        CreateHotSeatRequest: {
-            /** @description Display names for each on-this-device player, in turn order */
-            names: string[];
-        };
-        HotSeatPlayer: {
-            playerId: components["schemas"]["PlayerId"];
-            name: string;
-            playerToken: string;
-        };
-        CreateHotSeatResponse: {
-            gameId: string;
-            players: components["schemas"]["HotSeatPlayer"][];
-        };
         AcceptInvitationRequest: {
             /** @description Short invite code from the invitation link or displayed code */
             inviteCode?: string;
@@ -732,20 +666,12 @@ export interface components {
             invites: number;
             /** @description Number of currently open WebSocket connections */
             webSockets: number;
-            /** @description Lifetime counts of games started and rematches played, split by mode */
+            /** @description Lifetime counts of games started and rematches played by this server process */
             totals: {
-                internet: {
-                    /** @description Total number of Internet (invite-based) games ever started */
-                    games: number;
-                    /** @description Total number of Internet games continued as a rematch with the same players */
-                    rematches: number;
-                };
-                device: {
-                    /** @description Total number of on-this-device (hot-seat) games ever started */
-                    games: number;
-                    /** @description Total number of on-this-device games continued as a rematch with the same players */
-                    rematches: number;
-                };
+                /** @description Total number of server-hosted games ever started */
+                games: number;
+                /** @description Total number of server-hosted games continued as a rematch */
+                rematches: number;
             };
             /** @description Server package version */
             version: string;

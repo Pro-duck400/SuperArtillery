@@ -20,7 +20,7 @@ Branch: `Refactor`.
 | Repo layout | npm workspaces: `packages/core`, `packages/server`, `packages/client` |
 | Offline fidelity | Full — offline adapter implements the same gateway interface and emits the same OpenAPI-derived message types as the remote one |
 | Offline runtime | 100% in-browser; no server process, no `fetch`, no WebSocket |
-| Server hot-seat | `/api/v1/hot-seat/games` deprecated once offline mode ships |
+| Server hot-seat | `/api/v1/hot-seat/games` removed once offline mode ships |
 | Sequencing | Core extraction first, SOLID splits after |
 
 ## Testing policy
@@ -108,9 +108,9 @@ suite (done for `gameRules.test.ts` and `gameCleanupService.test.ts` in Phase 2)
 - Kept one server health probe on browser startup as a separate online-readiness indicator; device
   mode hides server controls and does not trigger further requests. Local game creation, connection,
   shots, turns, and rematches themselves use no `fetch` or WebSocket calls.
-- `/api/v1/hot-seat/games` is deprecated in the current OpenAPI contract while the server route is
-  retained for one compatibility release. Offline games and their in-process device stats are not
-  sent to server stats; server totals remain server-local.
+- Removed `/api/v1/hot-seat/games` and mode-specific counters from the OpenAPI contract; all
+  on-this-device games are created in the browser. Stats now use flat `{ games, rematches }` totals
+  scoped to the current server or local engine instance.
 
 ### Phase 6 — Server splits — DONE
 - Split API endpoints into Health, Games, Invitations and Gameplay route modules; `routes/api.ts`
@@ -138,8 +138,8 @@ suite (done for `gameRules.test.ts` and `gameCleanupService.test.ts` in Phase 2)
 
 ## Current baseline
 
-Post-Phase 7 verification: `npm run build` succeeds; `npm test` passes 67 core + 11 server + 57
-client = **135 tests**.
+Post-Phase 7 verification: `npm run build` succeeds; `npm test` passes 67 core + 10 server + 57
+client = **134 tests**.
 
 ## Open questions
 
