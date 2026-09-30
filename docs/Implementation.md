@@ -1,6 +1,8 @@
 # SuperArtillery - Implementation Plan
 
-### 🔴 Critical Simplifications for MVP
+### 🔴 Critical Simplifications for MVP (Original Scope)
+
+Historical MVP scope; current implementation status is tracked in the feature list below.
 
 #### What We're CUTTING (to be added later):
 - ✅ **Seeded terrain generation** - A server-defined hill is shared by both clients
@@ -19,6 +21,8 @@
 
 Comprehensive list of all features needed to build the complete SuperArtillery game. These will be organized into sprints later.
 
+Status: `[x]` implemented and currently available; `[ ]` not implemented or only partially implemented.
+
 ---
 
 ### 🎨 Core Game Features (Match Original 1980 Game)
@@ -28,7 +32,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 - [ ] Random castle placement on terrain (not in valleys)
 
 #### Physics & Ballistics
-- [ ] Angle validation (0-99° for player 1, mirrored for player 2)
+- [x] Angle validation (0-99° for player 1, mirrored for player 2)
 - [ ] Velocity limit (>350 = cannon explodes, lose turn)
 
 #### Game Mechanics
@@ -38,7 +42,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 #### Visual Feedback
 - [ ] Explosion animation on impact
-- [ ] Castle damage visualization
+- [x] Castle damage visualization
 - [ ] Crater on terrain after explosion
 - [ ] Animated cannon firing
 - [ ] Smoke/particle effects
@@ -72,8 +76,8 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 **Server Management**
 - [x] `GET /api/health` - Health check
-- [ ] `GET /api/status` - Server status (player count, games)
-- [ ] `GET /api/version` - API version info
+- [x] `GET /api/status` - Server status (WebSocket count, active games, invitations and totals)
+- [x] `GET /api/version` - API version info
 
 ---
 
@@ -81,34 +85,34 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 #### Lobby & Menus
 - [ ] Main menu (Play, Stats, Settings, About)
-- [ ] Player name/nickname input
+- [x] Player name/nickname input
 - [ ] Avatar selection (optional)
 - [ ] Game mode selection (quick match, private, vs AI)
 - [ ] Settings panel (volume, graphics quality)
 - [ ] How to Play / Tutorial screen
 
 #### In-Game UI
-- [ ] Player info display (name, score)
-- [ ] Current turn indicator (highlight active player)
-- [ ] Input panel with validation feedback
-- [ ] Shot history panel (last 4 shots)
-- [ ] Wind indicator (direction and strength)
+- [x] Player info display (name and cumulative frag count)
+- [x] Current turn indicator (highlight active player)
+- [x] Input panel with validation feedback
+- [x] Shot history panel (last 4 shots)
+- [x] Wind indicator (direction and strength)
 - [ ] Timer display (time remaining for turn)
 - [ ] Chat panel (optional)
 - [ ] Pause menu
 - [ ] Surrender/forfeit button
 
 #### Post-Game
-- [ ] Game over screen with winner announcement
+- [x] Game over screen with winner announcement
 - [ ] Match statistics summary
-- [ ] Play again button
+- [x] Play again button
 - [ ] Return to lobby button
 - [ ] Share game result (social media)
 - [ ] Replay viewer
 
 #### Visual Design
 - [ ] Consistent color scheme and branding
-- [ ] Responsive layout (mobile, tablet, desktop)
+- [x] Responsive layout (canvas scaling and wrapping controls)
 - [ ] Loading states and spinners
 - [ ] Error messages and toast notifications
 - [ ] Smooth transitions and animations
@@ -144,18 +148,18 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 ### 🧪 Testing & Quality Assurance
 
 #### Unit Tests
-- [ ] Physics calculations (trajectory, collision)
-- [ ] Game state management
-- [ ] Input validation
-- [ ] Utility functions
+- [x] Physics calculations (trajectory, collision)
+- [x] Game state management
+- [x] Input validation
+- [x] Utility functions
 - [ ] API endpoint handlers
 
 #### Integration Tests
 - [ ] WebSocket message flow
 - [ ] Client-server communication
-- [ ] REST API endpoints
-- [ ] Authentication flow
-- [ ] Game lifecycle (start to finish)
+- [x] REST API endpoints
+- [x] Authentication flow
+- [x] Game lifecycle (start to finish in the core engine)
 
 #### End-to-End Tests
 - [ ] Full gameplay simulation (two players)
@@ -175,20 +179,20 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 ### 🔒 Security & Validation
 
 #### Server-Side Validation
-- [ ] Physics calculations verification (anti-cheat)
-- [ ] Input sanitization (angle, velocity)
+- [x] Physics calculations verification (anti-cheat)
+- [x] Input sanitization (angle, velocity)
 - [ ] Rate limiting on API endpoints
 - [ ] WebSocket message rate limiting
 - [ ] XSS protection
 - [ ] CSRF tokens
-- [ ] Session management
+- [x] Session management (hashed server tokens and client session storage)
 
 #### Infrastructure Security
 - [ ] HTTPS/TLS for all connections
-- [ ] WSS (WebSocket Secure)
-- [ ] Environment variable management
+- [x] WSS (WebSocket Secure) support for HTTPS deployments
+- [x] Environment variable management
 - [ ] Secret key rotation
-- [ ] CORS configuration
+- [x] CORS configuration
 - [ ] Helmet.js security headers
 - [ ] DDoS protection
 
@@ -197,10 +201,10 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 ### 📊 Analytics & Monitoring
 
 #### Server Monitoring
-- [ ] Error logging (Winston/Pino)
+- [x] Error logging (console logging; not structured Winston/Pino logging)
 - [ ] Performance metrics
-- [ ] WebSocket connection count
-- [ ] Active game count
+- [x] WebSocket connection count
+- [x] Active game count
 - [ ] Server resource usage (CPU, memory)
 - [ ] Request/response times
 - [ ] Error rate tracking
@@ -251,7 +255,7 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 
 #### Mobile Optimization
 - [ ] Touch controls
-- [ ] Responsive canvas scaling
+- [x] Responsive canvas scaling
 - [ ] Mobile-friendly UI
 - [ ] Performance optimization for mobile
 - [ ] Native app wrapper (optional: Capacitor)
@@ -268,29 +272,29 @@ Comprehensive list of all features needed to build the complete SuperArtillery g
 ### 🛠️ Developer Tools & DevOps
 
 #### Development Environment
-- [ ] Hot module replacement (HMR)
-- [ ] TypeScript strict mode
+- [x] Hot module replacement (HMR)
+- [x] TypeScript strict mode
 - [ ] ESLint configuration
 - [ ] Prettier code formatting
 - [ ] Pre-commit hooks (Husky)
 - [ ] VSCode workspace settings
 
 #### Build & Deployment
-- [ ] Production build optimization
-- [ ] Code minification and tree-shaking
+- [x] Production build optimization
+- [x] Code minification and tree-shaking
 - [ ] Asset compression (images, audio)
 - [ ] CDN integration for static assets
-- [ ] Environment-based configuration
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Automated testing in CI
+- [x] Environment-based configuration
+- [x] CI/CD pipeline (GitHub Actions)
+- [x] Automated testing in CI
 - [ ] Staging environment
 - [ ] Blue-green deployment
 
 #### Documentation
-- [ ] API documentation (Swagger/OpenAPI)
+- [x] API documentation (Swagger/OpenAPI)
 - [ ] Code comments and JSDoc
 - [ ] Architecture diagrams
-- [ ] Deployment guide
+- [x] Deployment guide
 - [ ] Contributing guidelines
 
 ---

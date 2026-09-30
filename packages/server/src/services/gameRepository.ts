@@ -1,0 +1,1 @@
+export { InMemoryGameRepository, type GameRepository } from '@superartillery/core';

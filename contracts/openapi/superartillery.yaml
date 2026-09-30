@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 1.6.0
+  version: 2.1.0
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -14,28 +14,41 @@ paths:
   /api/v1/health:
     get:
       tags: [Health]
-      summary: Lightweight health check for the server
-      description: Returns server health, active game count, and version information
+      summary: Check server health
+      description: Returns server readiness and uptime information
       responses:
         '200':
-          description: Server is healthy
+          description: Server health retrieved
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
 
-  /api/v1/stats:
+  /api/v1/status:
     get:
       tags: [Health]
-      summary: Comprehensive server statistics
-      description: Returns server health, uptime, active connection metrics, and lifetime totals
+      summary: Get server runtime status
+      description: Returns active game, invitation, WebSocket, and lifetime game counters
       responses:
         '200':
-          description: Server statistics retrieved
+          description: Server status retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StatsResponse'
+                $ref: '#/components/schemas/StatusResponse'
+
+  /api/v1/version:
+    get:
+      tags: [Health]
+      summary: Get server and contract versions
+      description: Returns server package, core package, and API contract versions
+      responses:
+        '200':
+          description: Version information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
 
   /api/v1/games:
     post:
@@ -130,30 +143,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '410':
           description: Invitation expired
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/v1/hot-seat/games:
-    post:
-      tags: [Games]
-      summary: Create a hot-seat game
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateHotSeatRequest'
-      responses:
-        '201':
-          description: Hot-seat game created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateHotSeatResponse'
-        '400':
-          description: Invalid player names
           content:
             application/json:
               schema:
@@ -302,7 +291,7 @@ components:
     PlayerState:
       type: object
       additionalProperties: false
-      required: [playerId, name, active, connected]
+      required: [playerId, name, active, connected, frags]
       properties:
         playerId:
           $ref: '#/components/schemas/PlayerId'
@@ -312,6 +301,10 @@ components:
           type: boolean
         connected:
           type: boolean
+        frags:
+          type: integer
+          minimum: 0
+          description: Number of players this player has eliminated during the game, retained across rematches
 
     Position:
       type: object
@@ -456,47 +449,6 @@ components:
           type: integer
           minimum: 2
           maximum: 9
-
-    CreateHotSeatRequest:
-      type: object
-      additionalProperties: false
-      required: [names]
-      properties:
-        names:
-          type: array
-          minItems: 2
-          maxItems: 9
-          description: Display names for each on-this-device player, in turn order
-          items:
-            type: string
-            minLength: 1
-            maxLength: 15
-
-    HotSeatPlayer:
-      type: object
-      additionalProperties: false
-      required: [playerId, name, playerToken]
-      properties:
-        playerId:
-          $ref: '#/components/schemas/PlayerId'
-        name:
-          type: string
-        playerToken:
-          type: string
-
-    CreateHotSeatResponse:
-      type: object
-      additionalProperties: false
-      required: [gameId, players]
-      properties:
-        gameId:
-          type: string
-        players:
-          type: array
-          minItems: 2
-          maxItems: 9
-          items:
-            $ref: '#/components/schemas/HotSeatPlayer'
 
     AcceptInvitationRequest:
       type: object
@@ -669,7 +621,7 @@ components:
     HealthResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, games, invites, version, contractVersion]
+      required: [status, timestamp, uptime]
       properties:
         status:
           type: string
@@ -682,35 +634,11 @@ components:
           type: string
           pattern: '^\\d+\\.\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$'
           description: Server uptime formatted as D.HH:mm:ss.ggg
-        games:
-          type: integer
-          minimum: 0
-          description: Number of active games
-        invites:
-          type: integer
-          minimum: 0
-          description: Number of pending invitations
-        version:
-          type: string
-        contractVersion:
-          type: string
-
-    StatsResponse:
+    StatusResponse:
       type: object
       additionalProperties: false
-      required: [status, timestamp, uptime, games, invites, webSockets, totals, version, contractVersion]
+      required: [games, invites, webSockets, totals]
       properties:
-        status:
-          type: string
-          enum: [ok, degraded]
-          description: Server status (degraded if at max capacity)
-        timestamp:
-          type: string
-          format: date-time
-        uptime:
-          type: string
-          pattern: '^\\d+\\.\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$'
-          description: Server uptime formatted as D.HH:mm:ss.ggg
         games:
           type: integer
           minimum: 0
@@ -726,39 +654,31 @@ components:
         totals:
           type: object
           additionalProperties: false
-          required: [internet, device]
-          description: Lifetime counts of games started and rematches played, split by mode
+          required: [games, rematches]
+          description: Lifetime counts of games started and rematches played by this server process
           properties:
-            internet:
-              type: object
-              additionalProperties: false
-              required: [games, rematches]
-              properties:
-                games:
-                  type: integer
-                  minimum: 0
-                  description: Total number of Internet (invite-based) games ever started
-                rematches:
-                  type: integer
-                  minimum: 0
-                  description: Total number of Internet games continued as a rematch with the same players
-            device:
-              type: object
-              additionalProperties: false
-              required: [games, rematches]
-              properties:
-                games:
-                  type: integer
-                  minimum: 0
-                  description: Total number of on-this-device (hot-seat) games ever started
-                rematches:
-                  type: integer
-                  minimum: 0
-                  description: Total number of on-this-device games continued as a rematch with the same players
-        version:
+            games:
+              type: integer
+              minimum: 0
+              description: Total number of server-hosted games ever started
+            rematches:
+              type: integer
+              minimum: 0
+              description: Total number of server-hosted games continued as a rematch
+    VersionResponse:
+      type: object
+      additionalProperties: false
+      required: [serverVersion, coreVersion, contractVersion]
+      properties:
+        serverVersion:
           type: string
+          description: Server package version
+        coreVersion:
+          type: string
+          description: Core game package version
         contractVersion:
           type: string
+          description: OpenAPI contract version
 
     # WebSocket Message Types
 
