@@ -35,21 +35,16 @@ describe('battlefield generation', () => {
   it('generates independent side elevations and bounded middle terrain', () => {
     const first = createBattlefield(12345, [1, 2, 3]);
     const second = createBattlefield(54321, [1, 2, 3]);
-    const leftEdge = first.terrain.hillCenter - first.terrain.hillWidth;
-    const rightEdge = first.terrain.hillCenter + first.terrain.hillWidth;
     expect(first.terrain.leftY).not.toBe(first.terrain.rightY);
     expect(first.terrain.leftY).not.toBe(second.terrain.leftY);
     expect(first.terrain.leftY).toBeGreaterThanOrEqual(first.terrain.maxY - 22);
     expect(first.terrain.leftY).toBeLessThanOrEqual(first.terrain.maxY - 18);
     expect(first.terrain.rightY).toBeGreaterThanOrEqual(first.terrain.maxY - 22);
     expect(first.terrain.rightY).toBeLessThanOrEqual(first.terrain.maxY - 18);
-    expect(getTerrainY(first, 0)).toBe(first.terrain.leftY);
-    expect(getTerrainY(first, leftEdge)).toBe(first.terrain.leftY);
-    expect(getTerrainY(first, rightEdge)).toBeGreaterThanOrEqual(first.terrain.rightY!);
-    expect(getTerrainY(first, rightEdge)).toBeLessThanOrEqual(first.terrain.maxY);
-    expect(getTerrainY(first, first.width)).toBe(first.terrain.rightY);
-    expect(first.terrain.hillHeight).toBeGreaterThanOrEqual(85);
-    expect(first.terrain.hillHeight).toBeLessThanOrEqual(100);
+    expect(first.terrain.hillHeight).toBeGreaterThanOrEqual(55);
+    expect(first.terrain.hillHeight).toBeLessThanOrEqual(first.terrain.maxY);
+    expect(getTerrainY(first, 0)).toBeGreaterThanOrEqual(first.terrain.minY);
+    expect(getTerrainY(first, 0)).toBeLessThanOrEqual(first.terrain.maxY);
     expect(getTerrainY(first, first.width)).toBeGreaterThanOrEqual(first.terrain.minY);
     expect(getTerrainY(first, first.width)).toBeLessThanOrEqual(first.terrain.maxY);
   });
@@ -81,7 +76,16 @@ describe('battlefield generation', () => {
   it('generates a positive central hill with varied heights across seeds', () => {
     const samples = Array.from({ length: 300 }, (_, index) => createBattlefield((index * 1_000_003 + 1) >>> 0, [1, 2, 3]));
     const hillHeights = samples.map(({ terrain }) => terrain.hillHeight);
-    expect(hillHeights.every(height => height >= 85 && height <= 100)).toBe(true);
+    expect(hillHeights.every(height => height >= 55)).toBe(true);
+    expect(Math.max(...hillHeights) - Math.min(...hillHeights)).toBeGreaterThan(50);
     expect(new Set(hillHeights).size).toBeGreaterThan(100);
+  });
+
+  it('varies gap hill heights, widths and castle elevations within one battlefield', () => {
+    const battlefield = createBattlefield(12345, [1, 2, 3, 4, 5]);
+    const gapHills = [battlefield.terrain, ...battlefield.terrain.extraHills!.slice(0, 3)];
+    expect(new Set(gapHills.map(hill => Math.round(hill.hillHeight))).size).toBe(4);
+    expect(new Set(gapHills.map(hill => Math.round(hill.hillWidth))).size).toBeGreaterThan(1);
+    expect(new Set(battlefield.castles.map(castle => Math.round(castle.base_y))).size).toBeGreaterThan(2);
   });
 });

@@ -1,6 +1,6 @@
 import type { Battlefield } from '../contract/messages';
 
-export const TERRAIN_VERSION = 5;
+export const TERRAIN_VERSION = 6;
 
 function createRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -49,29 +49,41 @@ export function createBattlefield(
 
   const random = createRandom(seed);
   const castleSpacing = (width - 40) / (count - 1);
-  const hillWidth = castleSpacing * 0.42;
   const castles = playerIds.map((playerId, index) => ({
     playerId,
     left_x: 15 + index * ((width - 30 - 10) / (count - 1)),
     base_y: 0
   }));
-  const hillHeights = Array.from({ length: count - 1 }, () => randomBetween(random, 85, 100));
-  const gapHills = castles.slice(0, -1).map((castle, index) => ({
-    hillCenter: castle.left_x + 5 + castleSpacing / 2,
-    hillWidth,
-    hillHeight: hillHeights[index]!
+  // Width + jitter stay below 0.42 spacing so gap hills never reach a castle footprint.
+  const gapHills = castles.slice(0, -1).map(castle => ({
+    hillCenter: castle.left_x + 5 + castleSpacing * (0.5 + randomBetween(random, -0.08, 0.08)),
+    hillWidth: castleSpacing * randomBetween(random, 0.28, 0.38),
+    hillHeight: randomBetween(random, 55, 130)
   }));
   const mainHillIndex = Math.floor((gapHills.length - 1) / 2);
+  const castlePadWidth = castleSpacing * 0.26;
+  const lowCastleParity = random() < 0.5 ? 0 : 1;
+  const castlePads = castles.map((castle, index) => ({
+    hillCenter: castle.left_x + 5,
+    hillWidth: castlePadWidth,
+    hillHeight: index % 2 === lowCastleParity
+      ? -randomBetween(random, 30, 50)
+      : randomBetween(random, 0, 50)
+  }));
+  const bumps = castles.slice(0, -1).flatMap((castle, index) => {
+    const gapStart = castle.left_x + 10;
+    const gapEnd = castles[index + 1]!.left_x;
+    return Array.from({ length: Math.floor(randomBetween(random, 0, 3)) }, () => {
+      const bumpWidth = randomBetween(random, 10, 25);
+      const sign = random() < 0.5 ? -1 : 1;
+      return {
+        hillCenter: randomBetween(random, gapStart + bumpWidth, gapEnd - bumpWidth),
+        hillWidth: bumpWidth,
+        hillHeight: sign * randomBetween(random, 6, 18)
+      };
+    });
+  });
   const mainHill = gapHills[mainHillIndex]!;
-  const hillCenter = mainHill.hillCenter;
-  const hillHeight = mainHill.hillHeight;
-  const castleDepressionWidth = castleSpacing * 0.26;
-  const extraHills = [
-    ...gapHills.filter((_, index) => index !== mainHillIndex),
-    ...castles.flatMap((castle, index) => index % 2 === 1
-      ? [{ hillCenter: castle.left_x + 5, hillWidth: castleDepressionWidth, hillHeight: -40 }]
-      : [])
-  ];
 
   const battlefield: Battlefield = {
     width,
@@ -88,12 +100,16 @@ export function createBattlefield(
       sampleWidth: 2,
       minY: 0,
       maxY: height - 20,
-      hillCenter,
-      hillWidth,
-      hillHeight,
+      hillCenter: mainHill.hillCenter,
+      hillWidth: mainHill.hillWidth,
+      hillHeight: mainHill.hillHeight,
       leftY: 0,
       rightY: 0,
-      extraHills
+      extraHills: [
+        ...gapHills.filter((_, index) => index !== mainHillIndex),
+        ...castlePads,
+        ...bumps
+      ]
     }
   };
 
@@ -103,6 +119,22 @@ export function createBattlefield(
   for (const castle of battlefield.castles) {
     castle.base_y = getTerrainY(battlefield, castle.left_x + battlefield.castleW / 2);
   }
+
+  // Guarantee each gap hill blocks the direct line of sight between neighbouring castles.
+  gapHills.forEach((gapHill, index) => {
+    const leftCastle = castles[index]!;
+    const rightCastle = castles[index + 1]!;
+    const midpoint = (leftCastle.left_x + rightCastle.left_x + battlefield.castleW) / 2;
+    const lineOfSightY = (leftCastle.base_y + rightCastle.base_y) / 2 - battlefield.castleH;
+    const deficit = getTerrainY(battlefield, midpoint) - (lineOfSightY - 25);
+    if (deficit <= 0) {
+      return;
+    }
+    gapHill.hillHeight += deficit / hillContribution(midpoint, gapHill.hillCenter, gapHill.hillWidth, 1);
+    if (index === mainHillIndex) {
+      battlefield.terrain.hillHeight = gapHill.hillHeight;
+    }
+  });
 
   return battlefield;
 }
