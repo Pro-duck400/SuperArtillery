@@ -1,5 +1,5 @@
 [build]
-buildCommand = "npm ci && npm run contracts:generate && npm run build --workspace superartillery-server"
+buildCommand = "npm run contracts:generate && npm run build --workspace superartillery-server"
 
 [deploy]
 startCommand = "npm start --workspace superartillery-server"
