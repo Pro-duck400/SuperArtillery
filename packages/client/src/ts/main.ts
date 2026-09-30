@@ -49,6 +49,7 @@ let hotSeatNames: string[] | null = null;
 let historicalTrajectories: HistoricalTrajectory[] = [];
 let activeTrajectory: TrajectoryPoint[] = [];
 let activeShotIsLocal = false;
+let activeShotPlayerId: number | null = null;
 let animationActive = false;
 const pendingPresentations = new PendingPresentationQueue();
 
@@ -59,6 +60,13 @@ function refreshRosterPositions(): void {
     createRosterView(players),
     createRosterPositions(players, playerId => renderer.getCastleLabelPosition(playerId))
   );
+}
+
+function createHotSeatTrajectories(playerId: number): HistoricalTrajectory[] {
+  const battlefield = game.getBattlefield();
+  return battlefield
+    ? createHistoricalTrajectories(battlefield, game.getShotHistoryForPlayer(playerId), playerId)
+    : [];
 }
 
 function applyDirectionPolicy(playerId: number | null): void {
@@ -121,7 +129,11 @@ function applyPendingPresentation(): void {
 
   const turn = pendingPresentations.takeTurn();
   if (turn) {
+    if (game.isHotSeat()) {
+      historicalTrajectories = createHotSeatTrajectories(turn.playerId);
+    }
     renderer.setActiveTurn(turn.playerId);
+    uiManager.updateTurnUI(turn.playerId, turn.isMyTurn);
     renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
     const localNames = game.isHotSeat() ? hotSeatNames : null;
     const rosterPlayerName = game.getPlayers().find(player => player.playerId === turn.playerId)?.name;
@@ -144,7 +156,9 @@ animator.onFrame(({ projectile, trajectory }) => {
 animator.onComplete(() => {
   const localPlayerId = gameClient?.getPlayerId();
   const battlefield = game.getBattlefield();
-  if (activeShotIsLocal && localPlayerId !== null && localPlayerId !== undefined && battlefield) {
+  if (game.isHotSeat() && activeShotPlayerId !== null) {
+    historicalTrajectories = createHotSeatTrajectories(activeShotPlayerId);
+  } else if (activeShotIsLocal && localPlayerId !== null && localPlayerId !== undefined && battlefield) {
     historicalTrajectories = createHistoricalTrajectories(
       battlefield,
       game.getShotHistory(),
@@ -152,6 +166,7 @@ animator.onComplete(() => {
     );
   }
   activeShotIsLocal = false;
+  activeShotPlayerId = null;
   activeTrajectory = [];
   animationActive = false;
   renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
@@ -178,6 +193,7 @@ function wireGameClientEvents(client: GameClient): void {
     historicalTrajectories = [];
     activeTrajectory = [];
     activeShotIsLocal = false;
+    activeShotPlayerId = null;
     animationActive = false;
     pendingPresentations.reset();
     uiManager.setWindLabel(battlefield.wind);
@@ -221,6 +237,7 @@ function wireGameClientEvents(client: GameClient): void {
 
   client.onShot((data) => {
     animationActive = true;
+    activeShotPlayerId = data.playerId;
     const playerId = client.getPlayerId();
     const isMyShot = client.isHotSeat() || (playerId !== null && data.playerId === playerId);
     if (isMyShot) {
@@ -265,7 +282,6 @@ function wireGameClientEvents(client: GameClient): void {
       createRosterView(players, players.filter(player => pendingPresentations.isDefeated(player.playerId)).map(player => player.playerId)),
       createRosterPositions(players, playerId => renderer.getCastleLabelPosition(playerId))
     );
-    uiManager.updateTurnUI(activePlayerId, isMyTurn);
     pendingPresentations.queueTurn({ playerId, isMyTurn });
     if (isMyTurn && localPlayerId !== null && battlefield && !activeShotIsLocal) {
         historicalTrajectories = createHistoricalTrajectories(
