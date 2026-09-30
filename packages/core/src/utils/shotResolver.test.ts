@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Battlefield } from '../contract/messages';
 import { createBattlefield } from './battlefield';
-import { checkCastleCollision } from './physics';
+import { calculateVelocityComponents, checkCastleCollision } from './physics';
 import { calculateCastleHitTime, calculateCastleHits } from './shotResolver';
 
 function createFlatBattlefield() {
@@ -45,6 +45,15 @@ describe('calculateCastleHitTime', () => {
 });
 
 describe('calculateCastleHits', () => {
+  it('keeps high-angle shots moving in the selected horizontal direction', () => {
+    const leftShot = calculateVelocityComponents(99, 150, 'Left');
+    const rightShot = calculateVelocityComponents(99, 150, 'Right');
+
+    expect(leftShot.vx).toBeLessThan(0);
+    expect(rightShot.vx).toBeGreaterThan(0);
+    expect(leftShot.vy).toBe(rightShot.vy);
+  });
+
   it('pierces every castle in the flat trajectory before the ground stops it', () => {
     const battlefield: Battlefield = {
       width: 500,

@@ -50,12 +50,10 @@ export class ProjectileAnimator {
     const labelPosition = typeof this.renderer.getCastleLabelPosition === 'function'
       ? this.renderer.getCastleLabelPosition(playerId)
       : { x: startX, y: 0 };
-    const adjustedAngle = direction
-      ? direction === 'Left' ? 180 - angle : angle
-      : labelPosition.x < this.canvasWidth / 2 ? angle : 180 - angle;
+    const resolvedDirection = direction ?? (labelPosition.x < this.canvasWidth / 2 ? 'Right' : 'Left');
 
     // Calculate initial velocity components
-    const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
+    const { vx, vy } = calculateVelocityComponents(angle, velocity, resolvedDirection);
 
     // Initialize projectile at castle position
     this.currentProjectile = {

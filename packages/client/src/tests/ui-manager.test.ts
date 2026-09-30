@@ -52,9 +52,10 @@ describe('UIManager private game flow', () => {
           </div>
           <div id="controls">
             <label id="directionField" hidden>
+              <span>Shoot toward:</span>
               <select id="directionInput">
-                <option value="Left">Left</option>
-                <option value="Right">Right</option>
+                <option value="Left">Left ←</option>
+                <option value="Right">Right →</option>
               </select>
             </label>
             <input id="angleInput" value="45" />
@@ -152,6 +153,14 @@ describe('UIManager private game flow', () => {
     expect(document.getElementById('createModeToggle')?.textContent).toBe('over Internet');
     expect(document.getElementById('lobbyModeOptions')?.hidden).toBe(true);
     expect(document.getElementById('createModeOptions')?.hidden).toBe(true);
+  });
+
+  it('labels the direction selector by horizontal firing side', () => {
+    new UIManager('http://localhost:3000');
+
+    expect(document.querySelector('#directionField span')?.textContent).toBe('Shoot toward:');
+    expect(Array.from(document.querySelectorAll<HTMLOptionElement>('#directionInput option')).map(option => option.textContent))
+      .toEqual(['Left ←', 'Right →']);
   });
 
   it('allows creating a private game from the lobby', () => {
