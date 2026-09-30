@@ -1,5 +1,14 @@
 [build]
 buildCommand = "npm run contracts:generate && npm run build --workspace superartillery-server"
+watchPatterns = [
+  "/packages/server/**",
+  "/packages/core/**",
+  "/contracts/**",
+  "/scripts/**",
+  "/package.json",
+  "/package-lock.json",
+  "/railway.toml"
+]
 
 [deploy]
 startCommand = "npm start --workspace superartillery-server"
