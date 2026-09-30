@@ -70,10 +70,16 @@ function solveQuadratic(a: number, b: number, c: number): number[] {
   ];
 }
 
-export function calculateVelocityComponents(angle: number, velocity: number): { vx: number; vy: number } {
-  const angleRad = (angle * Math.PI) / 180;
+export function calculateVelocityComponents(
+  angle: number,
+  velocity: number,
+  direction?: 'Left' | 'Right'
+): { vx: number; vy: number } {
+  const launchAngle = direction && angle > 90 ? 180 - angle : angle;
+  const angleRad = (launchAngle * Math.PI) / 180;
+  const horizontalDirection = direction === 'Left' ? -1 : 1;
   return {
-    vx: velocity * Math.cos(angleRad),
+    vx: horizontalDirection * velocity * Math.cos(angleRad),
     vy: -velocity * Math.sin(angleRad)
   };
 }

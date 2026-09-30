@@ -23,12 +23,9 @@ export function calculateShotTrajectory(
   const castle = battlefield.castles.find((item) => item.playerId === playerId);
   if (!castle) return [];
 
-  const adjustedAngle = shot.direction
-    ? shot.direction === 'Left' ? 180 - shot.angle : shot.angle
-    : castle.left_x + battlefield.castleW / 2 < battlefield.width / 2
-      ? shot.angle
-      : 180 - shot.angle;
-  const velocity = calculateVelocityComponents(adjustedAngle, shot.velocity);
+  const direction = shot.direction
+    ?? (castle.left_x + battlefield.castleW / 2 < battlefield.width / 2 ? 'Right' : 'Left');
+  const velocity = calculateVelocityComponents(shot.angle, shot.velocity, direction);
   let projectile: Projectile = {
     x: castle.left_x + battlefield.castleW / 2,
     y: castle.base_y - battlefield.castleH,

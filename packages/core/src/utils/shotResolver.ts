@@ -33,8 +33,7 @@ export function calculateCastleHits(
   const firingCastle = battlefield.castles.find(castle => castle.playerId === playerId);
   if (!firingCastle) return [];
   const resolvedDirection = direction ?? getDefaultShotDirection(battlefield, playerId);
-  const adjustedAngle = resolvedDirection === 'Left' ? 180 - angle : angle;
-  const { vx, vy } = calculateVelocityComponents(adjustedAngle, velocity);
+  const { vx, vy } = calculateVelocityComponents(angle, velocity, resolvedDirection);
   const x0 = firingCastle.left_x + battlefield.castleW / 2;
   const y0 = firingCastle.base_y - battlefield.castleH;
   const terrainHitTime = checkTerrainCollision(
