@@ -36,7 +36,8 @@ export type {
 	PrivateGame,
 	RematchAnswer,
 	SkipWaitingResponse,
-	StatsResponse
+	StatusResponse,
+	VersionResponse
 } from './types/private-game';
 export { GAME_CONFIG } from './services/gameConfig';
 export { GAME_ERROR_CODES, GAME_ERROR_MESSAGES } from './services/gameErrors';

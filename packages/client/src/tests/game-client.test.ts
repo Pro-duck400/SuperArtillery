@@ -8,22 +8,16 @@ function createGateway(): GameGateway {
     healthCheckWithRetry: vi.fn(async () => ({
       status: 'ok' as const,
       timestamp: new Date().toISOString(),
-      uptime: '0.00:00:01.000',
-      games: 0,
-      invites: 0,
-      version: '1.0.0',
-      coreVersion: '1.0.0',
-      contractVersion: '1.0.0'
+      uptime: '0.00:00:01.000'
     })),
-    getStats: vi.fn(async () => ({
-      status: 'ok' as const,
-      timestamp: new Date().toISOString(),
-      uptime: '0.00:00:01.000',
+    getStatus: vi.fn(async () => ({
       games: 0,
       invites: 0,
       webSockets: 0,
-      totals: { games: 0, rematches: 0 },
-      version: '1.0.0',
+      totals: { games: 0, rematches: 0 }
+    })),
+    getVersion: vi.fn(async () => ({
+      serverVersion: '1.0.0',
       coreVersion: '1.0.0',
       contractVersion: '1.0.0'
     })),
@@ -96,12 +90,20 @@ describe('GameClient private-game flow', () => {
     expect(client.getGameSession()?.gameId).toBe('saved-game');
   });
 
-  it('returns player id from the stored session when available', () => {
+  it('keeps a stored session separate from un-restored game state', () => {
     const game = new Game();
+    sessionStorage.setItem('gameSession', JSON.stringify({
+      gameId: 'saved-game',
+      sessionToken: 'saved-token',
+      playerName: 'Bob'
+    }));
     const client = new GameClient(createGateway(), game);
 
-    game.setPlayer(0, 'Alice');
-    expect(client.getPlayerId()).toBe(0);
+    expect(client.hasActiveSession()).toBe(true);
+    expect(client.getGameSession()?.gameId).toBe('saved-game');
+    expect(client.getPlayerId()).toBeNull();
+    expect(game.getPlayerName()).toBeNull();
+    expect(game.getGameId()).toBeNull();
   });
 
   it('records only local player shots received from the server', () => {
@@ -135,8 +137,8 @@ describe('GameClient private-game flow', () => {
     game.setPlayer(0, 'Alice');
     const client = new GameClient(createGateway(), game);
     const players = [
-      { playerId: 0, name: 'Alice', active: true, connected: true },
-      { playerId: 1, name: 'Bob', active: true, connected: true }
+      { playerId: 0, name: 'Alice', active: true, connected: true, frags: 0 },
+      { playerId: 1, name: 'Bob', active: true, connected: true, frags: 0 }
     ];
 
     (client as any).handleMessage({ type: 'turn_change', turnId: 1, players });

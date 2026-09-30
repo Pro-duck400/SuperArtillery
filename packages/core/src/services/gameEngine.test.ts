@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GameMessage } from '../contract/messages';
+import type { Battlefield, GameMessage } from '../contract/messages';
 import type { PlayerConnection } from '../ports/player-connection';
 import { GameEngine } from './gameEngine';
 import { InMemoryGameRepository } from './gameRepository';
@@ -67,6 +67,71 @@ describe('GameEngine', () => {
     expect(engine.getGameStatus(created.value.gameId, created.value.players[0]!.playerToken)).toMatchObject({
       ok: true,
       value: { status: 'active' }
+    });
+    engine.shutdown();
+  });
+
+  it('counts multiple eliminations and preserves the shooter frag count across a rematch', () => {
+    const games = new InMemoryGameRepository();
+    const engine = new GameEngine({ games });
+    const created = engine.createLocalGame(['Alex', 'Blair', 'Casey', 'Drew']);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const messages: GameMessage[] = [];
+    engine.connect(created.value.gameId, created.value.players[0]!.playerToken, createConnection(messages));
+    const game = games.get(created.value.gameId)!;
+    const battlefield: Battlefield = {
+      width: 500,
+      height: 200,
+      gravity: 0,
+      wind: 0,
+      groundY: 180,
+      castleW: 10,
+      castleH: 10,
+      castles: [
+        { playerId: 0, left_x: 95, base_y: 105 },
+        { playerId: 1, left_x: 135, base_y: 100 },
+        { playerId: 2, left_x: 175, base_y: 100 },
+        { playerId: 3, left_x: 215, base_y: 100 }
+      ],
+      terrain: {
+        version: 3,
+        seed: 1,
+        sampleWidth: 2,
+        minY: 0,
+        maxY: 180,
+        hillCenter: 250,
+        hillWidth: 50,
+        hillHeight: 0,
+        leftY: 100,
+        rightY: 100
+      }
+    };
+    game.battlefield = battlefield;
+
+    expect(engine.fire(created.value.gameId, created.value.players[0]!.playerToken, 0, 40, 'Right').ok).toBe(true);
+    expect(game.frags).toEqual([3, 0, 0, 0]);
+    expect(messages.findLast(message => message.type === 'game_over')).toMatchObject({
+      players: [
+        { playerId: 0, frags: 3 },
+        { playerId: 1, frags: 0 },
+        { playerId: 2, frags: 0 },
+        { playerId: 3, frags: 0 }
+      ]
+    });
+
+    for (const player of created.value.players) {
+      expect(engine.requestRematch(created.value.gameId, player.playerToken).ok).toBe(true);
+    }
+    expect(game.round).toBe(2);
+    expect(game.frags).toEqual([3, 0, 0, 0]);
+    expect(messages.filter(message => message.type === 'game_start').at(-1)).toMatchObject({
+      players: [
+        { playerId: 0, frags: 3 },
+        { playerId: 1, frags: 0 },
+        { playerId: 2, frags: 0 },
+        { playerId: 3, frags: 0 }
+      ]
     });
     engine.shutdown();
   });

@@ -17,11 +17,21 @@ export class RemoteGameGateway implements GameGateway {
   }
 
   public healthCheckWithRetry() {
-    return this.apiClient.healthCheckWithRetry();
+    return this.apiClient.healthCheckWithRetry().then(async health => {
+      const version = await this.apiClient.getVersion();
+      if (version.contractVersion !== CONTRACT_VERSION) {
+        throw new Error(`API contract mismatch: client ${CONTRACT_VERSION}, server ${version.contractVersion}`);
+      }
+      return health;
+    });
   }
 
-  public getStats() {
-    return this.apiClient.getStats();
+  public getStatus() {
+    return this.apiClient.getStatus();
+  }
+
+  public getVersion() {
+    return this.apiClient.getVersion();
   }
 
   public createGame(playerName: string, clientUrl: string, playerCount: number = 2) {

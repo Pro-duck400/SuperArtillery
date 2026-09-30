@@ -141,6 +141,7 @@ export class GameEngine {
       currentTurn: 0,
       gameStarted: false,
       round: 1,
+      frags: names.map(() => 0),
       rematchReady: names.map(() => false)
     };
     game.lobbySlots = names.map((name, playerId) => ({

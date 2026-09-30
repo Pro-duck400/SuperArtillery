@@ -26,26 +26,23 @@ export class LocalGameGateway implements GameGateway {
     return {
       status: stats.maxReached ? 'degraded' as const : 'ok' as const,
       timestamp: new Date().toISOString(),
-      uptime: '0.00:00:00.000',
-      games: stats.games,
-      invites: stats.invites,
-      version: CORE_VERSION,
-      coreVersion: CORE_VERSION,
-      contractVersion: CONTRACT_VERSION
+      uptime: '0.00:00:00.000'
     };
   }
 
-  public async getStats() {
+  public async getStatus() {
     const stats = this.engine.getStats();
     return {
-      status: stats.maxReached ? 'degraded' as const : 'ok' as const,
-      timestamp: new Date().toISOString(),
-      uptime: '0.00:00:00.000',
       games: stats.games,
       invites: stats.invites,
       webSockets: this.connection?.isOpen() ? 1 : 0,
-      totals: stats.totals,
-      version: CORE_VERSION,
+      totals: stats.totals
+    };
+  }
+
+  public async getVersion() {
+    return {
+      serverVersion: CORE_VERSION,
       coreVersion: CORE_VERSION,
       contractVersion: CONTRACT_VERSION
     };

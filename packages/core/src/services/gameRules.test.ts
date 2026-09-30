@@ -33,6 +33,7 @@ function createGame(): PrivateGame {
     currentTurn: 0,
     gameStarted: false,
     round: 1,
+    frags: [0, 0],
     rematchReady: [false, false],
     lobbySlots: [
       { playerId: 0, session: initiator, status: 'ready', active: true, eliminated: false },

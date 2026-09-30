@@ -1,6 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CORE_VERSION } from '@superartillery/core';
+import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 import { UIManager } from '../ts/ui-manager';
+import { handleGameConnectionFailure } from '../ts/connection-error';
+
+function stubSuccessfulHealthChecks() {
+  const fetchSpy = vi.fn((input: RequestInfo | URL) => {
+    const isVersionRequest = String(input).endsWith('/api/v1/version');
+    return Promise.resolve({
+      ok: true,
+      json: async () => isVersionRequest
+        ? { serverVersion: '1.2.0', coreVersion: CORE_VERSION, contractVersion: CONTRACT_VERSION }
+        : { status: 'ok', timestamp: new Date().toISOString(), uptime: '0.00:00:01.000' }
+    } as Response);
+  });
+  vi.stubGlobal('fetch', fetchSpy);
+  return fetchSpy;
+}
 
 describe('UIManager private game flow', () => {
   beforeEach(() => {
@@ -76,44 +91,37 @@ describe('UIManager private game flow', () => {
   });
 
   it('shows server health details after selecting a server', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.2.0' })
-    });
-    vi.stubGlobal('fetch', fetchSpy);
+    const fetchSpy = stubSuccessfulHealthChecks();
     new UIManager('http://localhost:3000');
 
     const option = document.querySelector<HTMLButtonElement>('#serverAddressOptions [role="option"]') as HTMLButtonElement;
     option.click();
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('https://superartillery-server-production.up.railway.app/api/v1/health'));
-    await vi.waitFor(() => expect(document.getElementById('serverHealthMessage')?.textContent).toMatch(
-      new RegExp(`^Server v1\\.2\\.0 \\| Core v${CORE_VERSION.replaceAll('.', '\\.')} \\| Contract v1\\.2\\.0 \\| Response time: \\d+ms$`)
-    ));
+    expect(fetchSpy).toHaveBeenCalledWith('https://superartillery-server-production.up.railway.app/api/v1/version');
+    await vi.waitFor(() => {
+      const message = document.getElementById('serverHealthMessage')?.textContent ?? '';
+      expect(message).toMatch(/^Server ready \| Server v1\.2\.0 \| Core v\d+\.\d+\.\d+ \| Contract v\d+\.\d+\.\d+ \| Response time: \d+ms$/);
+      expect(message).toContain(`Core v${CORE_VERSION}`);
+      expect(message).toContain(`Contract v${CONTRACT_VERSION}`);
+    });
     vi.unstubAllGlobals();
   });
 
   it('checks the preselected server on startup without additional checks in on-device mode', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.8.0' })
-    });
-    vi.stubGlobal('fetch', fetchSpy);
+    const fetchSpy = stubSuccessfulHealthChecks();
     new UIManager('http://localhost:3000');
 
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3000/api/v1/health'));
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3000/api/v1/version');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     (document.querySelector<HTMLButtonElement>('[data-mode="device"]') as HTMLButtonElement).click();
     expect((document.getElementById('serverRow') as HTMLDivElement).hidden).toBe(true);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     vi.unstubAllGlobals();
   });
 
   it('checks the current server when the refresh button is pressed', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ version: '1.2.0', coreVersion: CORE_VERSION, contractVersion: '1.2.0' })
-    });
-    vi.stubGlobal('fetch', fetchSpy);
+    const fetchSpy = stubSuccessfulHealthChecks();
     new UIManager('http://localhost:3000');
 
     const serverInput = document.getElementById('serverAddressInput') as HTMLInputElement;
@@ -121,6 +129,7 @@ describe('UIManager private game flow', () => {
     (document.getElementById('serverHealthButton') as HTMLAnchorElement).click();
 
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('https://custom.example.com/api/v1/health'));
+    expect(fetchSpy).toHaveBeenCalledWith('https://custom.example.com/api/v1/version');
     vi.unstubAllGlobals();
   });
 
@@ -409,18 +418,25 @@ describe('UIManager private game flow', () => {
     expect(writeText).toHaveBeenCalledWith('https://example.com/?invite=token');
   });
 
-  it('hides invite details after a connection timeout', () => {
+  it('hides invite details when the connection-timeout handler runs', () => {
     const ui = new UIManager('http://localhost:3000');
     const inviteInfo = document.getElementById('inviteInfo') as HTMLDivElement;
     const codeButton = document.getElementById('copyInviteCodeButton') as HTMLButtonElement;
     const urlButton = document.getElementById('copyInviteUrlButton') as HTMLButtonElement;
+    const errorElement = document.getElementById('registrationError') as HTMLDivElement;
 
     ui.showInviteInfo('ABCD', 'https://example.com/?invite=ABCD');
-    ui.hideInviteInfo();
+    handleGameConnectionFailure(
+      new Error('Game connection timeout'),
+      'Connection failed',
+      () => ui.hideInviteInfo(),
+      message => ui.showRegistrationError(message)
+    );
 
     expect(inviteInfo.style.display).toBe('none');
     expect(codeButton.onclick).toBeNull();
     expect(urlButton.onclick).toBeNull();
+    expect(errorElement.textContent).toBe('Game connection timeout');
   });
 
   it('updates player names and turn state correctly', () => {
@@ -453,6 +469,41 @@ describe('UIManager private game flow', () => {
     expect(left.style.top).toBe('146px');
     expect(right.style.left).toBe('255px');
     expect(right.style.top).toBe('142px');
+  });
+
+  it('shows cumulative frags beside each player name', () => {
+    const roster = document.createElement('div');
+    roster.id = 'playerNameRoster';
+    document.getElementById('battlefieldFrame')?.appendChild(roster);
+    const ui = new UIManager('http://localhost:3000');
+    ui.setRosterNames([
+      { playerId: 0, name: 'Alex', active: true, frags: 1 },
+      { playerId: 1, name: 'Blair', active: true, frags: 0 }
+    ], new Map());
+
+    expect(roster.textContent).toContain('Alex +1');
+    expect(roster.textContent).toContain('Blair');
+    expect(roster.textContent).not.toContain('Blair +0');
+  });
+
+  it('retains the active-player highlight when roster labels are rebuilt', () => {
+    const roster = document.createElement('div');
+    roster.id = 'playerNameRoster';
+    document.getElementById('battlefieldFrame')?.appendChild(roster);
+    const ui = new UIManager('http://localhost:3000');
+    const players = [
+      { playerId: 0, name: 'Alex', active: true, frags: 0 },
+      { playerId: 1, name: 'Blair', active: true, frags: 0 }
+    ];
+
+    ui.setRosterNames(players, new Map());
+    ui.updateTurnUI(1, false);
+    expect(roster.querySelector('[data-player-id="1"]')?.classList.contains('player-name-active-turn')).toBe(true);
+
+    ui.setRosterNames(players, new Map());
+
+    expect(roster.querySelector('[data-player-id="0"]')?.classList.contains('player-name-active-turn')).toBe(false);
+    expect(roster.querySelector('[data-player-id="1"]')?.classList.contains('player-name-active-turn')).toBe(true);
   });
 
   it('shows both player names in the game over message', () => {

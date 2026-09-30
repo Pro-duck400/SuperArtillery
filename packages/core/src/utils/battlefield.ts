@@ -1,6 +1,6 @@
 import type { Battlefield } from '../contract/messages';
 
-export const TERRAIN_VERSION = 3;
+export const TERRAIN_VERSION = 5;
 
 function createRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -48,16 +48,30 @@ export function createBattlefield(
   const height = 240 + (count - 2) * 20;
 
   const random = createRandom(seed);
-  const terrainVariationRoll = random();
-  const hillHeight = terrainVariationRoll < 1 / 2
-    ? randomBetween(random, 15, 65)
-    : randomBetween(random, -65, -15);
-  const extraHillCount = Math.max(0, count - 3);
+  const castleSpacing = (width - 40) / (count - 1);
+  const hillWidth = castleSpacing * 0.42;
   const castles = playerIds.map((playerId, index) => ({
     playerId,
     left_x: 15 + index * ((width - 30 - 10) / (count - 1)),
     base_y: 0
   }));
+  const hillHeights = Array.from({ length: count - 1 }, () => randomBetween(random, 85, 100));
+  const gapHills = castles.slice(0, -1).map((castle, index) => ({
+    hillCenter: castle.left_x + 5 + castleSpacing / 2,
+    hillWidth,
+    hillHeight: hillHeights[index]!
+  }));
+  const mainHillIndex = Math.floor((gapHills.length - 1) / 2);
+  const mainHill = gapHills[mainHillIndex]!;
+  const hillCenter = mainHill.hillCenter;
+  const hillHeight = mainHill.hillHeight;
+  const castleDepressionWidth = castleSpacing * 0.26;
+  const extraHills = [
+    ...gapHills.filter((_, index) => index !== mainHillIndex),
+    ...castles.flatMap((castle, index) => index % 2 === 1
+      ? [{ hillCenter: castle.left_x + 5, hillWidth: castleDepressionWidth, hillHeight: -40 }]
+      : [])
+  ];
 
   const battlefield: Battlefield = {
     width,
@@ -74,26 +88,17 @@ export function createBattlefield(
       sampleWidth: 2,
       minY: 0,
       maxY: height - 20,
-      hillCenter: width / 2,
-      hillWidth: width / (count + 1),
+      hillCenter,
+      hillWidth,
       hillHeight,
       leftY: 0,
       rightY: 0,
-      extraHills: Array.from({ length: extraHillCount }, () => {
-        const extraHillHeight = random() < 1 / 2
-          ? randomBetween(random, 15, 55)
-          : randomBetween(random, -55, -15);
-        return {
-          hillCenter: randomBetween(random, width * 0.15, width * 0.85),
-          hillWidth: randomBetween(random, width * 0.06, width * 0.12),
-          hillHeight: extraHillHeight
-        };
-      })
+      extraHills
     }
   };
 
-  battlefield.terrain.leftY = randomBetween(random, 110, battlefield.terrain.maxY);
-  battlefield.terrain.rightY = randomBetween(random, 110, battlefield.terrain.maxY);
+  battlefield.terrain.leftY = battlefield.terrain.maxY - randomBetween(random, 18, 22);
+  battlefield.terrain.rightY = battlefield.terrain.maxY - randomBetween(random, 18, 22);
 
   for (const castle of battlefield.castles) {
     castle.base_y = getTerrainY(battlefield, castle.left_x + battlefield.castleW / 2);

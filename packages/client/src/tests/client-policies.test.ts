@@ -66,12 +66,12 @@ describe('client policies', () => {
 
   it('builds roster labels and positions while retaining temporarily defeated players', () => {
     const players = [
-      { playerId: 0, name: 'Alice', active: false, connected: true },
-      { playerId: 1, name: 'Bob', active: true, connected: true }
+      { playerId: 0, name: 'Alice', active: false, connected: true, frags: 1 },
+      { playerId: 1, name: 'Bob', active: true, connected: true, frags: 0 }
     ];
     expect(createRosterView(players, [0])).toEqual([
-      { playerId: 0, name: 'Alice', active: true },
-      { playerId: 1, name: 'Bob', active: true }
+      { playerId: 0, name: 'Alice', active: true, frags: 1 },
+      { playerId: 1, name: 'Bob', active: true, frags: 0 }
     ]);
     expect(createRosterPositions(players, playerId => ({ x: playerId * 10, y: 4 }))).toEqual(new Map([
       [0, { x: 0, y: 4 }],

@@ -273,7 +273,7 @@ export class UIManager {
   }
 
   public setRosterNames(
-    players: Array<{ playerId: number; name: string; active: boolean }>,
+    players: Array<{ playerId: number; name: string; active: boolean; frags?: number }>,
     positions: Map<number, { x: number; y: number }>
   ): void {
     this.rosterView.setRosterNames(players, positions);
@@ -408,6 +408,7 @@ export class UIManager {
    * @param isMyTurn Whether it's this client's turn
    */
   public updateTurnUI(currentTurn: number, isMyTurn: boolean): void {
+    this.rosterView.setActiveTurn(currentTurn);
     this.gameView.updateTurnUI(currentTurn, isMyTurn);
   }
 

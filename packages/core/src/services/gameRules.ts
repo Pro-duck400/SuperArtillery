@@ -139,13 +139,16 @@ export class GameRules {
     const hits = calculateCastleHits(game.battlefield, playerId, angle, velocity, direction);
     if (hits.length > 0) {
       const targetPlayerIds = hits.map(hit => hit.playerId);
+      const newlyDefeatedPlayerIds: number[] = [];
       targetPlayerIds.forEach(targetId => {
         const target = slots.find(slot => slot.playerId === targetId);
-        if (target) {
+        if (target?.active && !target.eliminated) {
           target.active = false;
           target.eliminated = true;
+          newlyDefeatedPlayerIds.push(targetId);
         }
       });
+      game.frags[playerId] = (game.frags[playerId] ?? 0) + newlyDefeatedPlayerIds.length;
       const lastHitTime = hits[hits.length - 1]!.hitTime;
       const survivors = slots.filter(slot => slot.active && !slot.eliminated);
       if (survivors.length <= 1) {

@@ -58,4 +58,42 @@ describe('RemoteGameGateway', () => {
     gateway.disconnect();
     expect(socket.closed).toBe(true);
   });
+
+  it('wakes the server with health and validates the contract through the version endpoint', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const isVersionRequest = String(input).endsWith('/api/v1/version');
+      return {
+        ok: true,
+        json: async () => isVersionRequest
+          ? { serverVersion: '1.5.0', coreVersion: '1.0.0', contractVersion: CONTRACT_VERSION }
+          : { status: 'ok', timestamp: new Date().toISOString(), uptime: '0.00:00:01.000' }
+      } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const gateway = new RemoteGameGateway('https://api.example.test', 'wss://api.example.test');
+
+    await gateway.healthCheckWithRetry();
+
+    expect(fetchSpy.mock.calls.map(([url]) => String(url))).toEqual([
+      'https://api.example.test/api/v1/health',
+      'https://api.example.test/api/v1/version'
+    ]);
+  });
+
+  it('rejects remote operations when the server contract version differs', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const isVersionRequest = String(input).endsWith('/api/v1/version');
+      return {
+        ok: true,
+        json: async () => isVersionRequest
+          ? { serverVersion: '1.5.0', coreVersion: '1.0.0', contractVersion: '1.9.0' }
+          : { status: 'ok', timestamp: new Date().toISOString(), uptime: '0.00:00:01.000' }
+      } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const gateway = new RemoteGameGateway('https://api.example.test', 'wss://api.example.test');
+
+    await expect(gateway.healthCheckWithRetry()).rejects.toThrow(/API contract mismatch/);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
 });

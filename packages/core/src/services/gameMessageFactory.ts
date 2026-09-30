@@ -68,7 +68,8 @@ export class GameMessageFactory {
       playerId: slot.playerId,
       name: slot.session.name ?? `Player ${slot.playerId + 1}`,
       active: slot.active && !slot.eliminated && slot.status !== 'skipped',
-      connected: slot.session.connection?.isOpen() ?? false
+      connected: slot.session.connection?.isOpen() ?? false,
+      frags: game.frags[slot.playerId] ?? 0
     }));
   }
 

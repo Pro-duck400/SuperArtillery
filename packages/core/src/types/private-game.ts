@@ -43,6 +43,7 @@ export interface PrivateGame {
   currentTurn: number;
   gameStarted: boolean;
   round: number;
+  frags: number[];
   rematchReady: boolean[];
   rematchAnswers?: Array<RematchAnswer | null>;
   battlefield?: Battlefield;
@@ -89,17 +90,9 @@ export interface HealthResponse {
   status: 'ok' | 'degraded';
   timestamp: string;
   uptime: string;
-  games: number;
-  invites: number;
-  version: string;
-  coreVersion: string;
-  contractVersion: string;
 }
 
-export interface StatsResponse {
-  status: 'ok' | 'degraded';
-  timestamp: string;
-  uptime: string;
+export interface StatusResponse {
   games: number;
   invites: number;
   webSockets: number;
@@ -107,7 +100,10 @@ export interface StatsResponse {
     games: number;
     rematches: number;
   };
-  version: string;
+}
+
+export interface VersionResponse {
+  serverVersion: string;
   coreVersion: string;
   contractVersion: string;
 }

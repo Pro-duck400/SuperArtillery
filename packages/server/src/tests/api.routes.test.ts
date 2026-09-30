@@ -105,42 +105,44 @@ describe('API routes', () => {
     expect(response.body.code).toBe('MISSING_FIELDS');
   });
 
-  it('reports lightweight health without totals', async () => {
+  it('reports health without runtime metrics or versions', async () => {
     const response = await request(app)
       .get('/api/v1/health')
       .expect(200);
 
     expect(response.body).toMatchObject({
       status: 'ok',
-      games: expect.any(Number),
-      invites: expect.any(Number),
       timestamp: expect.any(String),
-      uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
-      coreVersion: CORE_VERSION,
-      contractVersion: CONTRACT_VERSION
+      uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/)
     });
-    expect(response.body.totals).toBeUndefined();
+    expect(response.body.games).toBeUndefined();
+    expect(response.body.coreVersion).toBeUndefined();
   });
 
-  it('reports stats including webSockets and lifetime totals', async () => {
+  it('reports status including webSockets and lifetime totals', async () => {
     const response = await request(app)
-      .get('/api/v1/stats')
+      .get('/api/v1/status')
       .expect(200);
 
     expect(response.body).toMatchObject({
-      status: 'ok',
       games: expect.any(Number),
       invites: expect.any(Number),
       webSockets: expect.any(Number),
-      totals: {
-        games: expect.any(Number),
-        rematches: expect.any(Number)
-      },
-      // The deprecated server hot-seat route is gone; local games never reach server stats.
-      contractVersion: CONTRACT_VERSION,
-      timestamp: expect.any(String),
-      uptime: expect.stringMatching(/^\d+\.\d{2}:\d{2}:\d{2}\.\d{3}$/),
-      coreVersion: CORE_VERSION
+      totals: { games: expect.any(Number), rematches: expect.any(Number) },
+    });
+    expect(Object.keys(response.body.totals).sort()).toEqual(['games', 'rematches']);
+    expect(response.body.contractVersion).toBeUndefined();
+  });
+
+  it('reports server, core, and contract versions separately', async () => {
+    const response = await request(app)
+      .get('/api/v1/version')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      serverVersion: expect.any(String),
+      coreVersion: CORE_VERSION,
+      contractVersion: CONTRACT_VERSION
     });
   });
 });

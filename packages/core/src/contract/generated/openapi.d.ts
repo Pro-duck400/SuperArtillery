@@ -12,8 +12,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lightweight health check for the server
-         * @description Returns server health, active game count, and version information
+         * Check server health
+         * @description Returns server readiness and uptime information
          */
         get: {
             parameters: {
@@ -24,7 +24,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Server is healthy */
+                /** @description Server health retrieved */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -43,7 +43,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/stats": {
+    "/api/v1/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -51,8 +51,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Comprehensive server statistics
-         * @description Returns server health, uptime, active connection metrics, and lifetime totals
+         * Get server runtime status
+         * @description Returns active game, invitation, WebSocket, and lifetime game counters
          */
         get: {
             parameters: {
@@ -63,13 +63,52 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Server statistics retrieved */
+                /** @description Server status retrieved */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["StatsResponse"];
+                        "application/json": components["schemas"]["StatusResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get server and contract versions
+         * @description Returns server package, core package, and API contract versions
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Version information retrieved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VersionResponse"];
                     };
                 };
             };
@@ -485,6 +524,8 @@ export interface components {
             name: string;
             active: boolean;
             connected: boolean;
+            /** @description Number of players this player has eliminated during the game, retained across rematches */
+            frags: number;
         };
         Position: {
             x: number;
@@ -639,27 +680,8 @@ export interface components {
             timestamp: string;
             /** @description Server uptime formatted as D.HH:mm:ss.ggg */
             uptime: string;
-            /** @description Number of active games */
-            games: number;
-            /** @description Number of pending invitations */
-            invites: number;
-            /** @description Server package version */
-            version: string;
-            /** @description Core game package version */
-            coreVersion: string;
-            /** @description OpenAPI contract version */
-            contractVersion: string;
         };
-        StatsResponse: {
-            /**
-             * @description Server status (degraded if at max capacity)
-             * @enum {string}
-             */
-            status: "ok" | "degraded";
-            /** Format: date-time */
-            timestamp: string;
-            /** @description Server uptime formatted as D.HH:mm:ss.ggg */
-            uptime: string;
+        StatusResponse: {
             /** @description Number of active games */
             games: number;
             /** @description Number of pending invitations */
@@ -673,8 +695,10 @@ export interface components {
                 /** @description Total number of server-hosted games continued as a rematch */
                 rematches: number;
             };
+        };
+        VersionResponse: {
             /** @description Server package version */
-            version: string;
+            serverVersion: string;
             /** @description Core game package version */
             coreVersion: string;
             /** @description OpenAPI contract version */

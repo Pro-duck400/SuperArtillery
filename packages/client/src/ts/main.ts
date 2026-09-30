@@ -12,6 +12,7 @@ import { parseInviteInput, parseInviteLink } from './invite-link';
 import { createRosterPositions, createRosterView } from './roster-view';
 import { getDefaultServerAddress, resolveServerBaseUrls } from './server-address';
 import { PendingPresentationQueue } from './pending-presentation-queue';
+import { handleGameConnectionFailure } from './connection-error';
 import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
 import clientPackage from '../../package.json';
 import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
@@ -331,11 +332,12 @@ uiManager.onCreateGame(async (playerName: string, serverAddress: string) => {
     await gameClient.connectToGame();
   } catch (error) {
     console.error('Create game failed:', error);
-    if (error instanceof Error && error.message === 'Game connection timeout') {
-      uiManager.hideInviteInfo();
-    }
-    const errorMessage = error instanceof Error ? error.message : 'Game creation failed. Please try again.';
-    uiManager.showRegistrationError(errorMessage);
+    handleGameConnectionFailure(
+      error,
+      'Game creation failed. Please try again.',
+      () => uiManager.hideInviteInfo(),
+      message => uiManager.showRegistrationError(message)
+    );
   }
 });
 
@@ -366,11 +368,12 @@ uiManager.onJoinGame(async (inviteCode: string, playerName: string, serverAddres
     await gameClient.connectToGame();
   } catch (error) {
     console.error('Join game failed:', error);
-    if (error instanceof Error && error.message === 'Game connection timeout') {
-      uiManager.hideInviteInfo();
-    }
-    const errorMessage = error instanceof Error ? error.message : 'Unable to join game. Please try again.';
-    uiManager.showRegistrationError(errorMessage);
+    handleGameConnectionFailure(
+      error,
+      'Unable to join game. Please try again.',
+      () => uiManager.hideInviteInfo(),
+      message => uiManager.showRegistrationError(message)
+    );
   }
 });
 

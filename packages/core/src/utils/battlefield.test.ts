@@ -39,20 +39,49 @@ describe('battlefield generation', () => {
     const rightEdge = first.terrain.hillCenter + first.terrain.hillWidth;
     expect(first.terrain.leftY).not.toBe(first.terrain.rightY);
     expect(first.terrain.leftY).not.toBe(second.terrain.leftY);
+    expect(first.terrain.leftY).toBeGreaterThanOrEqual(first.terrain.maxY - 22);
+    expect(first.terrain.leftY).toBeLessThanOrEqual(first.terrain.maxY - 18);
+    expect(first.terrain.rightY).toBeGreaterThanOrEqual(first.terrain.maxY - 22);
+    expect(first.terrain.rightY).toBeLessThanOrEqual(first.terrain.maxY - 18);
     expect(getTerrainY(first, 0)).toBe(first.terrain.leftY);
     expect(getTerrainY(first, leftEdge)).toBe(first.terrain.leftY);
-    expect(getTerrainY(first, rightEdge)).toBe(first.terrain.rightY);
+    expect(getTerrainY(first, rightEdge)).toBeGreaterThanOrEqual(first.terrain.rightY!);
+    expect(getTerrainY(first, rightEdge)).toBeLessThanOrEqual(first.terrain.maxY);
     expect(getTerrainY(first, first.width)).toBe(first.terrain.rightY);
-    expect(first.terrain.hillHeight).toBeGreaterThanOrEqual(-65);
-    expect(first.terrain.hillHeight).toBeLessThanOrEqual(65);
+    expect(first.terrain.hillHeight).toBeGreaterThanOrEqual(85);
+    expect(first.terrain.hillHeight).toBeLessThanOrEqual(100);
     expect(getTerrainY(first, first.width)).toBeGreaterThanOrEqual(first.terrain.minY);
     expect(getTerrainY(first, first.width)).toBeLessThanOrEqual(first.terrain.maxY);
   });
 
-  it('can generate both a crest and a depression from different seeds', () => {
+  it('keeps neighboring castles at distinct elevations and terrain close to the bottom', () => {
+    for (let playerCount = 2; playerCount <= 9; playerCount += 1) {
+      const playerIds = Array.from({ length: playerCount }, (_, playerId) => playerId);
+      for (let seedIndex = 0; seedIndex < 100; seedIndex += 1) {
+        const battlefield = createBattlefield((seedIndex * 1_000_003 + playerCount) >>> 0, playerIds);
+        const castleGrounds = battlefield.castles.map(castle => castle.base_y);
+        for (let index = 1; index < castleGrounds.length; index += 1) {
+          expect(Math.abs(castleGrounds[index]! - castleGrounds[index - 1]!)).toBeGreaterThan(10);
+          const leftCastle = battlefield.castles[index - 1]!;
+          const rightCastle = battlefield.castles[index]!;
+          const midpoint = (leftCastle.left_x + rightCastle.left_x + battlefield.castleW) / 2;
+          const lineOfSightY = ((leftCastle.base_y - battlefield.castleH) + (rightCastle.base_y - battlefield.castleH)) / 2;
+          expect(getTerrainY(battlefield, midpoint)).toBeLessThan(lineOfSightY - 20);
+        }
+
+        let lowestGroundY = 0;
+        for (let x = 0; x <= battlefield.width; x += battlefield.terrain.sampleWidth) {
+          lowestGroundY = Math.max(lowestGroundY, getTerrainY(battlefield, x));
+        }
+        expect(battlefield.terrain.maxY - lowestGroundY).toBeLessThanOrEqual(20);
+      }
+    }
+  });
+
+  it('generates a positive central hill with varied heights across seeds', () => {
     const samples = Array.from({ length: 300 }, (_, index) => createBattlefield((index * 1_000_003 + 1) >>> 0, [1, 2, 3]));
-    expect(samples.some(({ terrain }) => terrain.hillHeight > 0)).toBe(true);
-    expect(samples.some(({ terrain }) => terrain.hillHeight < 0)).toBe(true);
-    expect(samples.every(({ terrain }) => terrain.hillHeight !== 0)).toBe(true);
+    const hillHeights = samples.map(({ terrain }) => terrain.hillHeight);
+    expect(hillHeights.every(height => height >= 85 && height <= 100)).toBe(true);
+    expect(new Set(hillHeights).size).toBeGreaterThan(100);
   });
 });

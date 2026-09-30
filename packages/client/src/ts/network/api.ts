@@ -49,17 +49,9 @@ export interface HealthResponse {
   status: 'ok' | 'degraded';
   timestamp: string;
   uptime: string;
-  games: number;
-  invites: number;
-  version: string;
-  coreVersion: string;
-  contractVersion: string;
 }
 
-export interface StatsResponse {
-  status: 'ok' | 'degraded';
-  timestamp: string;
-  uptime: string;
+export interface StatusResponse {
   games: number;
   invites: number;
   webSockets: number;
@@ -67,7 +59,10 @@ export interface StatsResponse {
     games: number;
     rematches: number;
   };
-  version: string;
+}
+
+export interface VersionResponse {
+  serverVersion: string;
   coreVersion: string;
   contractVersion: string;
 }
@@ -132,15 +127,23 @@ export class ApiClient {
   /**
    * Fetch comprehensive server statistics
    */
-  public async getStats(): Promise<StatsResponse> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/stats`, {
+  public async getStatus(): Promise<StatusResponse> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/status`, {
       method: 'GET'
     });
 
     if (!response.ok) {
-      throw new Error('Failed to retrieve server stats');
+      throw new Error('Failed to retrieve server status');
     }
 
+    return response.json();
+  }
+
+  public async getVersion(): Promise<VersionResponse> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/version`, {
+      method: 'GET'
+    });
+    if (!response.ok) throw new Error('Failed to retrieve server version');
     return response.json();
   }
 

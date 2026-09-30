@@ -47,6 +47,7 @@ export class InvitationService {
       currentTurn: 0,
       gameStarted: false,
       round: 1,
+      frags: Array.from({ length: playerCount }, () => 0),
       rematchReady: [false, false]
     };
 

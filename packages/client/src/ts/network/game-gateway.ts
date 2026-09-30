@@ -6,13 +6,15 @@ import type {
   HealthResponse,
   RematchResponse,
   SkipWaitingResponse,
-  StatsResponse
+  StatusResponse,
+  VersionResponse
 } from './api';
 import type { CreateHotSeatResponse } from '@superartillery/core';
 
 export interface GameGateway {
   healthCheckWithRetry(): Promise<HealthResponse>;
-  getStats(): Promise<StatsResponse>;
+  getStatus(): Promise<StatusResponse>;
+  getVersion(): Promise<VersionResponse>;
   createGame(playerName: string, clientUrl: string, playerCount?: number): Promise<CreateGameResponse>;
   createLocalGame?: (names: string[]) => Promise<CreateHotSeatResponse>;
   acceptInvitation(inviteCode: string, playerName: string): Promise<AcceptInvitationResponse>;
@@ -34,5 +36,6 @@ export type {
   HealthResponse,
   RematchResponse,
   SkipWaitingResponse,
-  StatsResponse
+  StatusResponse,
+  VersionResponse
 };

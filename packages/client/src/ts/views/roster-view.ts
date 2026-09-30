@@ -3,6 +3,7 @@ import type { UIElements } from '../dom/elements';
 export class RosterView {
   private readonly elements: UIElements;
   private readonly document: Document;
+  private activePlayerId: number | null = null;
 
   constructor(elements: UIElements, document: Document) {
     this.elements = elements;
@@ -34,7 +35,7 @@ export class RosterView {
   }
 
   public setRosterNames(
-    players: Array<{ playerId: number; name: string; active: boolean }>,
+    players: Array<{ playerId: number; name: string; active: boolean; frags?: number }>,
     positions: Map<number, { x: number; y: number }>
   ): void {
     const roster = this.elements.playerNameRoster;
@@ -44,10 +45,18 @@ export class RosterView {
       const element = this.document.createElement('div');
       element.className = 'player-name-overlay player-name-connected';
       element.dataset.playerId = String(player.playerId);
-      element.textContent = player.name;
+      element.textContent = player.frags ? `${player.name} +${player.frags}` : player.name;
       if (!player.active) element.classList.add('player-name-eliminated');
+      element.classList.toggle('player-name-active-turn', player.playerId === this.activePlayerId);
       this.position(element, positions.get(player.playerId) ?? { x: 0, y: 0 });
       roster.appendChild(element);
+    });
+  }
+
+  public setActiveTurn(playerId: number): void {
+    this.activePlayerId = playerId;
+    this.elements.playerNameRoster?.querySelectorAll<HTMLElement>('[data-player-id]').forEach(element => {
+      element.classList.toggle('player-name-active-turn', element.dataset.playerId === String(playerId));
     });
   }
 

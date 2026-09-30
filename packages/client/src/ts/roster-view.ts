@@ -4,6 +4,7 @@ export interface RosterViewPlayer {
   playerId: number;
   name: string;
   active: boolean;
+  frags: number;
 }
 
 export function createRosterView(
@@ -13,7 +14,8 @@ export function createRosterView(
   return players.map(player => ({
     playerId: player.playerId,
     name: player.name,
-    active: player.active || temporarilyActivePlayerIds.includes(player.playerId)
+    active: player.active || temporarilyActivePlayerIds.includes(player.playerId),
+    frags: player.frags
   }));
 }
 

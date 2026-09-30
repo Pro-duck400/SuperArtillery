@@ -28,37 +28,38 @@ Used by the client to detect a sleeping/cold-starting server before create/accep
 {
   "status": "ok",
   "timestamp": "2026-09-13T08:21:58.459Z",
-  "uptime": "0.01:05:51.042",
-  "games": 2,
-  "invites": 0,
-  "version": "1.3.1",
-  "coreVersion": "1.0.0",
-  "contractVersion": "1.9.0"
+  "uptime": "0.01:05:51.042"
 }
 ```
 
-### Server Statistics
+### Server Status
 
-Provides detailed metrics on active WebSocket connections, active games, pending invitations, and lifetime server-process game totals. On-this-device games are local to the client and are not included in server stats.
+Provides active game, pending invitation, open WebSocket, and lifetime server-process game counts.
 
-**GET** `/api/v1/stats`
+**GET** `/api/v1/status`
 
 **Response `200`:**
 ```json
 {
-  "status": "ok",
-  "timestamp": "2026-09-13T08:21:58.459Z",
-  "uptime": "0.01:05:51.042",
   "games": 2,
   "invites": 0,
   "webSockets": 3,
-  "totals": {
-    "games": 2,
-    "rematches": 4
-  },
-  "version": "1.3.1",
+  "totals": { "games": 2, "rematches": 4 }
+}
+```
+
+### Version Information
+
+Returns the server, core, and API contract versions. Remote clients compare `contractVersion` before creating or joining games.
+
+**GET** `/api/v1/version`
+
+**Response `200`:**
+```json
+{
+  "serverVersion": "1.5.0",
   "coreVersion": "1.0.0",
-  "contractVersion": "1.9.0"
+  "contractVersion": "2.1.0"
 }
 ```
 

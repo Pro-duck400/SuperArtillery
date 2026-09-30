@@ -18,6 +18,7 @@ function createGame(overrides: Partial<PrivateGame> = {}): PrivateGame {
     currentTurn: 0,
     gameStarted: false,
     round: 1,
+    frags: [0, 0],
     rematchReady: [false, false],
     lobbySlots: [],
     ...overrides

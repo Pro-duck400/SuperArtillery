@@ -1,4 +1,2 @@
 1. "Direction:" values "Left"/"Right" are not clear enought for the players. 
 Change them to "Shoot↖️" and "Shoot↗️"? Display direction in Fire button?
-2. Feature: count frags for each player and display it in the UI. E.g. "Alex +1". 
-Keep accumulated with each rematch.
