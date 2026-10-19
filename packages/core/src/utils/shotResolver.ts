@@ -1,4 +1,5 @@
 import type { Battlefield } from '../contract/messages';
+import type { ShotDirection } from '../contract/api-types';
 import { getTerrainY } from './battlefield';
 import { calculateVelocityComponents, checkCastleCollision, checkTerrainCollision } from './physics';
 
@@ -7,7 +8,7 @@ export function calculateCastleHitTime(
   playerId: number,
   angle: number,
   velocity: number,
-  direction?: 'Left' | 'Right'
+  direction?: ShotDirection
 ): number | null {
   const hit = calculateCastleHit(battlefield, playerId, angle, velocity, direction);
   return hit?.hitTime ?? null;
@@ -18,7 +19,7 @@ export function calculateCastleHit(
   playerId: number,
   angle: number,
   velocity: number,
-  direction?: 'Left' | 'Right'
+  direction?: ShotDirection
 ): { playerId: number; hitTime: number } | null {
   return calculateCastleHits(battlefield, playerId, angle, velocity, direction)[0] ?? null;
 }
@@ -28,7 +29,7 @@ export function calculateCastleHits(
   playerId: number,
   angle: number,
   velocity: number,
-  direction?: 'Left' | 'Right'
+  direction?: ShotDirection
 ): Array<{ playerId: number; hitTime: number }> {
   const firingCastle = battlefield.castles.find(castle => castle.playerId === playerId);
   if (!firingCastle) return [];
@@ -69,7 +70,7 @@ export function calculateCastleHits(
     .sort((left, right) => left.hitTime - right.hitTime || left.playerId - right.playerId);
 }
 
-export function getDefaultShotDirection(battlefield: Battlefield, playerId: number): 'Left' | 'Right' {
+export function getDefaultShotDirection(battlefield: Battlefield, playerId: number): ShotDirection {
   const castle = battlefield.castles.find(item => item.playerId === playerId);
   return castle && castle.left_x + battlefield.castleW / 2 < battlefield.width / 2
     ? 'Right'

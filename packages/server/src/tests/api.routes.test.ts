@@ -1,6 +1,6 @@
 import express from 'express';
 import request from 'supertest';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApiRouter } from '../routes/api';
 import { GameManager } from '../services/gameManager';
 import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
@@ -93,6 +93,31 @@ describe('API routes', () => {
       .expect(401);
 
     expect(response.body.code).toBe('MISSING_SESSION_TOKEN');
+  });
+
+  it('returns the contract rematch response shape', async () => {
+    vi.spyOn(gameManager, 'requestRematch').mockReturnValue({
+      success: true,
+      answer: 'play_again',
+      answered: 1,
+      required: 2,
+      players: [{ playerId: 0, name: 'Alice', answer: 'play_again' }],
+      roundStarted: false
+    });
+
+    const response = await request(app)
+      .post('/api/v1/games/game-1/rematch')
+      .query({ sessionToken: 'session-token' })
+      .send({ answer: 'play_again' })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      answer: 'play_again',
+      answered: 1,
+      required: 2,
+      players: [{ playerId: 0, name: 'Alice', answer: 'play_again' }],
+      roundStarted: false
+    });
   });
 
   it('rejects fire without required payload fields', async () => {

@@ -3,7 +3,9 @@ import {
   CORE_VERSION,
   GameEngine,
   type PlayerConnection,
-  type Result
+  type RematchAnswer,
+  type Result,
+  type ShotDirection
 } from '@superartillery/core';
 import type { CreateHotSeatResponse } from '@superartillery/core';
 import type { GameMessage, WebSocketErrorMessage } from '../types/messages';
@@ -73,12 +75,12 @@ export class LocalGameGateway implements GameGateway {
     sessionToken: string,
     angle: number,
     velocity: number,
-    direction?: 'Left' | 'Right'
+    direction?: ShotDirection
   ): Promise<void> {
     this.unwrap(this.engine.fire(gameId, sessionToken, angle, velocity, direction));
   }
 
-  public async requestRematch(gameId: string, sessionToken: string, answer: 'play_again' | 'had_enough') {
+  public async requestRematch(gameId: string, sessionToken: string, answer: RematchAnswer) {
     return this.unwrap(this.engine.requestRematch(gameId, sessionToken, answer));
   }
 

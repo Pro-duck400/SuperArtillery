@@ -1,3 +1,4 @@
+import type { RematchAnswer, ShotDirection } from '@superartillery/core';
 import type { BattlefieldConfig, GameStartMessage } from './types/messages';
 import type { GameStatusResponse } from './network/game-gateway';
 
@@ -5,7 +6,7 @@ export interface ShotEventData {
   playerId: number;
   angle: number;
   velocity: number;
-  direction: 'Left' | 'Right';
+  direction: ShotDirection;
 }
 
 export interface GameClientEventMap {
@@ -14,7 +15,7 @@ export interface GameClientEventMap {
   turnChange: [playerId: number, isMyTurn: boolean];
   gameOver: [winnerId: number, didIWin: boolean];
   playerHit: [playerId: number, playerName: string];
-  rematchStatus: [answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>];
+  rematchStatus: [answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: RematchAnswer }>];
   lobbyStatus: [status: GameStatusResponse];
 }
 

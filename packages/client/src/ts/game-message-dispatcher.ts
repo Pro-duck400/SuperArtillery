@@ -72,8 +72,7 @@ export class GameMessageDispatcher {
         break;
       }
       case 'rematch_status': {
-        const legacyStatus = message as typeof message & { playersReady?: number };
-        const answered = message.answered ?? legacyStatus.playersReady ?? 0;
+        const answered = message.answered;
         const players = (message.players ?? []).map(player => ({
           playerId: player.playerId,
           playerName: player.name,

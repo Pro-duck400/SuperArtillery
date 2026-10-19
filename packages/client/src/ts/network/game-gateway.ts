@@ -1,5 +1,10 @@
 import type { GameMessage, WebSocketErrorMessage } from '../types/messages';
 import type {
+  CreateHotSeatResponse,
+  RematchAnswer,
+  ShotDirection
+} from '@superartillery/core';
+import type {
   AcceptInvitationResponse,
   CreateGameResponse,
   GameStatusResponse,
@@ -9,7 +14,6 @@ import type {
   StatusResponse,
   VersionResponse
 } from './api';
-import type { CreateHotSeatResponse } from '@superartillery/core';
 
 export interface GameGateway {
   healthCheckWithRetry(): Promise<HealthResponse>;
@@ -20,8 +24,8 @@ export interface GameGateway {
   acceptInvitation(inviteCode: string, playerName: string): Promise<AcceptInvitationResponse>;
   getGameStatus(gameId: string, sessionToken: string): Promise<GameStatusResponse>;
   skipWaiting(gameId: string, sessionToken: string): Promise<SkipWaitingResponse>;
-  fire(gameId: string, sessionToken: string, angle: number, velocity: number, direction?: 'Left' | 'Right'): Promise<void>;
-  requestRematch(gameId: string, sessionToken: string, answer: 'play_again' | 'had_enough'): Promise<RematchResponse>;
+  fire(gameId: string, sessionToken: string, angle: number, velocity: number, direction?: ShotDirection): Promise<void>;
+  requestRematch(gameId: string, sessionToken: string, answer: RematchAnswer): Promise<RematchResponse>;
   connect(gameId: string, sessionToken: string): Promise<void>;
   disconnect(): void;
   onMessage(handler: (message: GameMessage) => void): void;

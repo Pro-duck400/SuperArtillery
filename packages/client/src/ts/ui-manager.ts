@@ -1,4 +1,5 @@
 // Manages all DOM interactions and UI state
+import type { LobbySlotResponse, RematchAnswer, ShotDirection } from '@superartillery/core';
 import type { ShotHistoryEntry } from './game';
 import { collectUIElements, type UIElements } from './dom/elements';
 import { RosterView } from './views/roster-view';
@@ -9,11 +10,7 @@ import { GameView } from './views/game-view';
 import { RematchView } from './views/rematch-view';
 import { LobbyView, type CreateMode, type LobbyMode } from './views/lobby-view';
 
-export interface LobbySlotView {
-  playerId: number;
-  name?: string;
-  status: 'waiting' | 'ready' | 'skipped';
-}
+export type LobbySlotView = LobbySlotResponse;
 
 export class UIManager {
   // DOM elements
@@ -80,7 +77,7 @@ export class UIManager {
   private onCreateGameCallback: ((name: string, serverAddress: string) => void) | null = null;
   private onJoinGameCallback: ((inviteCode: string, name: string, serverAddress: string) => void) | null = null;
   private onHotSeatCallback: ((names: string[], serverAddress: string) => void) | null = null;
-  private onFireCallback: ((angle: number, velocity: number, direction?: 'Left' | 'Right') => void) | null = null;
+  private onFireCallback: ((angle: number, velocity: number, direction?: ShotDirection) => void) | null = null;
   private onRematchCallback: (() => void) | null = null;
   private onRematchAnswerCallback: ((answer: 'play_again' | 'had_enough') => void) | null = null;
   private onSkipWaitingCallback: (() => void) | null = null;
@@ -302,7 +299,7 @@ export class UIManager {
   /**
    * Register callback for fire event
    */
-  public onFire(callback: (angle: number, velocity: number, direction?: 'Left' | 'Right') => void): void {
+  public onFire(callback: (angle: number, velocity: number, direction?: ShotDirection) => void): void {
     this.onFireCallback = callback;
   }
 
@@ -310,11 +307,11 @@ export class UIManager {
     if (this.directionField) this.directionField.hidden = !visible;
   }
 
-  public setDirectionDefault(direction: 'Left' | 'Right'): void {
+  public setDirectionDefault(direction: ShotDirection): void {
     if (this.directionInput) this.directionInput.value = direction;
   }
 
-  public getDirection(): 'Left' | 'Right' {
+  public getDirection(): ShotDirection {
     return this.directionInput?.value === 'Right' ? 'Right' : 'Left';
   }
 
@@ -326,7 +323,7 @@ export class UIManager {
     this.onRematchAnswerCallback = callback;
   }
 
-  public renderRematchStatus(players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>): void {
+  public renderRematchStatus(players: Array<{ playerId: number; playerName: string; answer?: RematchAnswer }>): void {
     this.rematchView.renderStatus(players);
   }
 
@@ -433,8 +430,8 @@ export class UIManager {
     else this.rematchView.showGameOver(winnerOrWon, playerName ?? '', opponentName ?? '');
   }
 
-  public setRematchWaiting(playersReady: number): void {
-    this.rematchView.setWaiting(playersReady);
+  public setRematchWaiting(answered: number): void {
+    this.rematchView.setWaiting(answered);
   }
 
   public setRematchAnswerSubmitted(): void {

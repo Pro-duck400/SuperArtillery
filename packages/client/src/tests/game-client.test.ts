@@ -117,7 +117,7 @@ describe('GameClient private-game flow', () => {
     expect(game.getShotHistory()).toEqual([{ angle: 45, velocity: 150 }]);
   });
 
-  it('dispatches rematch readiness updates from the server', () => {
+  it('dispatches rematch answer counts from the server contract', () => {
     const game = new Game();
     const client = new GameClient(createGateway(), game);
     const statusSpy = vi.fn();
@@ -125,8 +125,9 @@ describe('GameClient private-game flow', () => {
     client.onRematchStatus(statusSpy);
     (client as any).handleMessage({
       type: 'rematch_status',
-      playersReady: 1,
-      required: 2
+      answered: 1,
+      required: 2,
+      players: []
     });
 
     expect(statusSpy).toHaveBeenCalledWith(1);

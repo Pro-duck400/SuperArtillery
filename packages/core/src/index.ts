@@ -22,19 +22,27 @@ export {
 	type ProjectileState
 } from './utils/physics';
 export type {
+	AcceptInvitationRequest,
 	AcceptInvitationResponse,
+	CreateGameRequest,
 	CreateGameResponse,
 	CreateHotSeatResponse,
 	ErrorResponse,
+	FireRequest,
 	GameStatus,
 	GameStatusResponse,
 	HealthResponse,
 	Invitation,
 	LobbySlot,
+	LobbySlotResponse,
 	LobbySlotStatus,
 	PlayerSession,
 	PrivateGame,
 	RematchAnswer,
+	RematchPlayerStatus,
+	RematchRequest,
+	RematchResponse,
+	ShotDirection,
 	SkipWaitingResponse,
 	StatusResponse,
 	VersionResponse
@@ -46,6 +54,6 @@ export { InMemoryGameRepository, type GameRepository } from './services/gameRepo
 export { InvitationService, type InvitationResult } from './services/invitationService';
 export { GameRules, type FireTransition, type RematchTransition } from './services/gameRules';
 export { TokenService } from './services/tokenService';
-export { GameEngine, type EngineStats, type FireResponse, type GameEngineOptions, type RematchResponse } from './services/gameEngine';
+export { GameEngine, type EngineStats, type FireResponse, type GameEngineOptions } from './services/gameEngine';
 export { GameMessageFactory, type GamePlayerState } from './services/gameMessageFactory';
 export { GameError, type Result, failure, success } from './result';

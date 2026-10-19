@@ -8,8 +8,8 @@ export type FireTransition =
   | { kind: 'miss'; nextPlayerId: number };
 
 export type RematchTransition =
-  | { kind: 'waiting'; answered: number; playersReady: number; answers: Array<RematchAnswer | null> }
-  | { kind: 'started'; answered: number; playersReady: number; battlefield: Battlefield; round: number; answers: Array<RematchAnswer | null> };
+  | { kind: 'waiting'; answered: number; answers: Array<RematchAnswer | null> }
+  | { kind: 'started'; answered: number; battlefield: Battlefield; round: number; answers: Array<RematchAnswer | null> };
 
 export class GameRules {
   public startIfReady(game: PrivateGame, now: number = Date.now()): { battlefield: Battlefield } | null {
@@ -68,7 +68,7 @@ export class GameRules {
     const slots = this.ensureLobbySlots(game);
     const slotIndex = slots.findIndex(slot => slot.playerId === playerId);
     if (slotIndex === -1) {
-      return { kind: 'waiting', answered: 0, playersReady: 0, answers: game.rematchAnswers ?? slots.map(() => null) };
+      return { kind: 'waiting', answered: 0, answers: game.rematchAnswers ?? slots.map(() => null) };
     }
     if (!game.rematchAnswers || game.rematchAnswers.length !== slots.length) game.rematchAnswers = slots.map(() => null);
     if (!game.rematchReady || game.rematchReady.length !== slots.length) game.rematchReady = slots.map(() => false);
@@ -76,9 +76,8 @@ export class GameRules {
     game.rematchReady[slotIndex] = answer === 'play_again';
     game.lastActivityAt = now;
     const answered = game.rematchAnswers.filter(value => value !== null).length;
-    const playersReady = game.rematchReady.filter(Boolean).length;
     const answerSnapshot = [...game.rematchAnswers];
-    if (answered < slots.length) return { kind: 'waiting', answered, playersReady, answers: answerSnapshot };
+    if (answered < slots.length) return { kind: 'waiting', answered, answers: answerSnapshot };
 
     const remainingSlots = slots.filter((_, index) => game.rematchAnswers![index] === 'play_again');
     const playersLeaving = slots.filter((_, index) => game.rematchAnswers![index] === 'had_enough');
@@ -86,7 +85,7 @@ export class GameRules {
       game.rematchReady = slots.map(() => false);
       game.rematchAnswers = slots.map(() => null);
       if (remainingSlots.length === 1) game.status = 'finished';
-      return { kind: 'waiting', answered, playersReady: remainingSlots.length, answers: answerSnapshot };
+      return { kind: 'waiting', answered, answers: answerSnapshot };
     }
     if (playersLeaving.length > 0) {
       game.lobbySlots = remainingSlots.map(slot => ({
@@ -116,7 +115,6 @@ export class GameRules {
     return {
       kind: 'started',
       answered,
-      playersReady: remainingSlots.length,
       battlefield: game.battlefield,
       round: game.round,
       answers: answerSnapshot

@@ -1,3 +1,5 @@
+import type { ShotDirection } from '../contract/api-types';
+
 function checkCastleCollision(
   x0: number, y0: number,
   vx: number, vy: number,
@@ -73,7 +75,7 @@ function solveQuadratic(a: number, b: number, c: number): number[] {
 export function calculateVelocityComponents(
   angle: number,
   velocity: number,
-  direction?: 'Left' | 'Right'
+  direction?: ShotDirection
 ): { vx: number; vy: number } {
   const launchAngle = direction && angle > 90 ? 180 - angle : angle;
   const angleRad = (launchAngle * Math.PI) / 180;

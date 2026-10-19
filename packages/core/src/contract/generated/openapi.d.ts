@@ -391,7 +391,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RematchRequest"];
+                };
+            };
             responses: {
                 /** @description Rematch request accepted */
                 200: {
@@ -513,6 +517,10 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         PlayerId: number;
+        /** @enum {string} */
+        GameStatus: "pending" | "active" | "finished" | "expired";
+        /** @enum {string} */
+        ShotDirection: "Left" | "Right";
         LobbySlot: {
             playerId: components["schemas"]["PlayerId"];
             name?: string;
@@ -573,7 +581,7 @@ export interface components {
              * @description Number of player slots to reserve in the lobby
              * @default 2
              */
-            playerCount: number;
+            playerCount?: number;
             /**
              * Format: uri
              * @description Current client URL used to preserve the deployed application path in the invite link
@@ -608,11 +616,8 @@ export interface components {
             playerId: components["schemas"]["PlayerId"];
         };
         GameStatusResponse: {
-            /**
-             * @description Current game status
-             * @enum {string}
-             */
-            status: "pending" | "active" | "finished" | "expired";
+            /** @description Current game status */
+            status: components["schemas"]["GameStatus"];
             /** @description Number of players currently connected via WebSocket */
             playersConnected: number;
             /** @description Required number of players for the game to start */
@@ -625,9 +630,14 @@ export interface components {
             /** @description Number of players who have requested another round */
             readyCount: number;
         };
+        /** @description The answer defaults to play_again when omitted. */
+        RematchRequest: {
+            answer?: components["schemas"]["RematchAnswer"];
+        };
+        /** @enum {string} */
+        RematchAnswer: "play_again" | "had_enough" | "not_sure";
         RematchResponse: {
-            /** @enum {string} */
-            answer: "play_again" | "had_enough" | "not_sure";
+            answer: components["schemas"]["RematchAnswer"];
             answered: number;
             required: number;
             /** @description Whether every player chose play_again and a new round started */
@@ -637,8 +647,7 @@ export interface components {
         RematchPlayerStatus: {
             playerId: components["schemas"]["PlayerId"];
             name: string;
-            /** @enum {string} */
-            answer?: "play_again" | "had_enough" | "not_sure";
+            answer?: components["schemas"]["RematchAnswer"];
         };
         SkipWaitingResponse: {
             started: boolean;
@@ -653,12 +662,8 @@ export interface components {
             angle: number;
             /** @description Projectile velocity */
             velocity: number;
-            /**
-             * @description Horizontal firing direction for castles that are not at a battlefield edge
-             * @default Left
-             * @enum {string}
-             */
-            direction: "Left" | "Right";
+            /** @description Horizontal firing direction; when omitted, the server chooses based on the firing castle */
+            direction?: components["schemas"]["ShotDirection"];
         };
         ErrorResponse: {
             /** @description Machine-readable error code */
@@ -725,8 +730,7 @@ export interface components {
             playerId: components["schemas"]["PlayerId"];
             angle: number;
             velocity: number;
-            /** @enum {string} */
-            direction: "Left" | "Right";
+            direction: components["schemas"]["ShotDirection"];
         };
         TurnChangeMessage: {
             /**
@@ -778,8 +782,7 @@ export interface components {
              * @enum {string}
              */
             type: "lobby_status";
-            /** @enum {string} */
-            status: "pending" | "active" | "finished" | "expired";
+            status: components["schemas"]["GameStatus"];
             playersConnected: number;
             required: number;
             slots: components["schemas"]["LobbySlot"][];

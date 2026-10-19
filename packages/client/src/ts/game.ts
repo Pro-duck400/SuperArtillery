@@ -2,12 +2,13 @@
 import type { GameState } from './types/game';
 import type { BattlefieldConfig } from './types/messages';
 import type { PlayerState } from './types/messages';
+import type { ShotDirection } from '@superartillery/core';
 
 export interface ShotHistoryEntry {
   angle: number;
   velocity: number;
   playerId?: number;
-  direction?: 'Left' | 'Right';
+  direction?: ShotDirection;
 }
 
 export class Game {
@@ -85,7 +86,7 @@ export class Game {
     return this.opponentName;
   }
 
-  public addShotToHistory(angle: number, velocity: number, playerId?: number, direction?: 'Left' | 'Right'): void {
+  public addShotToHistory(angle: number, velocity: number, playerId?: number, direction?: ShotDirection): void {
     const shot = {
       angle,
       velocity,
@@ -122,4 +123,3 @@ export class Game {
     this.shotHistoryByPlayer.clear();
   }
 }
-

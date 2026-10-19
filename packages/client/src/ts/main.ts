@@ -13,7 +13,7 @@ import { createRosterPositions, createRosterView } from './roster-view';
 import { getDefaultServerAddress, resolveServerBaseUrls } from './server-address';
 import { PendingPresentationQueue } from './pending-presentation-queue';
 import { handleGameConnectionFailure } from './connection-error';
-import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
+import { CONTRACT_VERSION, CORE_VERSION, type ShotDirection } from '@superartillery/core';
 import clientPackage from '../../package.json';
 import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
 import { createHistoricalTrajectories } from './trajectory';
@@ -410,7 +410,7 @@ uiManager.onHotSeat(async (names: string[]) => {
   }
 });
 
-uiManager.onFire(async (angle: number, velocity: number, direction?: 'Left' | 'Right') => {
+uiManager.onFire(async (angle: number, velocity: number, direction?: ShotDirection) => {
   try {
     if (!gameClient) {
       throw new Error('Not connected yet');
@@ -438,4 +438,3 @@ uiManager.onRematchAnswer(async (answer) => {
     uiManager.setMessage(error instanceof Error ? error.message : 'Rematch response failed');
   }
 });
-

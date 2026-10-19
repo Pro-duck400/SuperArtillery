@@ -1,5 +1,6 @@
 // Coordinates network communication (HTTP + WebSocket)
 import { Game } from './game';
+import type { RematchAnswer, ShotDirection } from '@superartillery/core';
 import type { GameGateway } from './network/game-gateway';
 import type {
   AcceptInvitationResponse,
@@ -222,7 +223,7 @@ export class GameClient {
   /**
    * Fire a shot
    */
-  public async fire(angle: number, velocity: number, direction?: 'Left' | 'Right'): Promise<void> {
+  public async fire(angle: number, velocity: number, direction?: ShotDirection): Promise<void> {
     if (!this.gameSession) {
       throw new Error('No active game session');
     }
@@ -294,7 +295,7 @@ export class GameClient {
     this.events.on('playerHit', callback);
   }
 
-  public onRematchStatus(callback: (answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>) => void): void {
+  public onRematchStatus(callback: (answered: number, requiredPlayers: number, players: Array<{ playerId: number; playerName: string; answer?: RematchAnswer }>) => void): void {
     this.events.on('rematchStatus', (answered, requiredPlayers, players) => {
       if (callback.length <= 1) {
         (callback as unknown as (answered: number) => void)(answered);

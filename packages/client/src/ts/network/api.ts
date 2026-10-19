@@ -1,77 +1,42 @@
+import type {
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
+  CreateGameRequest,
+  CreateGameResponse,
+  FireRequest,
+  GameStatusResponse,
+  HealthResponse,
+  LobbySlotResponse,
+  RematchAnswer,
+  RematchRequest,
+  RematchResponse,
+  ShotDirection,
+  SkipWaitingResponse,
+  StatusResponse,
+  VersionResponse
+} from '@superartillery/core';
+
+export type {
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
+  CreateGameRequest,
+  CreateGameResponse,
+  ErrorResponse,
+  FireRequest,
+  GameStatusResponse,
+  HealthResponse,
+  LobbySlotResponse,
+  RematchAnswer,
+  RematchRequest,
+  RematchResponse,
+  ShotDirection,
+  SkipWaitingResponse,
+  StatusResponse,
+  VersionResponse
+} from '@superartillery/core';
+
 // REST API client for SuperArtillery private games
-
-export interface CreateGameResponse {
-  gameId: string;
-  playerToken: string;
-  inviteUrl: string;
-  inviteCode: string;
-  playerCount: number;
-}
-
-export interface LobbySlot {
-  playerId: number;
-  name?: string;
-  status: 'waiting' | 'ready' | 'skipped';
-}
-
-export interface AcceptInvitationResponse {
-  gameId: string;
-  playerToken: string;
-  playerId: number;
-}
-
-export interface GameStatusResponse {
-  status: 'pending' | 'active' | 'finished' | 'expired';
-  playersConnected: number;
-  required: number;
-  ready: boolean;
-  readyCount: number;
-  slots: LobbySlot[];
-  canSkipWaiting: boolean;
-}
-
-export interface SkipWaitingResponse {
-  started: boolean;
-  playersConnected: number;
-  required: number;
-  slots: LobbySlot[];
-}
-
-export interface RematchResponse {
-  answer: 'play_again' | 'had_enough' | 'not_sure';
-  answered: number;
-  required: number;
-  players: Array<{ playerId: number; name: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>;
-  roundStarted: boolean;
-}
-
-export interface HealthResponse {
-  status: 'ok' | 'degraded';
-  timestamp: string;
-  uptime: string;
-}
-
-export interface StatusResponse {
-  games: number;
-  invites: number;
-  webSockets: number;
-  totals: {
-    games: number;
-    rematches: number;
-  };
-}
-
-export interface VersionResponse {
-  serverVersion: string;
-  coreVersion: string;
-  contractVersion: string;
-}
-
-export interface ErrorResponse {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
-}
+export type LobbySlot = LobbySlotResponse;
 
 export class ApiClient {
   private baseUrl: string;
@@ -151,12 +116,13 @@ export class ApiClient {
    * Create a new private game
    */
   public async createGame(playerName: string, clientUrl: string, playerCount: number = 2): Promise<CreateGameResponse> {
+    const body = { name: playerName, clientUrl, playerCount } satisfies CreateGameRequest;
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/v1/games`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name: playerName, clientUrl, playerCount })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -175,7 +141,7 @@ export class ApiClient {
     inviteCode: string,
     playerName: string
   ): Promise<AcceptInvitationResponse> {
-    const body = { inviteCode, name: playerName };
+    const body = { inviteCode, name: playerName } satisfies AcceptInvitationRequest;
 
     const response = await this.fetchWithTimeout(
       `${this.baseUrl}/api/v1/invitations/accept`,
@@ -241,8 +207,9 @@ export class ApiClient {
     sessionToken: string,
     angle: number,
     velocity: number,
-    direction?: 'Left' | 'Right'
+    direction?: ShotDirection
   ): Promise<void> {
+    const body = { gameId, angle, velocity, ...(direction ? { direction } : {}) } satisfies FireRequest;
     const response = await this.fetchWithTimeout(
       `${this.baseUrl}/api/v1/fire?sessionToken=${encodeURIComponent(sessionToken)}`,
       {
@@ -250,7 +217,7 @@ export class ApiClient {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ gameId, angle, velocity, ...(direction ? { direction } : {}) })
+        body: JSON.stringify(body)
       }
     );
 
@@ -259,13 +226,14 @@ export class ApiClient {
     }
   }
 
-  public async requestRematch(gameId: string, sessionToken: string, answer: 'play_again' | 'had_enough'): Promise<RematchResponse> {
+  public async requestRematch(gameId: string, sessionToken: string, answer: RematchAnswer): Promise<RematchResponse> {
+    const body = { answer } satisfies RematchRequest;
     const response = await this.fetchWithTimeout(
       `${this.baseUrl}/api/v1/games/${gameId}/rematch?sessionToken=${encodeURIComponent(sessionToken)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer })
+        body: JSON.stringify(body)
       }
     );
 

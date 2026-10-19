@@ -1,7 +1,28 @@
 import type { PlayerConnection } from '../ports/player-connection';
 import type { Battlefield } from '../contract/messages';
+import type { GameStatus, LobbySlotStatus, RematchAnswer } from '../contract/api-types';
 
-export type GameStatus = 'pending' | 'active' | 'finished' | 'expired';
+export type {
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
+  CreateGameRequest,
+  CreateGameResponse,
+  ErrorResponse,
+  FireRequest,
+  GameStatus,
+  GameStatusResponse,
+  HealthResponse,
+  LobbySlotResponse,
+  LobbySlotStatus,
+  RematchAnswer,
+  RematchPlayerStatus,
+  RematchRequest,
+  RematchResponse,
+  ShotDirection,
+  SkipWaitingResponse,
+  StatusResponse,
+  VersionResponse
+} from '../contract/api-types';
 
 export interface PlayerSession {
   name: string | null;
@@ -15,9 +36,6 @@ export interface Invitation {
   expiresAt: number;
   accepted: boolean;
 }
-
-export type LobbySlotStatus = 'waiting' | 'ready' | 'skipped';
-export type RematchAnswer = 'play_again' | 'had_enough' | 'not_sure';
 
 export interface LobbySlot {
   playerId: number;
@@ -50,66 +68,7 @@ export interface PrivateGame {
   gameFinishedAt?: number;
 }
 
-export interface CreateGameResponse {
-  gameId: string;
-  playerToken: string;
-  inviteUrl: string;
-  inviteCode: string;
-  playerCount: number;
-}
-
-export interface AcceptInvitationResponse {
-  gameId: string;
-  playerToken: string;
-  playerId: number;
-}
-
 export interface CreateHotSeatResponse {
   gameId: string;
   players: Array<{ playerId: number; name: string; playerToken: string }>;
-}
-
-export interface GameStatusResponse {
-  status: GameStatus;
-  playersConnected: number;
-  required: number;
-  ready: boolean;
-  readyCount: number;
-  slots: Array<{ playerId: number; name?: string; status: LobbySlotStatus }>;
-  canSkipWaiting: boolean;
-}
-
-export interface SkipWaitingResponse {
-  started: boolean;
-  playersConnected: number;
-  required: number;
-  slots: Array<{ playerId: number; name?: string; status: LobbySlotStatus }>;
-}
-
-export interface HealthResponse {
-  status: 'ok' | 'degraded';
-  timestamp: string;
-  uptime: string;
-}
-
-export interface StatusResponse {
-  games: number;
-  invites: number;
-  webSockets: number;
-  totals: {
-    games: number;
-    rematches: number;
-  };
-}
-
-export interface VersionResponse {
-  serverVersion: string;
-  coreVersion: string;
-  contractVersion: string;
-}
-
-export interface ErrorResponse {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
 }
