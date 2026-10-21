@@ -4,6 +4,10 @@ import type { BattlefieldConfig } from './types/messages';
 import type { PlayerState } from './types/messages';
 import type { ShotDirection } from '@superartillery/core';
 
+const SHOT_HISTORY_LIMIT = 4;
+export const PLAYER_SHOT_HISTORY_LIMIT = 5;
+const MAX_PLAYER_SHOT_HISTORY_DURING_ANIMATION = PLAYER_SHOT_HISTORY_LIMIT + 1;
+
 export interface ShotHistoryEntry {
   angle: number;
   velocity: number;
@@ -93,10 +97,32 @@ export class Game {
       ...(playerId === undefined ? {} : { playerId }),
       ...(direction ? { direction } : {})
     };
-    this.shotHistory = [shot, ...this.shotHistory].slice(0, 4);
-    if (playerId !== undefined) {
-      const history = this.shotHistoryByPlayer.get(playerId) ?? [];
-      this.shotHistoryByPlayer.set(playerId, [shot, ...history].slice(0, 4));
+    if (playerId === undefined) {
+      this.shotHistory = [shot, ...this.shotHistory].slice(0, SHOT_HISTORY_LIMIT);
+      return;
+    }
+
+    const history = this.shotHistoryByPlayer.get(playerId) ?? [];
+    this.shotHistoryByPlayer.set(
+      playerId,
+      [shot, ...history].slice(0, MAX_PLAYER_SHOT_HISTORY_DURING_ANIMATION)
+    );
+
+    if (this.hotSeat) {
+      this.shotHistory = [shot, ...this.shotHistory].slice(0, SHOT_HISTORY_LIMIT);
+    } else if (playerId === this.state.playerId) {
+      this.shotHistory = [{
+        angle,
+        velocity,
+        ...(direction ? { direction } : {})
+      }, ...this.shotHistory].slice(0, SHOT_HISTORY_LIMIT);
+    }
+  }
+
+  public completeShotHistoryForPlayer(playerId: number): void {
+    const history = this.shotHistoryByPlayer.get(playerId);
+    if (history) {
+      this.shotHistoryByPlayer.set(playerId, history.slice(0, PLAYER_SHOT_HISTORY_LIMIT));
     }
   }
 

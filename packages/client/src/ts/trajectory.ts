@@ -1,6 +1,6 @@
 import type { BattlefieldConfig } from './types/messages';
 import type { Projectile } from './types/game';
-import type { ShotHistoryEntry } from './game';
+import { PLAYER_SHOT_HISTORY_LIMIT, type ShotHistoryEntry } from './game';
 import { calculateVelocityComponents, getTerrainY, updateProjectile } from '@superartillery/core';
 
 export interface TrajectoryPoint {
@@ -13,7 +13,7 @@ export interface HistoricalTrajectory {
   opacity: number;
 }
 
-const HISTORICAL_OPACITIES = [0.4, 0.35, 0.3, 0.25] as const;
+const HISTORICAL_OPACITIES = [0.4, 0.35, 0.3, 0.25, 0.2] as const;
 
 export function calculateShotTrajectory(
   battlefield: BattlefieldConfig,
@@ -64,4 +64,22 @@ export function createHistoricalTrajectories(
     points: calculateShotTrajectory(battlefield, shot, shot.playerId ?? playerId),
     opacity: HISTORICAL_OPACITIES[Math.min(index, HISTORICAL_OPACITIES.length - 1)]
   }));
+}
+
+export function createPlayerHistoricalTrajectories(
+  battlefield: BattlefieldConfig,
+  historiesByPlayer: ReadonlyMap<number, ShotHistoryEntry[]>,
+  expandedHistoryPlayerId: number | null,
+  inFlightPlayerId: number | null = null
+): HistoricalTrajectory[] {
+  return battlefield.castles.flatMap(({ playerId }) => {
+    const history = historiesByPlayer.get(playerId) ?? [];
+    const completedHistory = playerId === inFlightPlayerId ? history.slice(1) : history;
+    const visibleCount = playerId === expandedHistoryPlayerId ? PLAYER_SHOT_HISTORY_LIMIT : 1;
+    return createHistoricalTrajectories(
+      battlefield,
+      completedHistory.slice(0, visibleCount),
+      playerId
+    );
+  });
 }

@@ -30,14 +30,12 @@ export class GameMessageDispatcher {
         break;
       }
       case 'shot':
-        if (this.game.isHotSeat() || message.playerId === this.game.getPlayerId()) {
-          this.game.addShotToHistory(
-            message.angle,
-            message.velocity,
-            this.game.isHotSeat() ? message.playerId : undefined,
-            message.direction
-          );
-        }
+        this.game.addShotToHistory(
+          message.angle,
+          message.velocity,
+          message.playerId,
+          message.direction
+        );
         this.events.emit('shot', {
           playerId: message.playerId,
           angle: message.angle,
