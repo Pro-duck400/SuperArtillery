@@ -113,7 +113,7 @@ describe('GameRules', () => {
     game.battlefield = createFlatBattlefield();
     const rules = new GameRules();
     const waiting = rules.requestRematch(game, 0, 800);
-    expect(waiting).toMatchObject({ kind: 'waiting', answered: 1, playersReady: 1 });
+    expect(waiting).toMatchObject({ kind: 'waiting', answered: 1 });
     expect(waiting.answers).toEqual(['play_again', null]);
     expect(game.rematchReady).toEqual([true, false]);
     expect(game.status).toBe('finished');
@@ -138,9 +138,9 @@ describe('GameRules', () => {
     game.gameFinishedAt = 700;
     game.battlefield = createFlatBattlefield();
     const rules = new GameRules();
-    expect(rules.requestRematch(game, 0, 'play_again', 800)).toMatchObject({ kind: 'waiting', answered: 1, playersReady: 1 });
+    expect(rules.requestRematch(game, 0, 'play_again', 800)).toMatchObject({ kind: 'waiting', answered: 1 });
     const finalResponse = rules.requestRematch(game, 1, 'had_enough', 900);
-    expect(finalResponse).toMatchObject({ kind: 'waiting', answered: 2, playersReady: 1 });
+    expect(finalResponse).toMatchObject({ kind: 'waiting', answered: 2 });
     expect(finalResponse.answers).toEqual(['play_again', 'had_enough']);
     expect(game.status).toBe('finished');
     expect(game.round).toBe(2);

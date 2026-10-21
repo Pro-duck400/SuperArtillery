@@ -1,13 +1,14 @@
 import { Router } from 'express';
-import type { ErrorResponse } from '../types/private-game';
+import type { ErrorResponse, FireRequest } from '@superartillery/core';
 import { HTTP_STATUS } from '../httpStatus';
+import type { ContractRouteHandler } from '../http/contract-route-handler';
 import { GameManager } from '../services/gameManager';
 
 export function createGameplayRouter(game: GameManager): Router {
   const router = Router();
-  router.post('/v1/fire', (req, res) => {
+  const fireHandler: ContractRouteHandler<'/v1/fire', FireRequest, ErrorResponse | undefined> = (req, res) => {
     const { gameId, angle, velocity, direction } = req.body;
-    const sessionToken = req.query.sessionToken as string | undefined;
+    const sessionToken = typeof req.query.sessionToken === 'string' ? req.query.sessionToken : undefined;
     if (!gameId || !sessionToken || angle === undefined || velocity === undefined) {
       const errorResponse: ErrorResponse = {
         code: GameManager.ERROR_CODES.MISSING_FIELDS,
@@ -35,6 +36,7 @@ export function createGameplayRouter(game: GameManager): Router {
       return res.status(result.statusCode).json(errorResponse);
     }
     return res.status(HTTP_STATUS.OK).send();
-  });
+  };
+  router.post('/v1/fire', fireHandler);
   return router;
 }

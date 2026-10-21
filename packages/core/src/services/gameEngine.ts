@@ -11,6 +11,8 @@ import type {
   GameStatusResponse,
   PrivateGame,
   RematchAnswer,
+  RematchResponse,
+  ShotDirection,
   SkipWaitingResponse
 } from '../types/private-game';
 import { GameCleanupService } from './gameCleanupService';
@@ -33,15 +35,6 @@ export interface GameEngineOptions {
 
 export interface FireResponse {
   success: true;
-}
-
-export interface RematchResponse {
-  answer: RematchAnswer;
-  answered: number;
-  playersReady: number;
-  required: number;
-  players: Array<{ playerId: number; name: string; answer?: RematchAnswer }>;
-  roundStarted: boolean;
 }
 
 export interface EngineStats {
@@ -258,7 +251,7 @@ export class GameEngine {
     sessionToken: string,
     angle: number,
     velocity: number,
-    direction?: 'Left' | 'Right'
+    direction?: ShotDirection
   ): Result<FireResponse> {
     const game = this.games.get(gameId);
     if (!game) return this.error('GAME_NOT_FOUND');
@@ -305,7 +298,6 @@ export class GameEngine {
     return success({
       answer,
       answered: transition.answered,
-      playersReady: transition.playersReady,
       required: game.lobbySlots.length,
       players: statusMessage.players,
       roundStarted: transition.kind === 'started'

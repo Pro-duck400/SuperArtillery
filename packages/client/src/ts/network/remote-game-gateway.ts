@@ -1,4 +1,5 @@
 import { CONTRACT_VERSION } from '@superartillery/core';
+import type { RematchAnswer, ShotDirection } from '@superartillery/core';
 import { ApiClient } from './api';
 import type { GameGateway } from './game-gateway';
 import { WebSocketClient } from './websocket';
@@ -50,11 +51,11 @@ export class RemoteGameGateway implements GameGateway {
     return this.apiClient.skipWaiting(gameId, sessionToken);
   }
 
-  public fire(gameId: string, sessionToken: string, angle: number, velocity: number, direction?: 'Left' | 'Right') {
+  public fire(gameId: string, sessionToken: string, angle: number, velocity: number, direction?: ShotDirection) {
     return this.apiClient.fire(gameId, sessionToken, angle, velocity, direction);
   }
 
-  public requestRematch(gameId: string, sessionToken: string, answer: 'play_again' | 'had_enough') {
+  public requestRematch(gameId: string, sessionToken: string, answer: RematchAnswer) {
     return this.apiClient.requestRematch(gameId, sessionToken, answer);
   }
 

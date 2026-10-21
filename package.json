@@ -7,7 +7,7 @@
     "packages/client"
   ],
   "scripts": {
-    "contracts:generate": "node ./scripts/generate-contract-version.mjs && openapi-typescript ./contracts/openapi/superartillery.yaml -o ./packages/core/src/contract/generated/openapi.d.ts",
+    "contracts:generate": "node ./scripts/generate-contract-version.mjs && openapi-typescript ./contracts/openapi/superartillery.yaml -o ./packages/core/src/contract/generated/openapi.d.ts --default-non-nullable false",
     "build": "npm run contracts:generate && npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "type-check": "npm run type-check --workspaces --if-present"

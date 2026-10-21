@@ -7,7 +7,7 @@ import type {
   ShotMessage,
   TurnChangeMessage
 } from '../contract/messages';
-import type { PrivateGame, RematchAnswer } from '../types/private-game';
+import type { PrivateGame, RematchAnswer, ShotDirection } from '../types/private-game';
 
 export type GamePlayerState = GameStartMessage['players'][number];
 
@@ -30,7 +30,7 @@ export class GameMessageFactory {
     return { type: 'game_over', winnerId, players: this.playerStates(game) };
   }
 
-  public shot(playerId: number, angle: number, velocity: number, direction: 'Left' | 'Right'): ShotMessage {
+  public shot(playerId: number, angle: number, velocity: number, direction: ShotDirection): ShotMessage {
     return { type: 'shot', playerId, angle, velocity, direction };
   }
 

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SuperArtillery API
-  version: 2.1.0
+  version: 2.2.0
   description: Contract-first API specification for REST endpoints and server-to-client game messages.
 servers:
   - url: http://localhost:3000
@@ -202,6 +202,12 @@ paths:
           schema:
             type: string
           description: Player session token for authentication
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RematchRequest'
       responses:
         '200':
           description: Rematch request accepted
@@ -274,6 +280,14 @@ components:
       type: integer
       minimum: 0
       maximum: 8
+
+    GameStatus:
+      type: string
+      enum: [pending, active, finished, expired]
+
+    ShotDirection:
+      type: string
+      enum: [Left, Right]
 
     LobbySlot:
       type: object
@@ -486,8 +500,7 @@ components:
       required: [status, playersConnected, required, ready, readyCount, slots, canSkipWaiting]
       properties:
         status:
-          type: string
-          enum: [pending, active, finished, expired]
+          $ref: '#/components/schemas/GameStatus'
           description: Current game status
         playersConnected:
           type: integer
@@ -517,14 +530,25 @@ components:
           maximum: 9
           description: Number of players who have requested another round
 
+    RematchRequest:
+      type: object
+      additionalProperties: false
+      description: The answer defaults to play_again when omitted.
+      properties:
+        answer:
+          $ref: '#/components/schemas/RematchAnswer'
+
+    RematchAnswer:
+      type: string
+      enum: [play_again, had_enough, not_sure]
+
     RematchResponse:
       type: object
       additionalProperties: false
       required: [answer, answered, required, players, roundStarted]
       properties:
         answer:
-          type: string
-          enum: [play_again, had_enough, not_sure]
+          $ref: '#/components/schemas/RematchAnswer'
         answered:
           type: integer
           minimum: 0
@@ -553,8 +577,7 @@ components:
         name:
           type: string
         answer:
-          type: string
-          enum: [play_again, had_enough, not_sure]
+          $ref: '#/components/schemas/RematchAnswer'
 
     SkipWaitingResponse:
       type: object
@@ -597,10 +620,8 @@ components:
           maximum: 999
           description: Projectile velocity
         direction:
-          type: string
-          enum: [Left, Right]
-          default: Left
-          description: Horizontal firing direction for castles that are not at a battlefield edge
+          $ref: '#/components/schemas/ShotDirection'
+          description: Horizontal firing direction; when omitted, the server chooses based on the firing castle
 
     ErrorResponse:
       type: object
@@ -720,8 +741,7 @@ components:
         velocity:
           type: number
         direction:
-          type: string
-          enum: [Left, Right]
+          $ref: '#/components/schemas/ShotDirection'
 
     TurnChangeMessage:
       type: object
@@ -809,8 +829,7 @@ components:
           type: string
           const: lobby_status
         status:
-          type: string
-          enum: [pending, active, finished, expired]
+          $ref: '#/components/schemas/GameStatus'
         playersConnected:
           type: integer
           minimum: 0

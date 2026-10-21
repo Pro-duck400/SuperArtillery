@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Renderer } from '../ts/renderer';
 import type { BattlefieldConfig } from '../ts/types/messages';
-import { createHistoricalTrajectories } from '../ts/trajectory';
+import { createHistoricalTrajectories, createPlayerHistoricalTrajectories } from '../ts/trajectory';
 
 function createContext(): CanvasRenderingContext2D & { strokeStyles: string[] } {
   const context = {
@@ -109,12 +109,90 @@ describe('Renderer trajectory styles', () => {
         { angle: 20, velocity: 100 },
         { angle: 30, velocity: 110 },
         { angle: 40, velocity: 120 },
-        { angle: 50, velocity: 130 }
+        { angle: 50, velocity: 130 },
+        { angle: 60, velocity: 140 }
       ],
       0
     );
 
-    expect(history.map((trajectory) => trajectory.opacity)).toEqual([0.4, 0.35, 0.3, 0.25]);
+    expect(history.map((trajectory) => trajectory.opacity)).toEqual([0.4, 0.35, 0.3, 0.25, 0.2]);
+  });
+
+  it('shows five shots for the selected player and one latest shot for each other player', () => {
+    const historiesByPlayer = new Map([
+      [0, [
+        { angle: 60, velocity: 140, playerId: 0 },
+        { angle: 50, velocity: 130, playerId: 0 },
+        { angle: 40, velocity: 120, playerId: 0 },
+        { angle: 30, velocity: 110, playerId: 0 },
+        { angle: 20, velocity: 100, playerId: 0 }
+      ]],
+      [1, [
+        { angle: 55, velocity: 180, playerId: 1 },
+        { angle: 45, velocity: 150, playerId: 1 }
+      ]]
+    ]);
+
+    const trajectories = createPlayerHistoricalTrajectories(battlefield, historiesByPlayer, 0);
+
+    expect(trajectories).toHaveLength(6);
+    expect(trajectories.map((trajectory) => trajectory.opacity)).toEqual([
+      0.4, 0.35, 0.3, 0.25, 0.2, 0.4
+    ]);
+    expect(trajectories.at(-1)).toEqual(
+      createHistoricalTrajectories(battlefield, [historiesByPlayer.get(1)![0]!], 1)[0]
+    );
+  });
+
+  it('keeps five completed shots for the selected player during a shot', () => {
+    const activeHistory = [
+      { angle: 60, velocity: 160, playerId: 0 },
+      { angle: 50, velocity: 150, playerId: 0 },
+      { angle: 40, velocity: 140, playerId: 0 },
+      { angle: 30, velocity: 130, playerId: 0 },
+      { angle: 20, velocity: 120, playerId: 0 },
+      { angle: 10, velocity: 110, playerId: 0 }
+    ];
+    const otherHistory = [
+      { angle: 55, velocity: 180, playerId: 1 },
+      { angle: 45, velocity: 150, playerId: 1 }
+    ];
+    const historiesByPlayer = new Map([
+      [0, activeHistory],
+      [1, otherHistory]
+    ]);
+
+    const trajectories = createPlayerHistoricalTrajectories(battlefield, historiesByPlayer, 0, 0);
+
+    expect(trajectories.slice(0, 5)).toEqual(
+      createHistoricalTrajectories(battlefield, activeHistory.slice(1), 0)
+    );
+    expect(trajectories[5]).toEqual(
+      createHistoricalTrajectories(battlefield, otherHistory.slice(0, 1), 1)[0]
+    );
+  });
+
+  it('shows only one latest shot per player when no history is expanded', () => {
+    const playerZeroHistory = [
+      { angle: 60, velocity: 160, playerId: 0 },
+      { angle: 50, velocity: 150, playerId: 0 }
+    ];
+    const playerOneHistory = [
+      { angle: 55, velocity: 180, playerId: 1 },
+      { angle: 45, velocity: 150, playerId: 1 }
+    ];
+    const historiesByPlayer = new Map([
+      [0, playerZeroHistory],
+      [1, playerOneHistory]
+    ]);
+
+    const trajectories = createPlayerHistoricalTrajectories(battlefield, historiesByPlayer, null);
+
+    expect(trajectories).toHaveLength(2);
+    expect(trajectories).toEqual([
+      ...createHistoricalTrajectories(battlefield, playerZeroHistory.slice(0, 1), 0),
+      ...createHistoricalTrajectories(battlefield, playerOneHistory.slice(0, 1), 1)
+    ]);
   });
 
   it('applies historical opacity directly to the dark gray stroke', () => {

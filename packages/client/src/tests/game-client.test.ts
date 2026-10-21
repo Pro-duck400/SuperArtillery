@@ -106,7 +106,7 @@ describe('GameClient private-game flow', () => {
     expect(game.getGameId()).toBeNull();
   });
 
-  it('records only local player shots received from the server', () => {
+  it('records shots from every player while keeping the shared history local', () => {
     const game = new Game();
     game.setPlayer(0, 'Alice');
     const client = new GameClient(createGateway(), game);
@@ -115,9 +115,15 @@ describe('GameClient private-game flow', () => {
     (client as any).handleMessage({ type: 'shot', playerId: 0, angle: 45, velocity: 150 });
 
     expect(game.getShotHistory()).toEqual([{ angle: 45, velocity: 150 }]);
+    expect(game.getShotHistoryForPlayer(0)).toEqual([
+      { angle: 45, velocity: 150, playerId: 0 }
+    ]);
+    expect(game.getShotHistoryForPlayer(1)).toEqual([
+      { angle: 20, velocity: 100, playerId: 1 }
+    ]);
   });
 
-  it('dispatches rematch readiness updates from the server', () => {
+  it('dispatches rematch answer counts from the server contract', () => {
     const game = new Game();
     const client = new GameClient(createGateway(), game);
     const statusSpy = vi.fn();
@@ -125,8 +131,9 @@ describe('GameClient private-game flow', () => {
     client.onRematchStatus(statusSpy);
     (client as any).handleMessage({
       type: 'rematch_status',
-      playersReady: 1,
-      required: 2
+      answered: 1,
+      required: 2,
+      players: []
     });
 
     expect(statusSpy).toHaveBeenCalledWith(1);

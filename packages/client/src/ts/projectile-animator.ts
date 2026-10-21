@@ -1,5 +1,6 @@
 // Handles projectile animation and trajectory tracking
 import { calculateVelocityComponents, updateProjectile } from '@superartillery/core';
+import type { ShotDirection } from '@superartillery/core';
 import type { Renderer } from './renderer';
 import type { Projectile } from './types/game';
 import type { TrajectoryPoint } from './trajectory';
@@ -43,7 +44,7 @@ export class ProjectileAnimator {
   /**
    * Start a new projectile animation
    */
-  public fire(angle: number, velocity: number, startX: number, playerId: number, direction?: 'Left' | 'Right'): void {
+  public fire(angle: number, velocity: number, startX: number, playerId: number, direction?: ShotDirection): void {
     // Stop any existing animation
     this.stop();
 

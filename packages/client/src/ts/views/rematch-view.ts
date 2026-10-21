@@ -1,3 +1,4 @@
+import type { RematchAnswer } from '@superartillery/core';
 import type { UIElements } from '../dom/elements';
 
 export class RematchView {
@@ -9,7 +10,7 @@ export class RematchView {
     this.document = document;
   }
 
-  public renderStatus(players: Array<{ playerId: number; playerName: string; answer?: 'play_again' | 'had_enough' | 'not_sure' }>): void {
+  public renderStatus(players: Array<{ playerId: number; playerName: string; answer?: RematchAnswer }>): void {
     const list = this.elements.rematchPlayers;
     if (!list) return;
     list.replaceChildren();
@@ -40,12 +41,12 @@ export class RematchView {
     if (this.elements.hadEnoughButton) this.elements.hadEnoughButton.disabled = false;
   }
 
-  public setWaiting(playersReady: number): void {
+  public setWaiting(answered: number): void {
     if (this.elements.rematchControls) this.elements.rematchControls.hidden = false;
     if (this.elements.rematchButton) {
       this.elements.rematchButton.style.display = 'inline-block';
       this.elements.rematchButton.disabled = true;
-      this.elements.rematchButton.textContent = `Waiting (${playersReady})`;
+      this.elements.rematchButton.textContent = `Waiting (${answered})`;
     }
   }
 

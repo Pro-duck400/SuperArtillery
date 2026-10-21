@@ -8,7 +8,9 @@ import {
   type GameRepository,
   type GameStatusResponse,
   type RematchAnswer,
+  type RematchResponse,
   type Result,
+  type ShotDirection,
   type SkipWaitingResponse,
   type TimerScheduler,
   type PlayerConnection
@@ -103,15 +105,7 @@ export class GameManager {
   }
 
   public requestRematch(gameId: string, sessionToken: string, answer: RematchAnswer = 'play_again'):
-    | {
-        success: true;
-        answer: RematchAnswer;
-        answered: number;
-        playersReady: number;
-        required: number;
-        players: Array<{ playerId: number; name: string; answer?: RematchAnswer }>;
-        roundStarted: boolean;
-      }
+    | ({ success: true } & RematchResponse)
     | { success: false; error: string; code: string; statusCode: number } {
     const result = this.engine.requestRematch(gameId, sessionToken, answer);
     if (!result.ok) {
@@ -130,7 +124,7 @@ export class GameManager {
     sessionToken: string,
     angle: number,
     velocity: number,
-    direction?: 'Left' | 'Right'
+    direction?: ShotDirection
   ): { success: true } | { success: false; error: string; code: string; statusCode: number } {
     const result = this.engine.fire(gameId, sessionToken, angle, velocity, direction);
     if (!result.ok) {

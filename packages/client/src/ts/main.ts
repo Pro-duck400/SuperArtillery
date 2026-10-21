@@ -1,6 +1,6 @@
 // Main entry point for SuperArtillery
 import '../css/style.css';
-import { Game } from './game';
+import { Game, type ShotHistoryEntry } from './game';
 import { Renderer } from './renderer';
 import { ProjectileAnimator } from './projectile-animator';
 import { UIManager } from './ui-manager';
@@ -13,10 +13,10 @@ import { createRosterPositions, createRosterView } from './roster-view';
 import { getDefaultServerAddress, resolveServerBaseUrls } from './server-address';
 import { PendingPresentationQueue } from './pending-presentation-queue';
 import { handleGameConnectionFailure } from './connection-error';
-import { CONTRACT_VERSION, CORE_VERSION } from '@superartillery/core';
+import { CONTRACT_VERSION, CORE_VERSION, type ShotDirection } from '@superartillery/core';
 import clientPackage from '../../package.json';
 import type { HistoricalTrajectory, TrajectoryPoint } from './trajectory';
-import { createHistoricalTrajectories } from './trajectory';
+import { createPlayerHistoricalTrajectories } from './trajectory';
 
 console.log('SuperArtillery initializing...');
 
@@ -48,8 +48,8 @@ let opponentName = '';
 let hotSeatNames: string[] | null = null;
 let historicalTrajectories: HistoricalTrajectory[] = [];
 let activeTrajectory: TrajectoryPoint[] = [];
-let activeShotIsLocal = false;
 let activeShotPlayerId: number | null = null;
+let expandedHistoryPlayerId: number | null = null;
 let animationActive = false;
 const pendingPresentations = new PendingPresentationQueue();
 
@@ -62,11 +62,26 @@ function refreshRosterPositions(): void {
   );
 }
 
-function createHotSeatTrajectories(playerId: number): HistoricalTrajectory[] {
+function refreshHistoricalTrajectories(
+  expandedPlayerId: number | null,
+  inFlightPlayerId: number | null = null
+): void {
   const battlefield = game.getBattlefield();
-  return battlefield
-    ? createHistoricalTrajectories(battlefield, game.getShotHistoryForPlayer(playerId), playerId)
-    : [];
+  if (!battlefield) {
+    historicalTrajectories = [];
+    return;
+  }
+
+  const historiesByPlayer = new Map<number, ShotHistoryEntry[]>();
+  for (const castle of battlefield.castles) {
+    historiesByPlayer.set(castle.playerId, game.getShotHistoryForPlayer(castle.playerId));
+  }
+  historicalTrajectories = createPlayerHistoricalTrajectories(
+    battlefield,
+    historiesByPlayer,
+    expandedPlayerId,
+    inFlightPlayerId
+  );
 }
 
 function applyDirectionPolicy(playerId: number | null): void {
@@ -104,8 +119,10 @@ function applyPendingPresentation(): void {
     const defeatedPlayerIds = pendingPresentations.takeDefeatedPlayerIds();
     if (defeatedPlayerIds.length > 0) {
       renderer.setDefeatedPlayers(defeatedPlayerIds);
-      renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
     }
+    expandedHistoryPlayerId = null;
+    refreshHistoricalTrajectories(null);
+    renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
     schedulePendingRip();
     const winnerName = game.getPlayers().find(player => player.active)?.name ?? 'Unknown player';
     uiManager.showGameOver(winnerName);
@@ -129,9 +146,8 @@ function applyPendingPresentation(): void {
 
   const turn = pendingPresentations.takeTurn();
   if (turn) {
-    if (game.isHotSeat()) {
-      historicalTrajectories = createHotSeatTrajectories(turn.playerId);
-    }
+    expandedHistoryPlayerId = turn.isMyTurn ? turn.playerId : null;
+    refreshHistoricalTrajectories(expandedHistoryPlayerId);
     renderer.setActiveTurn(turn.playerId);
     uiManager.updateTurnUI(turn.playerId, turn.isMyTurn);
     renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
@@ -145,6 +161,9 @@ function applyPendingPresentation(): void {
       ? `${hitName} hit. ${turnPlayerName} turn`
       : `${turnPlayerName} turn`);
     pendingPresentations.clearHitName();
+  } else {
+    refreshHistoricalTrajectories(expandedHistoryPlayerId);
+    renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
   }
 }
 
@@ -154,22 +173,12 @@ animator.onFrame(({ projectile, trajectory }) => {
 });
 
 animator.onComplete(() => {
-  const localPlayerId = gameClient?.getPlayerId();
-  const battlefield = game.getBattlefield();
-  if (game.isHotSeat() && activeShotPlayerId !== null) {
-    historicalTrajectories = createHotSeatTrajectories(activeShotPlayerId);
-  } else if (activeShotIsLocal && localPlayerId !== null && localPlayerId !== undefined && battlefield) {
-    historicalTrajectories = createHistoricalTrajectories(
-      battlefield,
-      game.getShotHistory(),
-      localPlayerId as 0 | 1
-    );
+  if (activeShotPlayerId !== null) {
+    game.completeShotHistoryForPlayer(activeShotPlayerId);
   }
-  activeShotIsLocal = false;
   activeShotPlayerId = null;
   activeTrajectory = [];
   animationActive = false;
-  renderer.render({ projectile: null, activeTrajectory, historicalTrajectories });
   applyPendingPresentation();
 });
 
@@ -192,8 +201,8 @@ function wireGameClientEvents(client: GameClient): void {
     );
     historicalTrajectories = [];
     activeTrajectory = [];
-    activeShotIsLocal = false;
     activeShotPlayerId = null;
+    expandedHistoryPlayerId = null;
     animationActive = false;
     pendingPresentations.reset();
     uiManager.setWindLabel(battlefield.wind);
@@ -241,23 +250,12 @@ function wireGameClientEvents(client: GameClient): void {
     const playerId = client.getPlayerId();
     const isMyShot = client.isHotSeat() || (playerId !== null && data.playerId === playerId);
     if (isMyShot) {
-      activeShotIsLocal = true;
       uiManager.renderShotHistory(
         client.isHotSeat() ? game.getShotHistoryForPlayer(data.playerId) : game.getShotHistory()
       );
-      const battlefield = game.getBattlefield();
-      if (battlefield) {
-        historicalTrajectories = createHistoricalTrajectories(
-          battlefield,
-          client.isHotSeat()
-            ? game.getShotHistoryForPlayer(data.playerId).slice(1)
-            : game.getShotHistory().slice(1),
-          data.playerId
-        );
-      }
-    } else {
-      activeShotIsLocal = false;
     }
+    expandedHistoryPlayerId = isMyShot ? data.playerId : null;
+    refreshHistoricalTrajectories(expandedHistoryPlayerId, data.playerId);
 
     const shooterId = data.playerId;
     const startX = renderer.getCastleMuzzleX(shooterId);
@@ -266,7 +264,6 @@ function wireGameClientEvents(client: GameClient): void {
 
   client.onTurnChange((playerId: number, isMyTurn: boolean) => {
     const activePlayerId = playerId;
-    const battlefield = game.getBattlefield();
     const localPlayerId = client.getPlayerId();
     const targetPlayerId = client.isHotSeat() ? activePlayerId : localPlayerId;
 
@@ -283,13 +280,6 @@ function wireGameClientEvents(client: GameClient): void {
       createRosterPositions(players, playerId => renderer.getCastleLabelPosition(playerId))
     );
     pendingPresentations.queueTurn({ playerId, isMyTurn });
-    if (isMyTurn && localPlayerId !== null && battlefield && !activeShotIsLocal) {
-        historicalTrajectories = createHistoricalTrajectories(
-        battlefield,
-          game.isHotSeat() ? game.getShotHistoryForPlayer(activePlayerId) : game.getShotHistory(),
-        activePlayerId
-      );
-    }
     applyPendingPresentation();
   });
 
@@ -410,7 +400,7 @@ uiManager.onHotSeat(async (names: string[]) => {
   }
 });
 
-uiManager.onFire(async (angle: number, velocity: number, direction?: 'Left' | 'Right') => {
+uiManager.onFire(async (angle: number, velocity: number, direction?: ShotDirection) => {
   try {
     if (!gameClient) {
       throw new Error('Not connected yet');
@@ -438,4 +428,3 @@ uiManager.onRematchAnswer(async (answer) => {
     uiManager.setMessage(error instanceof Error ? error.message : 'Rematch response failed');
   }
 });
-

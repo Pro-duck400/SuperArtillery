@@ -30,14 +30,12 @@ export class GameMessageDispatcher {
         break;
       }
       case 'shot':
-        if (this.game.isHotSeat() || message.playerId === this.game.getPlayerId()) {
-          this.game.addShotToHistory(
-            message.angle,
-            message.velocity,
-            this.game.isHotSeat() ? message.playerId : undefined,
-            message.direction
-          );
-        }
+        this.game.addShotToHistory(
+          message.angle,
+          message.velocity,
+          message.playerId,
+          message.direction
+        );
         this.events.emit('shot', {
           playerId: message.playerId,
           angle: message.angle,
@@ -72,8 +70,7 @@ export class GameMessageDispatcher {
         break;
       }
       case 'rematch_status': {
-        const legacyStatus = message as typeof message & { playersReady?: number };
-        const answered = message.answered ?? legacyStatus.playersReady ?? 0;
+        const answered = message.answered;
         const players = (message.players ?? []).map(player => ({
           playerId: player.playerId,
           playerName: player.name,

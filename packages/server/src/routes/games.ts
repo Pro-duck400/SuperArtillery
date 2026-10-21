@@ -1,14 +1,27 @@
 import { Router } from 'express';
-import type { ErrorResponse } from '../types/private-game';
+import type {
+  CreateGameRequest,
+  CreateGameResponse,
+  ErrorResponse,
+  GameStatusResponse,
+  RematchRequest,
+  RematchResponse,
+  SkipWaitingResponse
+} from '@superartillery/core';
 import { HTTP_STATUS } from '../httpStatus';
 import { errorCodeToHttpStatus } from '../http/errorMapper';
+import type { ContractRouteHandler } from '../http/contract-route-handler';
 import { GameManager } from '../services/gameManager';
 import { getClientBaseUrl } from './client-base-url';
 
 export function createGamesRouter(game: GameManager): Router {
   const router = Router();
 
-  router.post('/v1/games', (req, res) => {
+  const createGameHandler: ContractRouteHandler<
+    '/v1/games',
+    CreateGameRequest,
+    CreateGameResponse | ErrorResponse
+  > = (req, res) => {
     const { name, playerCount, clientUrl } = req.body;
     const clientOrigin = typeof clientUrl === 'string' ? clientUrl : getClientBaseUrl(req);
     const forwardedProto = req.headers['x-forwarded-proto'];
@@ -22,11 +35,16 @@ export function createGamesRouter(game: GameManager): Router {
       return res.status(errorCodeToHttpStatus(result.code)).json(errorResponse);
     }
     return res.status(HTTP_STATUS.CREATED).json(result);
-  });
+  };
+  router.post('/v1/games', createGameHandler);
 
-  router.post('/v1/games/:gameId/skip-waiting', (req, res) => {
+  const skipWaitingHandler: ContractRouteHandler<
+    '/v1/games/:gameId/skip-waiting',
+    unknown,
+    SkipWaitingResponse | ErrorResponse
+  > = (req, res) => {
     const { gameId } = req.params;
-    const sessionToken = req.query.sessionToken as string | undefined;
+    const sessionToken = typeof req.query.sessionToken === 'string' ? req.query.sessionToken : undefined;
     if (!sessionToken) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
@@ -38,11 +56,16 @@ export function createGamesRouter(game: GameManager): Router {
       return res.status(errorCodeToHttpStatus(result.code)).json({ code: result.code, message: result.error });
     }
     return res.status(HTTP_STATUS.OK).json(result);
-  });
+  };
+  router.post('/v1/games/:gameId/skip-waiting', skipWaitingHandler);
 
-  router.get('/v1/games/:gameId/status', (req, res) => {
+  const gameStatusHandler: ContractRouteHandler<
+    '/v1/games/:gameId/status',
+    unknown,
+    GameStatusResponse | ErrorResponse
+  > = (req, res) => {
     const { gameId } = req.params;
-    const sessionToken = req.query.sessionToken as string | undefined;
+    const sessionToken = typeof req.query.sessionToken === 'string' ? req.query.sessionToken : undefined;
     if (!sessionToken) {
       const errorResponse: ErrorResponse = {
         code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
@@ -56,11 +79,16 @@ export function createGamesRouter(game: GameManager): Router {
       return res.status(errorCodeToHttpStatus(result.code, HTTP_STATUS.UNAUTHORIZED)).json(errorResponse);
     }
     return res.status(HTTP_STATUS.OK).json(result);
-  });
+  };
+  router.get('/v1/games/:gameId/status', gameStatusHandler);
 
-  router.post('/v1/games/:gameId/rematch', (req, res) => {
+  const rematchHandler: ContractRouteHandler<
+    '/v1/games/:gameId/rematch',
+    RematchRequest | undefined,
+    RematchResponse | ErrorResponse
+  > = (req, res) => {
     const { gameId } = req.params;
-    const sessionToken = req.query.sessionToken as string | undefined;
+    const sessionToken = typeof req.query.sessionToken === 'string' ? req.query.sessionToken : undefined;
     if (!sessionToken) {
       const errorResponse: ErrorResponse = {
         code: GameManager.ERROR_CODES.MISSING_SESSION_TOKEN,
@@ -73,15 +101,16 @@ export function createGamesRouter(game: GameManager): Router {
       const errorResponse: ErrorResponse = { code: result.code, message: result.error };
       return res.status(result.statusCode).json(errorResponse);
     }
-    return res.status(HTTP_STATUS.OK).json({
+    const response: RematchResponse = {
       answer: result.answer,
       answered: result.answered,
-      playersReady: result.playersReady,
       required: result.required,
       players: result.players,
       roundStarted: result.roundStarted
-    });
-  });
+    };
+    return res.status(HTTP_STATUS.OK).json(response);
+  };
+  router.post('/v1/games/:gameId/rematch', rematchHandler);
 
   return router;
 }
