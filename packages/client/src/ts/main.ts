@@ -268,11 +268,6 @@ function wireGameClientEvents(client: GameClient): void {
     const targetPlayerId = client.isHotSeat() ? activePlayerId : localPlayerId;
 
     applyDirectionPolicy(targetPlayerId);
-    expandedHistoryPlayerId = isMyTurn ? playerId : null;
-    refreshHistoricalTrajectories(
-      expandedHistoryPlayerId,
-      animationActive ? activeShotPlayerId : null
-    );
 
     const inputHistory = game.isHotSeat()
       ? game.getShotHistoryForPlayer(activePlayerId)
